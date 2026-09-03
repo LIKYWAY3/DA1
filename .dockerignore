@@ -1,0 +1,12 @@
+**/.git
+**/.github
+**/.vs
+**/bin
+**/obj
+**/publish
+**/out
+furni-1.0.0
+*.docx
+*.user
+*.suo
+*.log
