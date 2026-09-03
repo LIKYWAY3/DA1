@@ -55,11 +55,11 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
 
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "ASPtestShop",
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "ASPtestShopUser",
 
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "day_la_secret_key_rat_dai_123456789"))
     };
 
     // Kiểm tra security_stamp trong JWT có khớp với user hiện tại trong DB không
