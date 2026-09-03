@@ -21,6 +21,10 @@ COPY --from=build /app/publish .
 # Tao thu muc luu upload anh san pham
 RUN mkdir -p /app/wwwroot/Uploads/products
 
+# Tat inotify file watcher de tranh loi "user limit (128) on inotify instances has been reached" tren Render
+ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+
 # Cau hinh cong cho Render
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
