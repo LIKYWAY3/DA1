@@ -18,6 +18,13 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Hỗ trợ Render tự động gán PORT (ví dụ PORT=10000)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 // Add services to the container.
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
@@ -155,7 +162,7 @@ var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
 };
-forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
@@ -177,7 +184,6 @@ app.MapControllerRoute(
 
 // =========================================================================
 // ĐOẠN CODE TEST KẾT NỐI DATABASE (THÊM VÀO ĐÂY)
-
 // =========================================================================
 using (var scope = app.Services.CreateScope())
 {
@@ -192,7 +198,6 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine("\n==================================================");
             Console.WriteLine("[SUCCESS] KET NOI TOI SQL SERVER (Hshop) OK!");
             Console.WriteLine("====================XIN CHÀO==================\n");
-
             Console.WriteLine("==================================================\n");
         }
         else
@@ -218,58 +223,67 @@ using (var scope = app.Services.CreateScope())
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-
-    var dbContext = services.GetRequiredService<AppDbContext>();
-    await dbContext.Database.MigrateAsync();
-
-    var roleManager =
-        services.GetRequiredService<RoleManager<IdentityRole>>();
-
-    var userManager =
-        services.GetRequiredService<UserManager<ApplicationUser>>();
-
-    string[] roles = { "Admin", "Customer" };
-
-    foreach (var role in roles)
+    try
     {
-        if (!await roleManager.RoleExistsAsync(role))
+        var dbContext = services.GetRequiredService<AppDbContext>();
+        await dbContext.Database.MigrateAsync();
+
+        var roleManager =
+            services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        var userManager =
+            services.GetRequiredService<UserManager<ApplicationUser>>();
+
+        string[] roles = { "Admin", "Customer" };
+
+        foreach (var role in roles)
         {
-            await roleManager.CreateAsync(new IdentityRole(role));
+            if (!await roleManager.RoleExistsAsync(role))
+            {
+                await roleManager.CreateAsync(new IdentityRole(role));
+            }
+        }
+
+        const string adminEmail = "admin@gmail.com";
+        const string adminPassword = "Admin@123";
+
+        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+        if (adminUser == null)
+        {
+            adminUser = new ApplicationUser
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                EmailConfirmed = true,
+                FullName = "Administrator"
+            };
+
+            var createResult =
+                await userManager.CreateAsync(adminUser, adminPassword);
+
+            if (!createResult.Succeeded)
+            {
+                var errors = string.Join(
+                    ", ",
+                    createResult.Errors.Select(e => e.Description)
+                );
+
+                Console.WriteLine($"[WARNING] Không thể tạo Admin: {errors}");
+            }
+        }
+
+        if (adminUser != null && !await userManager.IsInRoleAsync(adminUser, "Admin"))
+        {
+            await userManager.AddToRoleAsync(adminUser, "Admin");
         }
     }
-
-    const string adminEmail = "admin@gmail.com";
-    const string adminPassword = "Admin@123";
-
-    var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
-    if (adminUser == null)
+    catch (Exception ex)
     {
-        adminUser = new ApplicationUser
-        {
-            UserName = adminEmail,
-            Email = adminEmail,
-            EmailConfirmed = true,
-            FullName = "Administrator"
-        };
-
-        var createResult =
-            await userManager.CreateAsync(adminUser, adminPassword);
-
-        if (!createResult.Succeeded)
-        {
-            var errors = string.Join(
-                ", ",
-                createResult.Errors.Select(e => e.Description)
-            );
-
-            throw new Exception($"Không thể tạo Admin: {errors}");
-        }
-    }
-
-    if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
-    {
-        await userManager.AddToRoleAsync(adminUser, "Admin");
+        Console.WriteLine("\n==================================================");
+        Console.WriteLine($"[ERROR] Loi Migration / Seed Role: {ex.Message}");
+        Console.WriteLine("Vui long kiem tra lai Connection String va quyen ket noi toi SQL Server.");
+        Console.WriteLine("==================================================\n");
     }
 }
 // =========================================================================
