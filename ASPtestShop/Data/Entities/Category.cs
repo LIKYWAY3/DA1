@@ -24,9 +24,6 @@ namespace ASPtestShop.Data.Entities
         public ICollection<Category> SubCategories { get; set; }
             = new List<Category>();
 
-        public ICollection<Category> ChildCategories { get; set; }
-            = new List<Category>();
-
         public ICollection<Product> Products { get; set; }
             = new List<Product>();
     }

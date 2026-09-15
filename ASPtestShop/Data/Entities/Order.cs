@@ -14,6 +14,9 @@ namespace ASPtestShop.Data.Entities
         //viết hoa chữ cái đầu (PascalCase) theo chuẩn của .NET:
         public Coupon? Coupon { get; set; }
 
+        [MaxLength(50)]
+        public string? CouponCodeSnapshot { get; set; }
+
         public string? UserId { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]

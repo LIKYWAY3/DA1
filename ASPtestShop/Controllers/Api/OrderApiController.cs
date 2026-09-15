@@ -108,5 +108,30 @@ namespace ASPtestShop.Controllers.Api
                 OrderDetails = order
             });
         }
+
+        //===============================CANCEL ORDER======================================
+        [HttpPost("cancel/{orderId:int}")]
+        public async Task<IActionResult> CancelOrder(int orderId, [FromQuery] string? reason = null)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new
+                {
+                    Message = "Bạn chưa đăng nhập"
+                });
+            }
+
+            var result = await _orderService.CancelOrderAsync(userId, orderId, reason);
+            if (!result.Success)
+            {
+                return BadRequest(new
+                {
+                    result.Message
+                });
+            }
+
+            return Ok(result);
+        }
     }
 }

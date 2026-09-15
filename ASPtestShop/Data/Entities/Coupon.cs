@@ -26,6 +26,12 @@ namespace ASPtestShop.Data.Entities
         [Column(TypeName = "decimal(18,2)")]
         public decimal? MaxDiscountAmount { get; set; }
 
+        public int UsageLimitTotal { get; set; } = 100;
+
+        public int UsageLimitPerCustomer { get; set; } = 1;
+
+        public int UsedCount { get; set; } = 0;
+
         public DateTime StartDate { get; set; }
 
         public DateTime EndDate { get; set; }

@@ -1,4 +1,4 @@
-﻿using ASPtestShop.Data;
+using ASPtestShop.Data;
 using ASPtestShop.Models.DTO.Order;
 using ASPtestShop.Services.Interfaces.Admin;
 using Microsoft.EntityFrameworkCore;
@@ -111,6 +111,7 @@ namespace ASPtestShop.Services.Implementations.Admin
             }
 
             var order = await _context.Orders
+                .Include(o => o.OrderItems)
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
 
             if (order == null)
@@ -120,6 +121,24 @@ namespace ASPtestShop.Services.Implementations.Admin
                     Success = false,
                     Message = "Không tìm thấy đơn hàng"
                 };
+            }
+
+            // Nếu đơn hàng chuyển sang Cancelled từ trạng thái khác -> Hoàn lại tồn kho & lượt dùng Coupon
+            if (dto.OrderStatus == "Cancelled" && order.OrderStatus != "Cancelled")
+            {
+                foreach (var item in order.OrderItems)
+                {
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
+                    );
+                }
+
+                if (order.CouponId.HasValue)
+                {
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {order.CouponId.Value}"
+                    );
+                }
             }
 
             order.OrderStatus = dto.OrderStatus;

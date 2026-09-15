@@ -4,6 +4,7 @@ using ASPtestShop.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ASPtestShop.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915164136_SyncPTTKEntitiesAndConstraints")]
+    partial class SyncPTTKEntitiesAndConstraints
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -216,6 +219,9 @@ namespace ASPtestShop.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoryId"));
 
+                    b.Property<int?>("CategoryId1")
+                        .HasColumnType("int");
+
                     b.Property<string>("CategoryName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -243,6 +249,8 @@ namespace ASPtestShop.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("CategoryId");
+
+                    b.HasIndex("CategoryId1");
 
                     b.HasIndex("ParentCategoryId");
 
@@ -998,6 +1006,10 @@ namespace ASPtestShop.Migrations
 
             modelBuilder.Entity("ASPtestShop.Data.Entities.Category", b =>
                 {
+                    b.HasOne("ASPtestShop.Data.Entities.Category", null)
+                        .WithMany("ChildCategories")
+                        .HasForeignKey("CategoryId1");
+
                     b.HasOne("ASPtestShop.Data.Entities.Category", "ParentCategory")
                         .WithMany("SubCategories")
                         .HasForeignKey("ParentCategoryId")
@@ -1202,6 +1214,8 @@ namespace ASPtestShop.Migrations
 
             modelBuilder.Entity("ASPtestShop.Data.Entities.Category", b =>
                 {
+                    b.Navigation("ChildCategories");
+
                     b.Navigation("Products");
 
                     b.Navigation("SubCategories");

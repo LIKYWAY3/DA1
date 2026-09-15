@@ -22,3 +22,6 @@ Thumbs.db
 
 ## Thư mục cấu hình local của VS Code (Nếu có)
 .vscode/
+
+## Tài liệu PTTK, công cụ kiểm thử & hình ảnh offline
+_docs_and_tools/

@@ -33,7 +33,12 @@ builder.Services.AddControllersWithViews()
     });
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Hshop"));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("Hshop"),
+        sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null));
 });
 // Cấu hình Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()

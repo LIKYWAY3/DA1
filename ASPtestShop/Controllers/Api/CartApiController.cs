@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using ASPtestShop.Models.DTO.Cart;
 using ASPtestShop.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +8,7 @@ namespace ASPtestShop.Controllers.Api
 {
     [Route("api/cart")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = ASPtestShop.Auth.UserCookieAuth.Scheme)]
+    [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme + "," + ASPtestShop.Auth.UserCookieAuth.Scheme)]
     public class CartApiController : ControllerBase
     {
         private readonly ICartService _cartService;

@@ -1,4 +1,4 @@
-﻿using ASPtestShop.Models.DTO.Auth;
+using ASPtestShop.Models.DTO.Auth;
 using ASPtestShop.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -65,8 +65,8 @@ namespace ASPtestShop.Controllers.Api
 
         //====================================PROFILE=========================================
         // GET: api/auth/profile
-        // API được bảo vệ bằng JWT
-        [Authorize]
+        // API được bảo vệ bằng JWT và Cookie
+        [Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme + "," + ASPtestShop.Auth.UserCookieAuth.Scheme)]
         [HttpGet("profile")]
         public IActionResult Profile()
         {

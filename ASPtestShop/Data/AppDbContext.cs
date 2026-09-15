@@ -20,6 +20,7 @@ namespace ASPtestShop.Data
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
         public DbSet<UserAddress> UserAddresses { get; set; }
+        public DbSet<BankAccount> BankAccounts { get; set; }
 
         // ==========================================
         // DBSETS: CHAT SYSTEM
@@ -55,6 +56,11 @@ namespace ASPtestShop.Data
             builder.Entity<Payment>()
                 .HasIndex(p => p.OrderId)
                 .IsUnique();
+
+            builder.Entity<Review>()
+                .HasIndex(r => new { r.UserId, r.OrderItemId })
+                .IsUnique()
+                .HasFilter("[OrderItemId] IS NOT NULL AND [UserId] IS NOT NULL");
 
             builder.Entity<Conversation>()
                 .HasIndex(c => c.UserId);
@@ -162,6 +168,20 @@ namespace ASPtestShop.Data
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Review - OrderItem
+            builder.Entity<Review>()
+                .HasOne(r => r.OrderItem)
+                .WithMany()
+                .HasForeignKey(r => r.OrderItemId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // BankAccount - User
+            builder.Entity<BankAccount>()
+                .HasOne(b => b.User)
+                .WithMany()
+                .HasForeignKey(b => b.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
 
             // ==========================================
             // RELATIONSHIPS: CHAT SYSTEM
@@ -203,6 +223,49 @@ namespace ASPtestShop.Data
             builder.Entity<ChatAttachment>()
                 .Property(ca => ca.AttachmentType)
                 .HasConversion<int>();
+
+
+            // ==========================================
+            // CHECK CONSTRAINTS (TÍNH TOÀN VẸN DỮ LIỆU CSDL)
+            // ==========================================
+            builder.Entity<Product>(entity =>
+            {
+                entity.ToTable(t => t.HasCheckConstraint("CK_Product_StockQuantity", "[StockQuantity] >= 0"));
+            });
+
+            builder.Entity<Review>(entity =>
+            {
+                entity.ToTable(t => t.HasCheckConstraint("CK_Review_Rating", "[Rating] >= 1 AND [Rating] <= 5"));
+            });
+
+            builder.Entity<CartItem>(entity =>
+            {
+                entity.ToTable(t => t.HasCheckConstraint("CK_CartItem_Quantity", "[Quantity] > 0"));
+            });
+
+            builder.Entity<OrderItem>(entity =>
+            {
+                entity.ToTable(t => t.HasCheckConstraint("CK_OrderItem_Quantity", "[Quantity] > 0"));
+            });
+
+            builder.Entity<Order>(entity =>
+            {
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_Order_TotalAmount", "[TotalAmount] >= 0");
+                    t.HasCheckConstraint("CK_Order_FinalAmount", "[FinalAmount] >= 0");
+                    t.HasCheckConstraint("CK_Order_DiscountAmount", "[DiscountAmount] >= 0");
+                });
+            });
+
+            builder.Entity<Coupon>(entity =>
+            {
+                entity.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_Coupon_UsedCount", "[UsedCount] >= 0");
+                    t.HasCheckConstraint("CK_Coupon_UsageLimitTotal", "[UsageLimitTotal] >= 0");
+                });
+            });
         }
     }
 }

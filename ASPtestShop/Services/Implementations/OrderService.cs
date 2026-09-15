@@ -114,142 +114,254 @@ namespace ASPtestShop.Services.Implementations
 
             var discountAmount = 0m;
             var shippingFee = 0m;
-            var finalAmount =
-                totalAmount - discountAmount + shippingFee;
+            Coupon? appliedCoupon = null;
 
-            await using var transaction =
-                await _context.Database.BeginTransactionAsync();
-
-            try
+            if (!string.IsNullOrWhiteSpace(checkoutDto.CouponCode))
             {
-                var order = new Order
+                var couponCode = checkoutDto.CouponCode.Trim().ToUpperInvariant();
+                var now = DateTime.UtcNow;
+                var coupon = await _context.Coupons
+                    .FirstOrDefaultAsync(c => c.Code == couponCode && c.IsActive);
+
+                if (coupon == null || now < coupon.StartDate || now > coupon.EndDate)
                 {
-                    OrderCode =
-                        "OD"
-                        + DateTime.Now.ToString("yyyyMMddHHmmssfff"),
-
-                    UserId = userId,
-
-                    TotalAmount = totalAmount,
-                    DiscountAmount = discountAmount,
-                    ShippingFee = shippingFee,
-                    FinalAmount = finalAmount,
-
-                    OrderStatus = "Pending",
-                    PaymentStatus = "Unpaid",
-                    PaymentMethod = paymentMethod,
-
-                    ReceiverName = checkoutDto.ReceiverName,
-                    ReceiverPhone = checkoutDto.ReceiverPhone,
-                    ShippingAddress = checkoutDto.ShippingAddress,
-                    Note = checkoutDto.Note
-                };
-
-                _context.Orders.Add(order);
-                await _context.SaveChangesAsync();
-
-                var orderItems = selectedCartItems
-                    .Select(item =>
-                    {
-                        var unitPrice =
-                            item.Product.SalePrice
-                            ?? item.Product.Price;
-
-                        return new OrderItem
-                        {
-                            OrderId = order.OrderId,
-                            ProductId = item.ProductId,
-
-                            ProductNameSnapshot =
-                                item.Product.ProductName,
-
-                            UnitPrice = unitPrice,
-                            Quantity = item.Quantity,
-                            LineTotal =
-                                item.Quantity * unitPrice
-                        };
-                    })
-                    .ToList();
-
-                _context.OrderItems.AddRange(orderItems);
-
-                var paymentResult =
-                    await provider.CreatePaymentAsync(
-                        new CreatePaymentRequestDto
-                        {
-                            OrderId = order.OrderId,
-                            OrderCode = order.OrderCode,
-                            UserId = userId,
-                            Amount = order.FinalAmount,
-                            PaymentMethod = paymentMethod
-                        }
-                    );
-
-                if (!paymentResult.IsSuccess)
-                {
-                    await transaction.RollbackAsync();
-
                     return new CheckoutResultDto
                     {
                         Success = false,
-                        Message = paymentResult.Message
+                        Message = "Mã giảm giá không hợp lệ hoặc đã hết hạn sử dụng!"
                     };
                 }
 
-                var payment = new Payment
+                if (coupon.UsedCount >= coupon.UsageLimitTotal)
                 {
-                    OrderId = order.OrderId,
-                    PaymentMethod =
-                        paymentResult.PaymentMethod,
+                    return new CheckoutResultDto
+                    {
+                        Success = false,
+                        Message = "Mã giảm giá đã hết lượt sử dụng!"
+                    };
+                }
 
-                    PaymentStatus =
-                        paymentResult.PaymentStatus,
+                var userUsedCount = await _context.Orders
+                    .CountAsync(o => o.UserId == userId && o.CouponId == coupon.CouponId && o.OrderStatus != "Cancelled");
 
-                    TransactionCode =
-                        paymentResult.TransactionCode,
-
-                    PaidAt =
-                        paymentResult.PaymentStatus == "Paid"
-                            ? DateTime.Now
-                            : null
-                };
-
-                _context.Payments.Add(payment);
-
-                order.PaymentMethod =
-                    paymentResult.PaymentMethod;
-
-                order.PaymentStatus =
-                    paymentResult.PaymentStatus;
-
-                // Chỉ xóa những sản phẩm đã được chọn và thanh toán.
-                _context.CartItems.RemoveRange(
-                    selectedCartItems
-                );
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return new CheckoutResultDto
+                if (userUsedCount >= coupon.UsageLimitPerCustomer)
                 {
-                    Success = true,
-                    Message = "Đặt hàng thành công",
-                    OrderId = order.OrderId,
-                    OrderCode = order.OrderCode,
-                    TotalAmount = order.TotalAmount,
-                    DiscountAmount = order.DiscountAmount,
-                    ShippingFee = order.ShippingFee,
-                    FinalAmount = order.FinalAmount,
-                    OrderStatus = order.OrderStatus,
-                    PaymentStatus = order.PaymentStatus,
-                    PaymentMethod = order.PaymentMethod
-                };
+                    return new CheckoutResultDto
+                    {
+                        Success = false,
+                        Message = $"Bạn đã sử dụng hết lượt ({coupon.UsageLimitPerCustomer} lần) của mã giảm giá này!"
+                    };
+                }
+
+                if (totalAmount < coupon.MinOrderAmount)
+                {
+                    return new CheckoutResultDto
+                    {
+                        Success = false,
+                        Message = $"Đơn hàng tối thiểu phải từ {coupon.MinOrderAmount:N0}đ để áp dụng mã giảm giá này!"
+                    };
+                }
+
+                appliedCoupon = coupon;
+                if (string.Equals(coupon.DiscountType, "Percentage", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(coupon.DiscountType, "Percent", StringComparison.OrdinalIgnoreCase))
+                {
+                    discountAmount = totalAmount * (coupon.DiscountValue / 100m);
+                    if (coupon.MaxDiscountAmount.HasValue && discountAmount > coupon.MaxDiscountAmount.Value)
+                    {
+                        discountAmount = coupon.MaxDiscountAmount.Value;
+                    }
+                }
+                else
+                {
+                    discountAmount = coupon.DiscountValue;
+                }
+
+                if (discountAmount > totalAmount)
+                {
+                    discountAmount = totalAmount;
+                }
             }
-            catch
+
+            var finalAmount =
+                totalAmount - discountAmount + shippingFee;
+            if (finalAmount < 0) finalAmount = 0;
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                await using var transaction =
+                    await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // Chống bán vượt kho (Overselling) - Trừ tồn kho nguyên tử
+                    foreach (var item in selectedCartItems)
+                    {
+                        var affected = await _context.Database.ExecuteSqlInterpolatedAsync(
+                            $"UPDATE Products SET StockQuantity = StockQuantity - {item.Quantity} WHERE ProductId = {item.ProductId} AND StockQuantity >= {item.Quantity}"
+                        );
+
+                        if (affected == 0)
+                        {
+                            await transaction.RollbackAsync();
+                            return new CheckoutResultDto
+                            {
+                                Success = false,
+                                Message = $"Sản phẩm '{item.Product.ProductName}' không đủ số lượng trong kho!"
+                            };
+                        }
+                    }
+
+                    // Cập nhật tăng UsedCount của Coupon nguyên tử nếu có
+                    if (appliedCoupon != null)
+                    {
+                        var couponAffected = await _context.Database.ExecuteSqlInterpolatedAsync(
+                            $"UPDATE Coupons SET UsedCount = UsedCount + 1 WHERE CouponId = {appliedCoupon.CouponId} AND UsedCount < {appliedCoupon.UsageLimitTotal}"
+                        );
+
+                        if (couponAffected == 0)
+                        {
+                            await transaction.RollbackAsync();
+                            return new CheckoutResultDto
+                            {
+                                Success = false,
+                                Message = "Mã giảm giá vừa hết lượt sử dụng trong lúc xử lý!"
+                            };
+                        }
+                    }
+
+                    var order = new Order
+                    {
+                        OrderCode =
+                            "OD"
+                            + DateTime.Now.ToString("yyyyMMddHHmmssfff"),
+
+                        UserId = userId,
+                        CouponId = appliedCoupon?.CouponId,
+                        CouponCodeSnapshot = appliedCoupon?.Code,
+
+                        TotalAmount = totalAmount,
+                        DiscountAmount = discountAmount,
+                        ShippingFee = shippingFee,
+                        FinalAmount = finalAmount,
+
+                        OrderStatus = "Pending",
+                        PaymentStatus = "Unpaid",
+                        PaymentMethod = paymentMethod,
+
+                        ReceiverName = checkoutDto.ReceiverName,
+                        ReceiverPhone = checkoutDto.ReceiverPhone,
+                        ShippingAddress = checkoutDto.ShippingAddress,
+                        Note = checkoutDto.Note
+                    };
+
+                    _context.Orders.Add(order);
+                    await _context.SaveChangesAsync();
+
+                    var orderItems = selectedCartItems
+                        .Select(item =>
+                        {
+                            var unitPrice =
+                                item.Product.SalePrice
+                                ?? item.Product.Price;
+
+                            return new OrderItem
+                            {
+                                OrderId = order.OrderId,
+                                ProductId = item.ProductId,
+
+                                ProductNameSnapshot =
+                                    item.Product.ProductName,
+
+                                UnitPrice = unitPrice,
+                                Quantity = item.Quantity,
+                                LineTotal =
+                                    item.Quantity * unitPrice
+                            };
+                        })
+                        .ToList();
+
+                    _context.OrderItems.AddRange(orderItems);
+
+                    var paymentResult =
+                        await provider.CreatePaymentAsync(
+                            new CreatePaymentRequestDto
+                            {
+                                OrderId = order.OrderId,
+                                OrderCode = order.OrderCode,
+                                UserId = userId,
+                                Amount = order.FinalAmount,
+                                PaymentMethod = paymentMethod
+                            }
+                        );
+
+                    if (!paymentResult.IsSuccess)
+                    {
+                        await transaction.RollbackAsync();
+
+                        return new CheckoutResultDto
+                        {
+                            Success = false,
+                            Message = paymentResult.Message
+                        };
+                    }
+
+                    var payment = new Payment
+                    {
+                        OrderId = order.OrderId,
+                        PaymentMethod =
+                            paymentResult.PaymentMethod,
+
+                        PaymentStatus =
+                            paymentResult.PaymentStatus,
+
+                        TransactionCode =
+                            paymentResult.TransactionCode,
+
+                        PaidAt =
+                            paymentResult.PaymentStatus == "Paid"
+                                ? DateTime.Now
+                                : null
+                    };
+
+                    _context.Payments.Add(payment);
+
+                    order.PaymentMethod =
+                        paymentResult.PaymentMethod;
+
+                    order.PaymentStatus =
+                        paymentResult.PaymentStatus;
+
+                    // Chỉ xóa những sản phẩm đã được chọn và thanh toán.
+                    _context.CartItems.RemoveRange(
+                        selectedCartItems
+                    );
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return new CheckoutResultDto
+                    {
+                        Success = true,
+                        Message = "Đặt hàng thành công",
+                        OrderId = order.OrderId,
+                        OrderCode = order.OrderCode,
+                        TotalAmount = order.TotalAmount,
+                        DiscountAmount = order.DiscountAmount,
+                        ShippingFee = order.ShippingFee,
+                        FinalAmount = order.FinalAmount,
+                        OrderStatus = order.OrderStatus,
+                        PaymentStatus = order.PaymentStatus,
+                        PaymentMethod = order.PaymentMethod
+                    };
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<List<OrderHistoryDto>> GetOrderHistoryAsync(
@@ -356,6 +468,88 @@ namespace ASPtestShop.Services.Implementations
                 .FirstOrDefaultAsync();
 
             return order;
+        }
+
+        public async Task<CancelOrderResultDto> CancelOrderAsync(
+            string userId,
+            int orderId,
+            string? cancelReason = null)
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId && o.UserId == userId);
+
+            if (order == null)
+            {
+                return new CancelOrderResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đơn hàng cần hủy!"
+                };
+            }
+
+            if (order.OrderStatus != "Pending")
+            {
+                return new CancelOrderResultDto
+                {
+                    Success = false,
+                    Message = $"Chỉ có thể hủy đơn hàng ở trạng thái 'Chờ xử lý' (Pending). Trạng thái hiện tại: '{order.OrderStatus}'"
+                };
+            }
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction =
+                    await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // Hoàn lại số lượng tồn kho nguyên tử cho từng sản phẩm
+                    foreach (var item in order.OrderItems)
+                    {
+                        await _context.Database.ExecuteSqlInterpolatedAsync(
+                            $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
+                        );
+                    }
+
+                    // Hoàn lại lượt dùng Coupon nếu đơn hàng có áp dụng
+                    if (order.CouponId.HasValue)
+                    {
+                        await _context.Database.ExecuteSqlInterpolatedAsync(
+                            $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {order.CouponId.Value}"
+                        );
+                    }
+
+                    order.OrderStatus = "Cancelled";
+                    if (!string.IsNullOrWhiteSpace(cancelReason))
+                    {
+                        order.Note = string.IsNullOrWhiteSpace(order.Note)
+                            ? $"Lý do hủy: {cancelReason}"
+                            : $"{order.Note} | Lý do hủy: {cancelReason}";
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return new CancelOrderResultDto
+                    {
+                        Success = true,
+                        Message = "Hủy đơn hàng và hoàn lại số lượng tồn kho thành công!",
+                        OrderId = order.OrderId,
+                        OrderStatus = order.OrderStatus
+                    };
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return new CancelOrderResultDto
+                    {
+                        Success = false,
+                        Message = "Đã xảy ra lỗi trong quá trình hủy đơn: " + ex.Message
+                    };
+                }
+            });
         }
     }
 }

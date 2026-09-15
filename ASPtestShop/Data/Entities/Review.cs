@@ -10,6 +10,8 @@ namespace ASPtestShop.Data.Entities
 
         public string? UserId { get; set; }
 
+        public int? OrderItemId { get; set; }
+
         [Range(1, 5)]
         public int Rating { get; set; }
 
@@ -21,5 +23,7 @@ namespace ASPtestShop.Data.Entities
         public Product Product { get; set; } = null!;
 
         public ApplicationUser? User { get; set; }
+
+        public OrderItem? OrderItem { get; set; }
     }
 }
