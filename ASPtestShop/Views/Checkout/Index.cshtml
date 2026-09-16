@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Thanh toán";
 }
 
@@ -136,6 +136,29 @@
                             </strong>
                         </div>
 
+                        <!-- Mã giảm giá -->
+                        <div class="mb-3 pt-2 border-top">
+                            <label class="form-label small fw-bold text-dark">Phiếu giảm giá (Coupon)</label>
+                            <div class="input-group">
+                                <input type="text"
+                                       id="checkout-coupon-code"
+                                       class="form-control text-uppercase"
+                                       placeholder="Nhập mã giảm giá">
+                                <button type="button"
+                                        id="btn-apply-checkout-coupon"
+                                        class="btn btn-dark">
+                                    Áp dụng
+                                </button>
+                            </div>
+                            <div id="checkout-coupon-message" class="mt-2 small"></div>
+                        </div>
+
+                        <!-- Dòng hiển thị giảm giá khuyến mãi -->
+                        <div id="checkout-discount-row" class="d-flex justify-content-between mb-3 d-none">
+                            <span class="text-success fw-semibold">Giảm giá khuyến mãi</span>
+                            <strong id="checkout-discount-amount" class="text-success">- 0 ₫</strong>
+                        </div>
+
                         <div class="d-flex justify-content-between mb-3">
                             <span>Phí vận chuyển</span>
 
@@ -231,6 +254,9 @@
 
         let selectedCartItemIds = [];
         let selectedCheckoutItems = [];
+        let currentCheckoutSubtotal = 0;
+        let appliedCheckoutCouponCode = "";
+        let appliedCheckoutDiscount = 0;
 
         document.addEventListener(
             "DOMContentLoaded",
@@ -243,6 +269,12 @@
                     "submit",
                     submitCheckoutForm
                 );
+
+                const btnApplyCoupon =
+                    document.getElementById("btn-apply-checkout-coupon");
+                if (btnApplyCoupon) {
+                    btnApplyCoupon.addEventListener("click", applyCheckoutCoupon);
+                }
 
                 const hasSelectedProducts =
                     loadSelectedCartItemIds();
@@ -501,9 +533,10 @@
                 productList.appendChild(productItem);
             });
 
+            currentCheckoutSubtotal = subtotal;
             const shippingFee = 0;
             const grandTotal =
-                subtotal + shippingFee;
+                Math.max(subtotal - appliedCheckoutDiscount + shippingFee, 0);
 
             document.getElementById(
                 "checkout-subtotal"
@@ -527,6 +560,8 @@
             document.getElementById(
                 "checkout-total-container"
             ).classList.remove("d-none");
+
+            autoApplyCouponIfSaved();
         }
 
         // =========================
@@ -581,6 +616,9 @@
                     document.getElementById(
                         "paymentMethod"
                     ).value,
+
+                couponCode:
+                    appliedCheckoutCouponCode || null,
 
                 cartItemIds:
                     selectedCartItemIds
@@ -649,6 +687,7 @@
                 sessionStorage.removeItem(
                     selectedCartItemsStorageKey
                 );
+                sessionStorage.removeItem("appliedCouponCode");
 
                 const orderCode =
                     result?.orderCode ?? "";
@@ -787,6 +826,119 @@
                     currency: "VND"
                 }
             ).format(Number(value) || 0);
+        }
+
+        // =========================
+        // CHECKOUT COUPON
+        // =========================
+        function autoApplyCouponIfSaved() {
+            const savedCoupon = sessionStorage.getItem("appliedCouponCode");
+            if (savedCoupon && !appliedCheckoutCouponCode) {
+                const couponInput = document.getElementById("checkout-coupon-code");
+                if (couponInput) {
+                    couponInput.value = savedCoupon;
+                    applyCheckoutCoupon();
+                }
+            }
+        }
+
+        async function applyCheckoutCoupon() {
+            const input = document.getElementById("checkout-coupon-code");
+            const btn = document.getElementById("btn-apply-checkout-coupon");
+            const code = input ? input.value.trim().toUpperCase() : "";
+
+            if (!code) {
+                showCheckoutCouponMessage("Vui lòng nhập mã giảm giá", "warning");
+                return;
+            }
+
+            if (currentCheckoutSubtotal <= 0) {
+                showCheckoutCouponMessage("Không có sản phẩm nào để tính giảm giá", "warning");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+            try {
+                const response = await fetch("/api/coupons/apply", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        couponCode: code,
+                        subtotal: currentCheckoutSubtotal,
+                        cartItemIds: selectedCartItemIds
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    showCheckoutCouponMessage(data.message || "Mã giảm giá không hợp lệ", "danger");
+                    removeCheckoutCoupon(false);
+                    return;
+                }
+
+                appliedCheckoutCouponCode = data.couponCode;
+                appliedCheckoutDiscount = Number(data.discountAmount) || 0;
+                sessionStorage.setItem("appliedCouponCode", data.couponCode);
+
+                // Cập nhật dòng chiết khấu
+                const discountRow = document.getElementById("checkout-discount-row");
+                const discountAmountEl = document.getElementById("checkout-discount-amount");
+                if (discountRow && discountAmountEl) {
+                    discountAmountEl.textContent = `- ${formatCurrency(appliedCheckoutDiscount)}`;
+                    discountRow.classList.remove("d-none");
+                }
+
+                // Cập nhật tổng thanh toán
+                const grandTotalEl = document.getElementById("checkout-grand-total");
+                if (grandTotalEl) {
+                    grandTotalEl.textContent = formatCurrency(Math.max(currentCheckoutSubtotal - appliedCheckoutDiscount, 0));
+                }
+
+                showCheckoutCouponMessage(`
+                    <div class="d-flex justify-content-between align-items-center text-success">
+                        <span>✅ Đã áp dụng <strong>${data.couponCode}</strong> (-${formatCurrency(appliedCheckoutDiscount)})</span>
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="removeCheckoutCoupon(true)">Xóa</button>
+                    </div>
+                `, "success");
+
+            } catch (err) {
+                showCheckoutCouponMessage("Lỗi mạng khi kiểm tra mã giảm giá", "danger");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Áp dụng";
+            }
+        }
+
+        function removeCheckoutCoupon(clearInput = true) {
+            appliedCheckoutCouponCode = "";
+            appliedCheckoutDiscount = 0;
+            sessionStorage.removeItem("appliedCouponCode");
+
+            const discountRow = document.getElementById("checkout-discount-row");
+            if (discountRow) {
+                discountRow.classList.add("d-none");
+            }
+
+            const grandTotalEl = document.getElementById("checkout-grand-total");
+            if (grandTotalEl) {
+                grandTotalEl.textContent = formatCurrency(currentCheckoutSubtotal);
+            }
+
+            if (clearInput) {
+                const input = document.getElementById("checkout-coupon-code");
+                if (input) input.value = "";
+                const msgBox = document.getElementById("checkout-coupon-message");
+                if (msgBox) msgBox.innerHTML = "";
+            }
+        }
+
+        function showCheckoutCouponMessage(msg, type = "info") {
+            const msgBox = document.getElementById("checkout-coupon-message");
+            if (!msgBox) return;
+            msgBox.innerHTML = `<div class="alert alert-${type} py-1 px-2 mb-0 small">${msg}</div>`;
         }
     </script>
 }

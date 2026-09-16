@@ -74,6 +74,83 @@ namespace ASPtestShop.Services.Implementations.Admin
             return result;
         }
 
+        public async Task<AdminUserDetailDto?> GetUserDetailAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return null;
+
+            var now = DateTimeOffset.UtcNow;
+            var isLocked = user.LockoutEnd.HasValue && user.LockoutEnd.Value > now;
+
+            // Lấy danh sách địa chỉ
+            var addresses = await _context.UserAddresses.AsNoTracking()
+                .Where(a => a.UserId == userId)
+                .Select(a => new AdminUserAddressItemDto
+                {
+                    Id = a.Id,
+                    FullName = a.FullName,
+                    PhoneNumber = a.PhoneNumber,
+                    SpecificAddress = a.SpecificAddress,
+                    IsDefault = a.IsDefault
+                })
+                .ToListAsync();
+
+            // Lấy danh sách đơn hàng
+            var orders = await _context.Orders.AsNoTracking()
+                .Include(o => o.OrderItems)
+                .Include(o => o.Coupon)
+                .Where(o => o.UserId == userId)
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+
+            // Thống kê đơn hàng
+            var totalOrders = orders.Count;
+            var completedOrders = orders.Count(o => o.OrderStatus == "Completed" || o.OrderStatus == "Delivered");
+            var cancelledOrders = orders.Count(o => o.OrderStatus == "Cancelled");
+            var totalSpent = orders
+                .Where(o => o.PaymentStatus == "Paid" || o.OrderStatus == "Delivered" || o.OrderStatus == "Completed")
+                .Sum(o => o.FinalAmount);
+
+            var totalReviews = await _context.Reviews.CountAsync(r => r.UserId == userId);
+
+            return new AdminUserDetailDto
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? "",
+                Email = user.Email ?? "",
+                EmailConfirmed = user.EmailConfirmed,
+                FullName = user.FullName,
+                PhoneNumber = user.PhoneNumber,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                Gender = user.Gender,
+                AvatarUrl = user.AvatarUrl,
+                PrimaryAddress = user.Address,
+                IsLockedOut = isLocked,
+                LockoutEnd = user.LockoutEnd,
+                AccessFailedCount = user.AccessFailedCount,
+                TotalOrders = totalOrders,
+                CompletedOrders = completedOrders,
+                CancelledOrders = cancelledOrders,
+                TotalSpent = totalSpent,
+                TotalReviews = totalReviews,
+                Addresses = addresses,
+                RecentOrders = orders.Take(20).Select(o => new AdminUserOrderSummaryDto
+                {
+                    OrderId = o.OrderId,
+                    OrderCode = o.OrderCode,
+                    CreatedAt = o.CreatedAt,
+                    TotalAmount = o.TotalAmount,
+                    DiscountAmount = o.DiscountAmount,
+                    FinalAmount = o.FinalAmount,
+                    OrderStatus = o.OrderStatus,
+                    PaymentStatus = o.PaymentStatus,
+                    PaymentMethod = o.PaymentMethod,
+                    ItemCount = o.OrderItems?.Count ?? 0,
+                    CouponCode = o.Coupon?.Code
+                }).ToList()
+            };
+        }
+
         public async Task<(bool Success, string Message, bool IsLockedOut)> ToggleLockUserAsync(string currentAdminId, string targetUserId)
         {
             if (currentAdminId == targetUserId)

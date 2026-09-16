@@ -136,6 +136,7 @@ builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 //admin services
 builder.Services.AddScoped<IAdminProductService, AdminProductService>();
 builder.Services.AddScoped<IAdminUploadService, AdminUploadService>();

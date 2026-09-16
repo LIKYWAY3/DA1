@@ -152,5 +152,68 @@ namespace ASPtestShop.Services.Implementations.Admin
                 Message = "Cập nhật trạng thái đơn hàng thành công"
             };
         }
+
+        public async Task<AdminOrderActionResultDto> DeleteCancelledOrderAsync(int orderId)
+        {
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+            if (order == null)
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đơn hàng cần xóa!"
+                };
+            }
+
+            if (order.OrderStatus != "Cancelled")
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Chỉ được phép xóa các đơn hàng có trạng thái Đã hủy (Cancelled)! Các đơn hàng khác phải được giữ lại để đảm bảo dữ liệu doanh thu và thống kê."
+                };
+            }
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                _context.Orders.Remove(order);
+                await _context.SaveChangesAsync();
+                return new AdminOrderActionResultDto
+                {
+                    Success = true,
+                    Message = $"Đã xóa thành công đơn hàng {order.OrderCode}!"
+                };
+            });
+        }
+
+        public async Task<AdminOrderActionResultDto> CleanupAllCancelledOrdersAsync()
+        {
+            var cancelledOrders = await _context.Orders
+                .Where(o => o.OrderStatus == "Cancelled")
+                .ToListAsync();
+
+            if (cancelledOrders.Count == 0)
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = true,
+                    Message = "Hiện tại không có đơn hàng nào bị hủy cần dọn dẹp."
+                };
+            }
+
+            var count = cancelledOrders.Count;
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                _context.Orders.RemoveRange(cancelledOrders);
+                await _context.SaveChangesAsync();
+                return new AdminOrderActionResultDto
+                {
+                    Success = true,
+                    Message = $"Đã dọn dẹp thành công {count} đơn hàng đã hủy!"
+                };
+            });
+        }
     }
-}
+}

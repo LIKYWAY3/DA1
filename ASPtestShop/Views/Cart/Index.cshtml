@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "_LayoutCustomer";
 }
 
@@ -77,17 +77,19 @@
 
                     <div class="col-12 col-md-8 mb-3 mb-xl-0">
                         <input type="text"
-                               class="form-control py-3"
+                               class="form-control py-3 text-uppercase"
                                id="coupon"
-                               placeholder="Mã giảm giá">
+                               placeholder="Nhập mã giảm giá (VD: GIAM20K)">
                     </div>
 
                     <div class="col-12 col-xl-4">
                         <button type="button"
+                                id="btn-apply-coupon"
                                 class="btn btn-black btn-block py-3">
                             Áp dụng phiếu
                         </button>
                     </div>
+                    <div class="col-12 mt-3" id="coupon-alert-container"></div>
                 </div>
             </div>
 
@@ -160,6 +162,7 @@
         document.addEventListener("DOMContentLoaded", function() {
             sessionStorage.removeItem(selectedCartItemsStorageKey);
             setCheckoutButtonState(false);
+            initCouponHandlers();
             getCartData();
         });
 
@@ -696,6 +699,111 @@
 
         function escapeAttribute(value) {
             return escapeHtml(value);
+        }
+
+        // ==================== COUPON HANDLING ====================
+        function initCouponHandlers() {
+            const btnApply = document.getElementById("btn-apply-coupon");
+            const couponInput = document.getElementById("coupon");
+
+            if (!btnApply || !couponInput) return;
+
+            const savedCoupon = sessionStorage.getItem("appliedCouponCode");
+            if (savedCoupon) {
+                couponInput.value = savedCoupon;
+            }
+
+            btnApply.addEventListener("click", async function() {
+                const code = couponInput.value.trim().toUpperCase();
+                if (!code) {
+                    showCouponAlert("Vui lòng nhập mã giảm giá trước khi áp dụng.", "warning");
+                    return;
+                }
+
+                const selectedIds = getSelectedCartItemIds();
+                if (selectedIds.length === 0) {
+                    showCouponAlert("Vui lòng chọn ít nhất một sản phẩm trong giỏ để áp dụng mã.", "warning");
+                    return;
+                }
+
+                let currentSubtotal = 0;
+                document.querySelectorAll(".cart-item").forEach(item => {
+                    const checkbox = item.querySelector(".check-item");
+                    if (checkbox && checkbox.checked) {
+                        const qty = Number(item.querySelector(".quantity-amount").value) || 0;
+                        const price = Number(item.querySelector(".unit-price").dataset.price) || 0;
+                        currentSubtotal += qty * price;
+                    }
+                });
+
+                btnApply.disabled = true;
+                btnApply.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang xử lý...';
+
+                try {
+                    const res = await fetch("/api/coupons/apply", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            couponCode: code,
+                            subtotal: currentSubtotal,
+                            cartItemIds: selectedIds
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (!res.ok || !data.success) {
+                        showCouponAlert(data.message || "Mã giảm giá không hợp lệ.", "danger");
+                        removeCoupon(false);
+                        return;
+                    }
+
+                    // Lưu mã đã áp dụng thành công
+                    sessionStorage.setItem("appliedCouponCode", data.couponCode);
+                    const discountElement = document.getElementById("cart-discount");
+                    if (discountElement) {
+                        discountElement.dataset.discount = data.discountAmount;
+                    }
+
+                    updateCartTotals();
+
+                    showCouponAlert(`
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>✅ ${data.message} (-<strong>${formatCurrency(data.discountAmount)}</strong>)</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-2" onclick="removeCoupon(true)">Hủy mã</button>
+                        </div>
+                    `, "success");
+
+                } catch (err) {
+                    showCouponAlert("Lỗi mạng khi kiểm tra mã giảm giá.", "danger");
+                } finally {
+                    btnApply.disabled = false;
+                    btnApply.textContent = "Áp dụng phiếu";
+                }
+            });
+        }
+
+        function showCouponAlert(msg, type = "info") {
+            const alertBox = document.getElementById("coupon-alert-container");
+            if (!alertBox) return;
+            alertBox.innerHTML = `
+                <div class="alert alert-${type} py-2 mb-0 small" role="alert">
+                    ${msg}
+                </div>
+            `;
+        }
+
+        function removeCoupon(clearInput = true) {
+            sessionStorage.removeItem("appliedCouponCode");
+            const discountElement = document.getElementById("cart-discount");
+            if (discountElement) {
+                discountElement.dataset.discount = 0;
+            }
+            const alertBox = document.getElementById("coupon-alert-container");
+            if (alertBox && clearInput) alertBox.innerHTML = "";
+            const couponInput = document.getElementById("coupon");
+            if (couponInput && clearInput) couponInput.value = "";
+            updateCartTotals();
         }
     </script>
 }

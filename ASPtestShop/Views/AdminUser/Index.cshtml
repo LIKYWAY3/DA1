@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="fw-bold mb-1">Quản lý tài khoản khách hàng</h3>
-            <p class="text-muted small mb-0">Theo dõi thông tin thành viên, tổng chi tiêu và kiểm soát khóa/mở khóa tài khoản</p>
+            <p class="text-muted small mb-0">Theo dõi thông tin thành viên, hồ sơ cá nhân, sổ địa chỉ, lịch sử mua hàng và khóa/mở khóa tài khoản</p>
         </div>
     </div>
 
@@ -50,6 +50,146 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CHI TIẾT KHÁCH HÀNG -->
+<div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <div class="d-flex align-items-center gap-3">
+                    <div id="modalUserAvatar" class="rounded-circle bg-white text-dark fw-bold d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; font-size: 1.2rem;">
+                        U
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="modalUserName">Hồ sơ khách hàng</h5>
+                        <small class="text-white-50" id="modalUserHandle">@@username</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- Thống kê nhanh KPI -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded text-center border">
+                            <small class="text-muted d-block">Tổng đơn</small>
+                            <span class="fs-5 fw-bold text-dark" id="modalStatTotalOrders">0</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded text-center border">
+                            <small class="text-muted d-block">Hoàn thành</small>
+                            <span class="fs-5 fw-bold text-success" id="modalStatCompletedOrders">0</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded text-center border">
+                            <small class="text-muted d-block">Đã hủy</small>
+                            <span class="fs-5 fw-bold text-danger" id="modalStatCancelledOrders">0</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded text-center border">
+                            <small class="text-muted d-block">Tổng chi tiêu</small>
+                            <span class="fs-6 fw-bold text-primary" id="modalStatTotalSpent">0 đ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-3" id="userDetailTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-semibold" id="tab-info-btn" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab">Thông tin cá nhân</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" id="tab-address-btn" data-bs-toggle="tab" data-bs-target="#tab-address" type="button" role="tab">Sổ địa chỉ (<span id="addressCountBadge">0</span>)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-semibold" id="tab-orders-btn" data-bs-toggle="tab" data-bs-target="#tab-orders" type="button" role="tab">Lịch sử đơn hàng (<span id="orderCountBadge">0</span>)</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="userDetailTabContent">
+                    <!-- TAB 1: THÔNG TIN CÁ NHÂN -->
+                    <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="text-muted small">Họ và tên</label>
+                                <div class="fw-semibold text-dark" id="modalFullName">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Tên tài khoản (UserName)</label>
+                                <div class="fw-semibold text-dark" id="modalAccountName">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Email</label>
+                                <div class="fw-semibold text-dark d-flex align-items-center gap-2">
+                                    <span id="modalEmail">-</span>
+                                    <span id="modalEmailVerifiedBadge"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Số điện thoại</label>
+                                <div class="fw-semibold text-dark d-flex align-items-center gap-2">
+                                    <span id="modalPhone">-</span>
+                                    <span id="modalPhoneVerifiedBadge"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Giới tính</label>
+                                <div class="fw-semibold text-dark" id="modalGender">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="text-muted small">Trạng thái bảo mật</label>
+                                <div class="fw-semibold" id="modalSecurityStatus">-</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="text-muted small">Địa chỉ mặc định trong hồ sơ</label>
+                                <div class="p-2 bg-light rounded border text-secondary" id="modalPrimaryAddress">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: SỔ ĐỊA CHỈ -->
+                    <div class="tab-pane fade" id="tab-address" role="tabpanel">
+                        <div id="modalAddressList" class="d-flex flex-column gap-2">
+                            <div class="text-muted text-center py-3">Không có địa chỉ phụ nào được lưu.</div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: LỊCH SỬ ĐƠN HÀNG -->
+                    <div class="tab-pane fade" id="tab-orders" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Mã đơn</th>
+                                        <th>Ngày đặt</th>
+                                        <th>Số SP</th>
+                                        <th>Thanh toán</th>
+                                        <th>Trạng thái</th>
+                                        <th class="text-end">Chi tiết</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalOrderList">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-3">Chưa có đơn hàng nào.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <div id="modalLockActionContainer"></div>
             </div>
         </div>
     </div>
@@ -144,13 +284,121 @@
                         </td>
                         <td>${statusBadge}</td>
                         <td class="text-end">
-                            <button type="button" class="btn btn-sm ${lockBtnClass} rounded-pill px-3" onclick="toggleLock('${u.id}', '${u.userName}', ${isLocked})">
-                                ${lockBtnText}
-                            </button>
+                            <div class="d-inline-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="viewUserDetail('${u.id}')">
+                                    👁️ Chi tiết
+                                </button>
+                                <button type="button" class="btn btn-sm ${lockBtnClass} rounded-pill px-3" onclick="toggleLock('${u.id}', '${u.userName}', ${isLocked})">
+                                    ${lockBtnText}
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        async function viewUserDetail(userId) {
+            try {
+                const res = await fetch(`/api/admin/users/${userId}`, { method: "GET", credentials: "include" });
+                if (!res.ok) throw new Error("Không thể lấy thông tin chi tiết khách hàng");
+                const u = await res.json();
+
+                // Điền Header
+                document.getElementById("modalUserName").textContent = u.fullName || u.userName;
+                document.getElementById("modalUserHandle").textContent = `@@${u.userName}`;
+                document.getElementById("modalUserAvatar").textContent = (u.fullName || u.userName || 'U').charAt(0).toUpperCase();
+
+                // Điền Thống kê
+                document.getElementById("modalStatTotalOrders").textContent = u.totalOrders;
+                document.getElementById("modalStatCompletedOrders").textContent = u.completedOrders;
+                document.getElementById("modalStatCancelledOrders").textContent = u.cancelledOrders;
+                document.getElementById("modalStatTotalSpent").textContent = formatVND(u.totalSpent);
+
+                // Điền Tab Thông tin
+                document.getElementById("modalFullName").textContent = u.fullName || "Chưa cập nhật";
+                document.getElementById("modalAccountName").textContent = u.userName;
+                document.getElementById("modalEmail").textContent = u.email;
+                document.getElementById("modalEmailVerifiedBadge").innerHTML = u.emailConfirmed 
+                    ? '<span class="badge bg-success-subtle text-success border border-success">Đã xác thực</span>'
+                    : '<span class="badge bg-warning-subtle text-warning border border-warning">Chưa xác thực</span>';
+                
+                document.getElementById("modalPhone").textContent = u.phoneNumber || "Chưa có";
+                document.getElementById("modalPhoneVerifiedBadge").innerHTML = u.phoneNumberConfirmed
+                    ? '<span class="badge bg-success-subtle text-success border border-success">Đã xác thực</span>'
+                    : '<span class="badge bg-secondary-subtle text-secondary border">Chưa xác thực</span>';
+
+                document.getElementById("modalGender").textContent = u.gender || "Chưa cập nhật";
+                document.getElementById("modalPrimaryAddress").textContent = u.primaryAddress || "Chưa cập nhật địa chỉ chính";
+
+                const isLocked = u.isLockedOut;
+                document.getElementById("modalSecurityStatus").innerHTML = isLocked
+                    ? `<span class="badge bg-danger">Bị khóa (Hết hạn: ${u.lockoutEnd ? new Date(u.lockoutEnd).toLocaleDateString('vi-VN') : 'Vô thời hạn'})</span>`
+                    : '<span class="badge bg-success">Tài khoản an toàn, đang hoạt động</span>';
+
+                // Điền Tab Sổ địa chỉ
+                const addressContainer = document.getElementById("modalAddressList");
+                document.getElementById("addressCountBadge").textContent = u.addresses?.length || 0;
+                if (!u.addresses || u.addresses.length === 0) {
+                    addressContainer.innerHTML = '<div class="text-muted text-center py-3">Không có địa chỉ nào trong sổ địa chỉ.</div>';
+                } else {
+                    addressContainer.innerHTML = u.addresses.map(a => `
+                        <div class="p-3 border rounded ${a.isDefault ? 'border-primary bg-primary-subtle' : 'bg-light'}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="text-dark">${escapeHtml(a.fullName)}</strong>
+                                ${a.isDefault ? '<span class="badge bg-primary">Mặc định</span>' : ''}
+                            </div>
+                            <div class="small text-muted mb-1">📞 ${escapeHtml(a.phoneNumber)}</div>
+                            <div class="small text-dark">🏠 ${escapeHtml(a.specificAddress)}</div>
+                        </div>
+                    `).join('');
+                }
+
+                // Điền Tab Đơn hàng
+                const orderContainer = document.getElementById("modalOrderList");
+                document.getElementById("orderCountBadge").textContent = u.recentOrders?.length || 0;
+                if (!u.recentOrders || u.recentOrders.length === 0) {
+                    orderContainer.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Chưa có đơn hàng nào.</td></tr>';
+                } else {
+                    orderContainer.innerHTML = u.recentOrders.map(o => {
+                        let badgeClass = "bg-secondary";
+                        if (o.orderStatus === "Pending") badgeClass = "bg-warning text-dark";
+                        if (o.orderStatus === "Confirmed") badgeClass = "bg-primary";
+                        if (o.orderStatus === "Shipped") badgeClass = "bg-info text-dark";
+                        if (o.orderStatus === "Completed" || o.orderStatus === "Delivered") badgeClass = "bg-success";
+                        if (o.orderStatus === "Cancelled") badgeClass = "bg-danger";
+
+                        return `
+                            <tr>
+                                <td><strong>${o.orderCode}</strong></td>
+                                <td class="small">${new Date(o.createdAt).toLocaleDateString('vi-VN')}</td>
+                                <td>${o.itemCount} SP</td>
+                                <td><strong class="text-danger">${formatVND(o.finalAmount)}</strong></td>
+                                <td><span class="badge ${badgeClass}">${o.orderStatus}</span></td>
+                                <td class="text-end">
+                                    <a href="/admin/orders/detail/${o.orderId}" target="_blank" class="btn btn-sm btn-outline-dark">Xem</a>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                // Container nút khóa/mở khóa ở footer
+                const lockBtnText = isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản';
+                const lockBtnClass = isLocked ? 'btn-success' : 'btn-danger';
+                document.getElementById("modalLockActionContainer").innerHTML = `
+                    <button type="button" class="btn ${lockBtnClass}" onclick="toggleLock('${u.id}', '${u.userName}', ${isLocked}); bootstrap.Modal.getInstance(document.getElementById('userDetailModal')).hide();">
+                        ${lockBtnText}
+                    </button>
+                `;
+
+                // Kích hoạt Modal
+                const modal = new bootstrap.Modal(document.getElementById("userDetailModal"));
+                modal.show();
+
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
         }
 
         async function toggleLock(userId, userName, currentLocked) {
@@ -171,6 +419,11 @@
             } catch (err) {
                 showAlert(err.message, "danger");
             }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
         }
     </script>
 }

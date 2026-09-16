@@ -1,4 +1,4 @@
-﻿using ASPtestShop.Auth;
+using ASPtestShop.Auth;
 using ASPtestShop.Models.DTO.Order;
 using ASPtestShop.Services.Interfaces.Admin;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -71,5 +71,25 @@ namespace ASPtestShop.Controllers.Api.Admin
 
             return Ok(result);
         }
+
+        // DELETE: /api/admin/orders/5
+        [HttpDelete("{orderId:int}")]
+        public async Task<IActionResult> DeleteOrder(int orderId)
+        {
+            var result = await _adminOrderService.DeleteCancelledOrderAsync(orderId);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        // DELETE: /api/admin/orders/cleanup-cancelled
+        [HttpDelete("cleanup-cancelled")]
+        public async Task<IActionResult> CleanupCancelledOrders()
+        {
+            var result = await _adminOrderService.CleanupAllCancelledOrdersAsync();
+            return Ok(result);
+        }
     }
-}
+}

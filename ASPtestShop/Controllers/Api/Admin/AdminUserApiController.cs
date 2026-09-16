@@ -26,6 +26,18 @@ namespace ASPtestShop.Controllers.Api.Admin
             return Ok(list);
         }
 
+        // GET: /api/admin/users/{userId}
+        [HttpGet("{userId}")]
+        public async Task<IActionResult> GetUserDetail(string userId)
+        {
+            var detail = await _userService.GetUserDetailAsync(userId);
+            if (detail == null)
+            {
+                return NotFound(new { message = "Không tìm thấy thông tin khách hàng" });
+            }
+            return Ok(detail);
+        }
+
         // POST: /api/admin/users/{userId}/toggle-lock
         [HttpPost("{userId}/toggle-lock")]
         public async Task<IActionResult> ToggleLock(string userId)
