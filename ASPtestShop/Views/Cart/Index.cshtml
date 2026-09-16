@@ -79,13 +79,16 @@
                         <input type="text"
                                class="form-control py-3 text-uppercase"
                                id="coupon"
-                               placeholder="Nhập mã giảm giá (VD: GIAM20K)">
+                               placeholder="Nhập mã giảm giá (VD: GIAM20K)"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault(); applyCouponCart();}">
                     </div>
 
                     <div class="col-12 col-xl-4">
                         <button type="button"
                                 id="btn-apply-coupon"
-                                class="btn btn-black btn-block py-3">
+                                onclick="applyCouponCart()"
+                                class="btn btn-dark btn-block py-3 w-100"
+                                style="cursor: pointer; font-weight: 600;">
                             Áp dụng phiếu
                         </button>
                     </div>
@@ -535,6 +538,12 @@
                 discountElement?.dataset.discount
             ) || 0;
 
+            if (discountElement) {
+                discountElement.innerHTML = discount > 0 
+                    ? `-${formatCurrency(discount)}` 
+                    : `0<sup>&#8363;</sup>`;
+            }
+
             const grandTotal = Math.max(
                 subtotal - discount,
                 0
@@ -703,85 +712,104 @@
 
         // ==================== COUPON HANDLING ====================
         function initCouponHandlers() {
-            const btnApply = document.getElementById("btn-apply-coupon");
             const couponInput = document.getElementById("coupon");
-
-            if (!btnApply || !couponInput) return;
-
             const savedCoupon = sessionStorage.getItem("appliedCouponCode");
-            if (savedCoupon) {
+            if (savedCoupon && couponInput) {
                 couponInput.value = savedCoupon;
             }
+        }
 
-            btnApply.addEventListener("click", async function() {
-                const code = couponInput.value.trim().toUpperCase();
-                if (!code) {
-                    showCouponAlert("Vui lòng nhập mã giảm giá trước khi áp dụng.", "warning");
+        async function applyCouponCart() {
+            const couponInput = document.getElementById("coupon");
+            const btnApply = document.getElementById("btn-apply-coupon");
+
+            const code = couponInput ? couponInput.value.trim().toUpperCase() : "";
+            if (!code) {
+                showCouponAlert("Vui lòng nhập mã giảm giá trước khi áp dụng.", "warning");
+                if (couponInput) couponInput.focus();
+                return;
+            }
+
+            let selectedIds = getSelectedCartItemIds();
+            if (selectedIds.length === 0) {
+                // Tự động tick chọn tất cả sản phẩm trong giỏ nếu khách hàng chưa tick
+                const allCheckboxes = document.querySelectorAll(".check-item");
+                if (allCheckboxes.length > 0) {
+                    allCheckboxes.forEach(cb => cb.checked = true);
+                    const checkAll = document.getElementById("checkAll");
+                    if (checkAll) checkAll.checked = true;
+                    updateSelectionState();
+                    selectedIds = getSelectedCartItemIds();
+                } else {
+                    showCouponAlert("Giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm trước!", "warning");
                     return;
                 }
+            }
 
-                const selectedIds = getSelectedCartItemIds();
-                if (selectedIds.length === 0) {
-                    showCouponAlert("Vui lòng chọn ít nhất một sản phẩm trong giỏ để áp dụng mã.", "warning");
-                    return;
+            let currentSubtotal = 0;
+            document.querySelectorAll(".cart-item").forEach(item => {
+                const checkbox = item.querySelector(".check-item");
+                if (checkbox && checkbox.checked) {
+                    const qty = Number(item.querySelector(".quantity-amount")?.value) || 1;
+                    const price = Number(item.querySelector(".unit-price")?.dataset.price) || 0;
+                    currentSubtotal += qty * price;
                 }
+            });
 
-                let currentSubtotal = 0;
-                document.querySelectorAll(".cart-item").forEach(item => {
-                    const checkbox = item.querySelector(".check-item");
-                    if (checkbox && checkbox.checked) {
-                        const qty = Number(item.querySelector(".quantity-amount").value) || 0;
-                        const price = Number(item.querySelector(".unit-price").dataset.price) || 0;
-                        currentSubtotal += qty * price;
-                    }
-                });
-
+            if (btnApply) {
                 btnApply.disabled = true;
                 btnApply.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang xử lý...';
+            }
 
-                try {
-                    const res = await fetch("/api/coupons/apply", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            couponCode: code,
-                            subtotal: currentSubtotal,
-                            cartItemIds: selectedIds
-                        })
-                    });
+            try {
+                const res = await fetch("/api/coupons/apply", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        couponCode: code,
+                        subtotal: currentSubtotal,
+                        cartItemIds: selectedIds
+                    })
+                });
 
-                    const data = await res.json();
+                const data = await res.json();
 
-                    if (!res.ok || !data.success) {
-                        showCouponAlert(data.message || "Mã giảm giá không hợp lệ.", "danger");
-                        removeCoupon(false);
-                        return;
-                    }
+                if (!res.ok || !data.success) {
+                    showCouponAlert(data.message || "Mã giảm giá không hợp lệ.", "danger");
+                    removeCoupon(false);
+                    return;
+                }
 
-                    // Lưu mã đã áp dụng thành công
-                    sessionStorage.setItem("appliedCouponCode", data.couponCode);
-                    const discountElement = document.getElementById("cart-discount");
-                    if (discountElement) {
-                        discountElement.dataset.discount = data.discountAmount;
-                    }
+                // Lưu mã đã áp dụng thành công
+                sessionStorage.setItem("appliedCouponCode", data.couponCode);
+                const discountElement = document.getElementById("cart-discount");
+                if (discountElement) {
+                    discountElement.dataset.discount = data.discountAmount;
+                }
 
-                    updateCartTotals();
+                updateCartTotals();
 
-                    showCouponAlert(`
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span>✅ ${data.message} (-<strong>${formatCurrency(data.discountAmount)}</strong>)</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-2" onclick="removeCoupon(true)">Hủy mã</button>
-                        </div>
-                    `, "success");
+                showCouponAlert(`
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>✅ ${data.message} (-<strong>${formatCurrency(data.discountAmount)}</strong>)</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-2" onclick="removeCoupon(true)">Hủy mã</button>
+                    </div>
+                `, "success");
 
-                } catch (err) {
-                    showCouponAlert("Lỗi mạng khi kiểm tra mã giảm giá.", "danger");
-                } finally {
+            } catch (err) {
+                showCouponAlert("Lỗi mạng khi kiểm tra mã giảm giá.", "danger");
+            } finally {
+                if (btnApply) {
                     btnApply.disabled = false;
                     btnApply.textContent = "Áp dụng phiếu";
                 }
-            });
+            }
         }
+        window.applyCouponCart = applyCouponCart;
 
         function showCouponAlert(msg, type = "info") {
             const alertBox = document.getElementById("coupon-alert-container");
@@ -805,5 +833,6 @@
             if (couponInput && clearInput) couponInput.value = "";
             updateCartTotals();
         }
+        window.removeCoupon = removeCoupon;
     </script>
 }

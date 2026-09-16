@@ -143,10 +143,12 @@
                                 <input type="text"
                                        id="checkout-coupon-code"
                                        class="form-control text-uppercase"
-                                       placeholder="Nhập mã giảm giá">
+                                       placeholder="Nhập mã giảm giá"
+                                       onkeydown="if (event.key === 'Enter') { event.preventDefault(); applyCheckoutCoupon(); }">
                                 <button type="button"
                                         id="btn-apply-checkout-coupon"
-                                        class="btn btn-dark">
+                                        class="btn btn-dark"
+                                        onclick="applyCheckoutCoupon()">
                                     Áp dụng
                                 </button>
                             </div>
@@ -849,7 +851,12 @@
 
             if (!code) {
                 showCheckoutCouponMessage("Vui lòng nhập mã giảm giá", "warning");
+                if (input) input.focus();
                 return;
+            }
+
+            if (currentCheckoutSubtotal <= 0 && selectedCheckoutItems && selectedCheckoutItems.length > 0) {
+                currentCheckoutSubtotal = selectedCheckoutItems.reduce((acc, item) => acc + (Number(item.unitPrice) || 0) * (Number(item.quantity) || 1), 0);
             }
 
             if (currentCheckoutSubtotal <= 0) {
@@ -857,13 +864,19 @@
                 return;
             }
 
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang xử lý...';
+            }
 
             try {
                 const response = await fetch("/api/coupons/apply", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
                     body: JSON.stringify({
                         couponCode: code,
                         subtotal: currentCheckoutSubtotal,
@@ -907,10 +920,13 @@
             } catch (err) {
                 showCheckoutCouponMessage("Lỗi mạng khi kiểm tra mã giảm giá", "danger");
             } finally {
-                btn.disabled = false;
-                btn.textContent = "Áp dụng";
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = "Áp dụng";
+                }
             }
         }
+        window.applyCheckoutCoupon = applyCheckoutCoupon;
 
         function removeCheckoutCoupon(clearInput = true) {
             appliedCheckoutCouponCode = "";
@@ -934,6 +950,7 @@
                 if (msgBox) msgBox.innerHTML = "";
             }
         }
+        window.removeCheckoutCoupon = removeCheckoutCoupon;
 
         function showCheckoutCouponMessage(msg, type = "info") {
             const msgBox = document.getElementById("checkout-coupon-message");
