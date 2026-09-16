@@ -182,7 +182,6 @@ using ASPtestShop.Services.Interfaces;
 
                 var emailSettings = await _emailService.GetSettingsAsync();
                 ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
-                ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(email);
 
                 return View(model);
             }
@@ -196,7 +195,6 @@ using ASPtestShop.Services.Interfaces;
                 {
                     var emailSettings = await _emailService.GetSettingsAsync();
                     ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
-                    ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(model.Email);
                     return View(model);
                 }
 
@@ -207,7 +205,6 @@ using ASPtestShop.Services.Interfaces;
                     ModelState.AddModelError("", result.Message);
                     var emailSettings = await _emailService.GetSettingsAsync();
                     ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
-                    ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(model.Email);
                     return View(model);
                 }
 
@@ -223,11 +220,9 @@ using ASPtestShop.Services.Interfaces;
             {
                 var result = await _userAuthService.ResendOtpAsync(email);
                 var emailSettings = await _emailService.GetSettingsAsync();
-                var devOtp = await _userAuthService.GetPendingOtpCodeAsync(email);
                 return Json(new { 
                     success = result.Success, 
                     message = result.Message,
-                    devOtp = devOtp,
                     isConfigured = emailSettings.IsConfigured
                 });
             }
