@@ -142,6 +142,10 @@ builder.Services.AddScoped<IAdminUploadService, AdminUploadService>();
 builder.Services.AddScoped<IAdminCategoryService, AdminCategoryService>();
 builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
 builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+builder.Services.AddScoped<IAdminCouponService, AdminCouponService>();
+builder.Services.AddScoped<IAdminReviewService, AdminReviewService>();
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 //user services
 builder.Services.AddScoped<IUserAuthService, UserAuthService>();
 // Payment providers

@@ -1,0 +1,233 @@
+@{
+    ViewData["Title"] = "Kiểm duyệt đánh giá";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">Kiểm duyệt đánh giá & bình luận</h3>
+            <p class="text-muted small mb-0">Xem xét ý kiến phản hồi của khách hàng trước khi hiển thị công khai trên web</p>
+        </div>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; background: #fff;">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+            <!-- TABS LỌC -->
+            <ul class="nav nav-pills gap-2" id="filterTabs">
+                <li class="nav-item">
+                    <button class="nav-link active rounded-pill px-4 py-2" onclick="setFilter('pending', this)">
+                        Chờ duyệt <span class="badge bg-warning text-dark ms-1" id="badgePendingCount">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-4 py-2" onclick="setFilter('approved', this)">
+                        Đã duyệt <span class="badge bg-success ms-1" id="badgeApprovedCount">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-4 py-2" onclick="setFilter('all', this)">
+                        Tất cả <span class="badge bg-secondary ms-1" id="badgeAllCount">0</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 200px;">Sản phẩm</th>
+                            <th>Khách hàng</th>
+                            <th>Đánh giá</th>
+                            <th style="min-width: 250px;">Nội dung nhận xét</th>
+                            <th>Ngày gửi</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end" style="min-width: 140px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reviewTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">Đang tải danh sách đánh giá...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentFilter = 'pending';
+        let allReviewsCache = [];
+
+        document.addEventListener("DOMContentLoaded", function () {
+            loadReviews();
+        });
+
+        function showAlert(message, type = "success") {
+            const box = document.getElementById("alertBox");
+            box.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            setTimeout(() => { box.innerHTML = ""; }, 4000);
+        }
+
+        function setFilter(filter, el) {
+            currentFilter = filter;
+            document.querySelectorAll("#filterTabs .nav-link").forEach(btn => btn.classList.remove("active"));
+            el.classList.add("active");
+            filterAndRender();
+        }
+
+        async function loadReviews() {
+            try {
+                const res = await fetch("/api/admin/reviews?filter=all", { method: "GET", credentials: "include" });
+                if (!res.ok) throw new Error("Không thể tải danh sách đánh giá");
+                allReviewsCache = await res.json();
+
+                // Cập nhật số lượng trên các badge tabs
+                const pending = allReviewsCache.filter(r => !r.isApproved).length;
+                const approved = allReviewsCache.filter(r => r.isApproved).length;
+
+                document.getElementById("badgePendingCount").textContent = pending;
+                document.getElementById("badgeApprovedCount").textContent = approved;
+                document.getElementById("badgeAllCount").textContent = allReviewsCache.length;
+
+                filterAndRender();
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
+        }
+
+        function filterAndRender() {
+            let list = allReviewsCache;
+            if (currentFilter === 'pending') {
+                list = list.filter(r => !r.isApproved);
+            } else if (currentFilter === 'approved') {
+                list = list.filter(r => r.isApproved);
+            }
+            renderTable(list);
+        }
+
+        function renderTable(list) {
+            const tbody = document.getElementById("reviewTableBody");
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Không có đánh giá nào trong mục này.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(r => {
+                // Tạo số sao vàng
+                let stars = '';
+                for (let i = 1; i <= 5; i++) {
+                    stars += i <= r.rating ? '<span style="color: #f9bf29; font-size: 1.1rem;">★</span>' : '<span style="color: #ddd; font-size: 1.1rem;">★</span>';
+                }
+
+                const statusBadge = r.isApproved
+                    ? '<span class="badge bg-success">Đã duyệt (Hiển thị)</span>'
+                    : '<span class="badge bg-warning text-dark">Chờ duyệt (Đang ẩn)</span>';
+
+                const thumb = r.productThumbnail
+                    ? `<img src="${r.productThumbnail}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;" />`
+                    : `<div class="rounded bg-light me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">🎣</div>`;
+
+                const createdDate = new Date(r.createdAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                ${thumb}
+                                <div>
+                                    <div class="fw-semibold text-dark text-truncate" style="max-width: 180px;">${r.productName || 'Sản phẩm #' + r.productId}</div>
+                                    <small class="text-muted">ID: ${r.productId}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">${r.customerName}</div>
+                            <small class="text-muted">${r.customerEmail || 'Chưa có email'}</small>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-1">${stars}</div>
+                            <small class="text-muted">${r.rating}/5 sao</small>
+                        </td>
+                        <td>
+                            <p class="mb-0 text-break" style="font-size: 0.95rem;">${escapeHtml(r.comment || '(Khách hàng không để lại nhận xét chữ)')}</p>
+                        </td>
+                        <td class="small text-muted">${createdDate}</td>
+                        <td>${statusBadge}</td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                ${!r.isApproved ? `
+                                    <button type="button" class="btn btn-sm btn-success rounded-pill px-3 me-1" onclick="approveReview(${r.reviewId})">
+                                        ✓ Duyệt
+                                    </button>
+                                ` : `
+                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 me-1" onclick="rejectReview(${r.reviewId})">
+                                        Ẩn
+                                    </button>
+                                `}
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2" onclick="deleteReview(${r.reviewId})">
+                                    🗑️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function approveReview(id) {
+            try {
+                const res = await fetch(`/api/admin/reviews/${id}/approve`, { method: "POST", credentials: "include" });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Lỗi thao tác");
+                showAlert(data.message);
+                loadReviews();
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
+        }
+
+        async function rejectReview(id) {
+            try {
+                const res = await fetch(`/api/admin/reviews/${id}/reject`, { method: "POST", credentials: "include" });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Lỗi thao tác");
+                showAlert(data.message, "warning");
+                loadReviews();
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
+        }
+
+        async function deleteReview(id) {
+            if (!confirm("Bạn có chắc chắn muốn xóa vĩnh viễn đánh giá này?")) return;
+
+            try {
+                const res = await fetch(`/api/admin/reviews/${id}`, { method: "DELETE", credentials: "include" });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Lỗi thao tác");
+                showAlert(data.message);
+                loadReviews();
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+}

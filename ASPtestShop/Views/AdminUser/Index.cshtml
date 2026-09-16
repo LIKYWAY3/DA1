@@ -1,0 +1,176 @@
+@{
+    ViewData["Title"] = "Quản lý khách hàng";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">Quản lý tài khoản khách hàng</h3>
+            <p class="text-muted small mb-0">Theo dõi thông tin thành viên, tổng chi tiêu và kiểm soát khóa/mở khóa tài khoản</p>
+        </div>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; background: #fff;">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+            <!-- Ô TÌM KIẾM -->
+            <div class="row g-2 align-items-center">
+                <div class="col-md-6 col-lg-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">🔍</span>
+                        <input type="text" class="form-control border-start-0 bg-light" id="searchInput" placeholder="Tìm theo tên, email, số điện thoại..." onkeyup="handleSearchKeyup(event)">
+                        <button class="btn btn-dark" type="button" onclick="searchUsers()">Tìm kiếm</button>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-7 text-md-end text-muted small">
+                    Tổng thành viên hiển thị: <span class="fw-bold text-dark" id="userCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Khách hàng</th>
+                            <th>Thông tin liên hệ</th>
+                            <th>Địa chỉ</th>
+                            <th>Đơn hàng</th>
+                            <th>Tổng chi tiêu</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">Đang tải danh sách thành viên...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
+
+        document.addEventListener("DOMContentLoaded", function () {
+            loadUsers();
+        });
+
+        function showAlert(message, type = "success") {
+            const box = document.getElementById("alertBox");
+            box.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            setTimeout(() => { box.innerHTML = ""; }, 4000);
+        }
+
+        let searchTimeout = null;
+        function handleSearchKeyup(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchUsers();
+            }, 400);
+        }
+
+        function searchUsers() {
+            const q = document.getElementById("searchInput").value.trim();
+            loadUsers(q);
+        }
+
+        async function loadUsers(search = "") {
+            try {
+                const url = search ? `/api/admin/users?search=${encodeURIComponent(search)}` : "/api/admin/users";
+                const res = await fetch(url, { method: "GET", credentials: "include" });
+                if (!res.ok) throw new Error("Không thể tải danh sách khách hàng");
+                const list = await res.json();
+                document.getElementById("userCount").textContent = list.length;
+                renderUserTable(list);
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
+        }
+
+        function renderUserTable(list) {
+            const tbody = document.getElementById("userTableBody");
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Không tìm thấy khách hàng nào.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(u => {
+                const isLocked = u.isLockedOut;
+                const statusBadge = isLocked
+                    ? '<span class="badge bg-danger">Đã bị khóa</span>'
+                    : '<span class="badge bg-success">Đang hoạt động</span>';
+
+                const lockBtnText = isLocked ? 'Mở khóa' : 'Khóa';
+                const lockBtnClass = isLocked ? 'btn-outline-success' : 'btn-outline-danger';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center fw-bold text-dark" style="width: 38px; height: 38px;">
+                                    ${(u.fullName || u.userName || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-dark">${u.fullName || 'Chưa cập nhật tên'}</div>
+                                    <small class="text-muted">@@${u.userName}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small fw-semibold">${u.email}</div>
+                            <small class="text-muted">${u.phoneNumber || 'Chưa có SĐT'}</small>
+                        </td>
+                        <td class="small text-muted" style="max-width: 220px;">
+                            ${u.address || 'Chưa lưu địa chỉ'}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">${u.orderCount} đơn</span>
+                        </td>
+                        <td>
+                            <span class="fw-bold text-success">${formatVND(u.totalSpent)}</span>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm ${lockBtnClass} rounded-pill px-3" onclick="toggleLock('${u.id}', '${u.userName}', ${isLocked})">
+                                ${lockBtnText}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function toggleLock(userId, userName, currentLocked) {
+            const actionText = currentLocked ? "mở khóa" : "khóa";
+            if (!confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản '${userName}'?`)) return;
+
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/toggle-lock`, {
+                    method: "POST",
+                    credentials: "include"
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Lỗi thao tác");
+
+                showAlert(data.message);
+                searchUsers();
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
+        }
+    </script>
+}
