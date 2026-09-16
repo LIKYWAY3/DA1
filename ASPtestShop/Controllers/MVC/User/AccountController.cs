@@ -19,14 +19,17 @@ using ASPtestShop.Services.Interfaces;
             private readonly IUserAuthService _userAuthService;
             private readonly UserManager<ApplicationUser> _userManager;
             private readonly IWebHostEnvironment _webHostEnvironment;
+            private readonly IEmailService _emailService;
 
             public AccountController(IUserAuthService userAuthService, 
                    UserManager<ApplicationUser> userManager,
-                   IWebHostEnvironment webHostEnvironment)
+                   IWebHostEnvironment webHostEnvironment,
+                   IEmailService emailService)
             {
                 _userAuthService = userAuthService;
                 _userManager = userManager;
                 _webHostEnvironment = webHostEnvironment;
+                _emailService = emailService;
             }
 
             // GET: /account/login
@@ -165,7 +168,7 @@ using ASPtestShop.Services.Interfaces;
 
             // GET: /account/verify-email
             [HttpGet("verify-email")]
-            public IActionResult VerifyEmail(string? email)
+            public async Task<IActionResult> VerifyEmail(string? email)
             {
                 if (string.IsNullOrWhiteSpace(email))
                 {
@@ -177,6 +180,10 @@ using ASPtestShop.Services.Interfaces;
                     Email = email
                 };
 
+                var emailSettings = await _emailService.GetSettingsAsync();
+                ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
+                ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(email);
+
                 return View(model);
             }
 
@@ -187,6 +194,9 @@ using ASPtestShop.Services.Interfaces;
             {
                 if (!ModelState.IsValid)
                 {
+                    var emailSettings = await _emailService.GetSettingsAsync();
+                    ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
+                    ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(model.Email);
                     return View(model);
                 }
 
@@ -195,6 +205,9 @@ using ASPtestShop.Services.Interfaces;
                 if (!result.Success)
                 {
                     ModelState.AddModelError("", result.Message);
+                    var emailSettings = await _emailService.GetSettingsAsync();
+                    ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
+                    ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(model.Email);
                     return View(model);
                 }
 
@@ -209,7 +222,14 @@ using ASPtestShop.Services.Interfaces;
             public async Task<IActionResult> ResendOtp([FromForm] string email)
             {
                 var result = await _userAuthService.ResendOtpAsync(email);
-                return Json(new { success = result.Success, message = result.Message });
+                var emailSettings = await _emailService.GetSettingsAsync();
+                var devOtp = await _userAuthService.GetPendingOtpCodeAsync(email);
+                return Json(new { 
+                    success = result.Success, 
+                    message = result.Message,
+                    devOtp = devOtp,
+                    isConfigured = emailSettings.IsConfigured
+                });
             }
         // GET: /account/profile
         [HttpGet("profile")]

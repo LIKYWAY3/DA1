@@ -144,10 +144,29 @@ builder.Services.AddAuthentication(options =>
                 context.RejectPrincipal();
                 await context.HttpContext.SignOutAsync(UserCookieAuth.Scheme);
                 context.HttpContext.Items["ForceLogout"] = true;
+
+                // Nếu là trang web thông thường (HTML navigation), redirect ngay về login kèm thông báo
+                var path = context.Request.Path.Value ?? "";
+                if (!path.StartsWith("/api", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/css", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/js", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/images", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/fonts", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/account/login", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.Redirect("/account/login?sessionExpired=true");
+                }
             }
         },
         OnRedirectToLogin = context =>
         {
+            // Đối với các request AJAX / API: Trả về HTTP 401 Unauthorized thay vì mã 302 Redirect
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+
             if (context.HttpContext.Items.ContainsKey("ForceLogout"))
             {
                 context.Response.Redirect("/account/login?sessionExpired=true");
@@ -156,6 +175,16 @@ builder.Services.AddAuthentication(options =>
             {
                 context.Response.Redirect(context.RedirectUri);
             }
+            return Task.CompletedTask;
+        },
+        OnRedirectToAccessDenied = context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+            context.Response.Redirect(context.RedirectUri);
             return Task.CompletedTask;
         }
     };

@@ -222,8 +222,21 @@ namespace ASPtestShop.Services.Implementations.User
             return new UserRegisterResultDto
             {
                 Success = true,
-                Message = "Mã xác thực OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư."
+                Message = sendSuccess
+                    ? "Mã xác thực OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư."
+                    : $"Mã xác thực đã được tạo (Thông báo hệ thống: {sendMsg})."
             };
+        }
+
+        public Task<string?> GetPendingOtpCodeAsync(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return Task.FromResult<string?>(null);
+            var cacheKey = $"PendingReg_{email.Trim().ToLower()}";
+            if (_cache.TryGetValue(cacheKey, out PendingRegistration? pending) && pending != null)
+            {
+                return Task.FromResult<string?>(pending.OtpCode);
+            }
+            return Task.FromResult<string?>(null);
         }
 
         public async Task<UserRegisterResultDto> VerifyOtpAndRegisterAsync(VerifyEmailViewModel model)
@@ -354,12 +367,14 @@ namespace ASPtestShop.Services.Implementations.User
                     </div>
                 </div>";
 
-            await _emailService.SendEmailAsync(email.Trim(), subject, body);
+            var (sendSuccess, sendMsg) = await _emailService.SendEmailAsync(email.Trim(), subject, body);
 
             return new UserRegisterResultDto
             {
                 Success = true,
-                Message = "Đã gửi lại mã xác thực mới vào hộp thư của bạn."
+                Message = sendSuccess
+                    ? "Đã gửi lại mã xác thực mới vào hộp thư của bạn."
+                    : $"Đã tạo mã OTP mới (Thông báo hệ thống: {sendMsg})."
             };
         }
 

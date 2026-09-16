@@ -30,5 +30,55 @@
 	<script src="~/js/bootstrap.bundle.min.js"></script>
 	<script src="~/js/tiny-slider.js"></script>
 	<script src="~/js/custom.js"></script>
+
+	@if (User.Identity?.IsAuthenticated == true)
+	{
+		<script>
+			(function() {
+				let sessionTerminated = false;
+				let isChecking = false;
+
+				async function verifyActiveSession() {
+					if (sessionTerminated || isChecking) return;
+					isChecking = true;
+
+					try {
+						const res = await fetch("/api/auth/check-session", {
+							method: "GET",
+							credentials: "include",
+							headers: { "Accept": "application/json" }
+						});
+
+						if (res.ok) {
+							const data = await res.json();
+							if (data && (!data.valid || data.reason === "session_expired")) {
+								sessionTerminated = true;
+								alert("Tài khoản của bạn đã được đăng nhập từ một thiết bị khác!\nPhiên làm việc trên thiết bị này sẽ được tự động đăng xuất để bảo mật.");
+								window.location.href = "/account/login?sessionExpired=true";
+							}
+						} else if (res.status === 401) {
+							sessionTerminated = true;
+							window.location.href = "/account/login?sessionExpired=true";
+						}
+					} catch (e) {
+						// Bỏ qua lỗi mạng chập chờn
+					} finally {
+						isChecking = false;
+					}
+				}
+
+				// Kiểm tra định kỳ mỗi 5 giây
+				setInterval(verifyActiveSession, 5000);
+
+				// Kiểm tra tức thì khi chuyển tab hoặc focus trình duyệt
+				window.addEventListener("focus", verifyActiveSession);
+				document.addEventListener("visibilitychange", function() {
+					if (document.visibilityState === "visible") {
+						verifyActiveSession();
+					}
+				});
+			})();
+		</script>
+	}
 </body>
 </html>

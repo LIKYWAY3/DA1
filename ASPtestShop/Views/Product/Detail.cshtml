@@ -267,6 +267,13 @@
 
     @section Scripts {
         <script>
+            const isUserLoggedIn = @(User.Identity?.IsAuthenticated == true ? "true" : "false");
+
+            function redirectToLogin() {
+                const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = `/account/login?returnUrl=${returnUrl}`;
+            }
+
             const productIdFromRoute = 
                 Number.parseInt('@ViewBag.ProductId', 10) || 
                 Number.parseInt(window.location.pathname.split('/').filter(Boolean).pop(), 10) || 0;
@@ -277,9 +284,20 @@
                 loadProductDetail();
                 initReviewForm();
 
-                document
-                    .getElementById("btn-add-to-cart")
-                    .addEventListener("click", addToCart);
+                const btnAdd = document.getElementById("btn-add-to-cart");
+                if (btnAdd) {
+                    btnAdd.addEventListener("click", addToCart);
+                }
+
+                const qtyInput = document.getElementById("qty");
+                if (qtyInput) {
+                    qtyInput.addEventListener("click", function () {
+                        if (!isUserLoggedIn) redirectToLogin();
+                    });
+                    qtyInput.addEventListener("change", function () {
+                        if (!isUserLoggedIn) redirectToLogin();
+                    });
+                }
             });
 
             // ==================== LOAD PRODUCT ====================
@@ -443,6 +461,11 @@
             // ==================== ADD TO CART ====================
 
             async function addToCart() {
+                if (!isUserLoggedIn) {
+                    redirectToLogin();
+                    return;
+                }
+
                 const quantityInput =
                     document.getElementById("qty");
 
@@ -499,22 +522,19 @@
                         })
                     });
 
-                    // Chưa đăng nhập
-                    if (response.status === 401) {
-                        const returnUrl = encodeURIComponent(
-                            window.location.pathname
-                            + window.location.search
-                        );
-
-                        window.location.href =
-                            `/account/login?returnUrl=${returnUrl}`;
-
+                    // Chưa đăng nhập hoặc bị chuyển hướng
+                    if (response.status === 401 || response.status === 403 || response.redirected) {
+                        redirectToLogin();
                         return;
                     }
 
                     const result = await readJsonResponse(response);
 
-                    if (!response.ok) {
+                    if (!result || !response.ok) {
+                        if (!result) {
+                            redirectToLogin();
+                            return;
+                        }
                         throw new Error(
                             result?.message
                             ?? result?.error

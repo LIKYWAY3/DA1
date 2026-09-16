@@ -300,6 +300,13 @@
 
 @section Scripts {
     <script>
+        const isUserLoggedIn = @(User.Identity?.IsAuthenticated == true ? "true" : "false");
+
+        function redirectToLogin() {
+            const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = `/account/login?returnUrl=${returnUrl}`;
+        }
+
         const productId =
             Number.parseInt('@ViewBag.ProductId', 10) || 0;
 
@@ -315,21 +322,34 @@
         );
 
         function initializeEvents() {
-            document
-                .getElementById("btn-add-to-cart")
-                .addEventListener("click", addToCart);
+            const btnAdd = document.getElementById("btn-add-to-cart");
+            if (btnAdd) {
+                btnAdd.addEventListener("click", addToCart);
+            }
 
-            document
-                .getElementById("btn-increase")
-                .addEventListener("click", increaseQuantity);
+            const btnInc = document.getElementById("btn-increase");
+            if (btnInc) {
+                btnInc.addEventListener("click", increaseQuantity);
+            }
 
-            document
-                .getElementById("btn-decrease")
-                .addEventListener("click", decreaseQuantity);
+            const btnDec = document.getElementById("btn-decrease");
+            if (btnDec) {
+                btnDec.addEventListener("click", decreaseQuantity);
+            }
 
-            document
-                .getElementById("quantity")
-                .addEventListener("change", normalizeQuantity);
+            const qtyInput = document.getElementById("quantity");
+            if (qtyInput) {
+                qtyInput.addEventListener("click", function () {
+                    if (!isUserLoggedIn) redirectToLogin();
+                });
+                qtyInput.addEventListener("change", function () {
+                    if (!isUserLoggedIn) {
+                        redirectToLogin();
+                    } else {
+                        normalizeQuantity();
+                    }
+                });
+            }
         }
 
         // =============================================
@@ -570,6 +590,11 @@
         // =============================================
 
         function increaseQuantity() {
+            if (!isUserLoggedIn) {
+                redirectToLogin();
+                return;
+            }
+
             const input =
                 document.getElementById("quantity");
 
@@ -585,6 +610,11 @@
         }
 
         function decreaseQuantity() {
+            if (!isUserLoggedIn) {
+                redirectToLogin();
+                return;
+            }
+
             const input =
                 document.getElementById("quantity");
 
@@ -625,6 +655,11 @@
         // =============================================
 
         async function addToCart() {
+            if (!isUserLoggedIn) {
+                redirectToLogin();
+                return;
+            }
+
             clearCartMessage();
 
             if (!currentProduct) {
@@ -677,23 +712,19 @@
                     }
                 );
 
-                if (response.status === 401) {
-                    const returnUrl =
-                        encodeURIComponent(
-                            window.location.pathname
-                            + window.location.search
-                        );
-
-                    window.location.href =
-                        `/account/login?returnUrl=${returnUrl}`;
-
+                if (response.status === 401 || response.status === 403 || response.redirected) {
+                    redirectToLogin();
                     return;
                 }
 
                 const result =
                     await readJsonResponse(response);
 
-                if (!response.ok) {
+                if (!result || !response.ok) {
+                    if (!result) {
+                        redirectToLogin();
+                        return;
+                    }
                     throw new Error(
                         result?.message
                         ?? result?.error

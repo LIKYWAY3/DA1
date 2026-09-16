@@ -3,6 +3,10 @@ using ASPtestShop.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication;
+using ASPtestShop.Data;
+using ASPtestShop.Data.Entities;
 
 namespace ASPtestShop.Controllers.Api
 {
@@ -151,6 +155,37 @@ namespace ASPtestShop.Controllers.Api
             {
                 result.Message
             });
+        }
+
+        //==================================CHECK SESSION=======================================
+        // GET: api/auth/check-session
+        // Kiểm tra phiên đăng nhập và SecurityStamp (Single Session Heartbeat)
+        [HttpGet("check-session")]
+        public async Task<IActionResult> CheckSession()
+        {
+            if (HttpContext.Items.ContainsKey("ForceLogout"))
+            {
+                return Ok(new { isAuthenticated = true, valid = false, reason = "session_expired" });
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cookieStamp = User.FindFirstValue("security_stamp");
+
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(cookieStamp))
+            {
+                return Ok(new { isAuthenticated = false, valid = false, reason = "anonymous" });
+            }
+
+            var userManager = HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = await userManager.FindByIdAsync(userId);
+
+            if (user == null || user.SecurityStamp != cookieStamp || (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow))
+            {
+                await HttpContext.SignOutAsync(ASPtestShop.Auth.UserCookieAuth.Scheme);
+                return Ok(new { isAuthenticated = true, valid = false, reason = "session_expired" });
+            }
+
+            return Ok(new { isAuthenticated = true, valid = true });
         }
     }
 }

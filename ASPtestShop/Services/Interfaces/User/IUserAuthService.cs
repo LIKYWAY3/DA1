@@ -17,6 +17,8 @@ namespace ASPtestShop.Services.Interfaces.User
 
         Task<UserRegisterResultDto> ResendOtpAsync(string email);
 
+        Task<string?> GetPendingOtpCodeAsync(string email);
+
         Task<AuthResultDto> UpdateProfileAsync(string userId, UpdateProfileDto dto);
 
         Task<UserProfileDto?> GetUserProfileAsync(string userId);

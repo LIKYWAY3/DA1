@@ -20,6 +20,26 @@
                 </div>
             }
 
+            @if (ViewBag.DevOtpCode != null)
+            {
+                <div class="alert alert-warning border-0 shadow-sm mb-4 text-start" style="border-radius: 10px; background-color: #fff3cd; color: #664d03;">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="fas fa-key me-2 text-warning fs-5"></i>
+                        <strong class="fs-6">Mã OTP kích hoạt nhanh (Hệ thống):</strong>
+                    </div>
+                    <p class="mb-2 small">Mã OTP được hệ thống bảo mật khởi tạo cho email <strong>@Model.Email</strong> là:</p>
+                    <div class="p-2 bg-white rounded border border-warning text-center font-monospace fw-bold fs-3 text-dark letter-spacing-2 my-2 shadow-sm d-flex justify-content-center align-items-center gap-2">
+                        <span id="displayDevOtp">@ViewBag.DevOtpCode</span>
+                        <button type="button" class="btn btn-sm btn-outline-warning text-dark py-1 px-2" onclick="fillDevOtp()" title="Tự động điền">
+                            <i class="fas fa-magic"></i> Điền mã
+                        </button>
+                    </div>
+                    <p class="mb-0 small text-muted" style="font-size: 0.8rem;">
+                        <i class="fas fa-info-circle me-1"></i>Mã có hiệu lực trong 5 phút. Bạn có thể nhấn <strong>Điền mã</strong> hoặc nhập trực tiếp vào ô bên dưới.
+                    </p>
+                </div>
+            }
+
             <p class="text-muted text-center mb-4 small" style="line-height: 1.6;">
                 Mã xác thực 6 chữ số đã được gửi tới hộp thư:<br>
                 <strong class="text-dark fs-6">@Model.Email</strong><br>
@@ -130,6 +150,17 @@
             });
         }
 
+        function fillDevOtp() {
+            const code = document.getElementById("displayDevOtp")?.textContent?.trim();
+            if (code) {
+                const input = document.getElementById("otpCodeInput");
+                if (input) {
+                    input.value = code;
+                    input.focus();
+                }
+            }
+        }
+
         // Gửi lại mã qua AJAX
         async function resendOtpCode() {
             if (resendCooldown > 0) return;
@@ -163,6 +194,12 @@
                 if (data.success) {
                     timeLeft = 300; // Reset đồng hồ 5 phút
                     resendCooldown = 60; // Cooldown 60s
+                    if (data.devOtp) {
+                        const devEl = document.getElementById("displayDevOtp");
+                        if (devEl) {
+                            devEl.textContent = data.devOtp;
+                        }
+                    }
                     if (resendMsgEl) {
                         resendMsgEl.innerHTML = `<span class="text-success">✅ ${data.message}</span>`;
                     }
