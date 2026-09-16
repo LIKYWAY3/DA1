@@ -10,6 +10,7 @@ obj/
 ## Cấu hình bảo mật appsettings (Giữ nguyên của bạn)
 **/appsettings.json
 **/appsettings.Development.json
+**/App_Data/
 
 ## Thư mục khi deploy / publish code
 publish/

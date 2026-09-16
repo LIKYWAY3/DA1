@@ -8,6 +8,7 @@ using ASPtestShop.Services.Interfaces;
 using ASPtestShop.Services.Interfaces.Admin;
 using ASPtestShop.Services.Interfaces.User;
 using ASPtestShop.Services.PaymentProviders;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer; // Thêm namespace cho JWT Bearer Authentication
 using Microsoft.AspNetCore.Identity;
@@ -115,6 +116,49 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+    // Single Session: Kiểm tra security_stamp trong Cookie với CSDL
+    // Nếu user đăng nhập trên máy khác, máy cũ sẽ bị đá văng (Force Logout) ngay lập tức
+    options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
+    {
+        OnValidatePrincipal = async context =>
+        {
+            var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cookieStamp = context.Principal?.FindFirstValue("security_stamp");
+
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(cookieStamp))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(UserCookieAuth.Scheme);
+                context.HttpContext.Items["ForceLogout"] = true;
+                return;
+            }
+
+            var userManager = context.HttpContext.RequestServices
+                .GetRequiredService<UserManager<ApplicationUser>>();
+
+            var user = await userManager.FindByIdAsync(userId);
+
+            if (user == null || user.SecurityStamp != cookieStamp || (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(UserCookieAuth.Scheme);
+                context.HttpContext.Items["ForceLogout"] = true;
+            }
+        },
+        OnRedirectToLogin = context =>
+        {
+            if (context.HttpContext.Items.ContainsKey("ForceLogout"))
+            {
+                context.Response.Redirect("/account/login?sessionExpired=true");
+            }
+            else
+            {
+                context.Response.Redirect(context.RedirectUri);
+            }
+            return Task.CompletedTask;
+        }
+    };
 })
 .AddCookie(AdminCookieAuth.Scheme, options =>
 {
@@ -129,6 +173,11 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
+
+// Cache & Email Service
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 //Đăng kí services cho các lớp dịch vụ
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IOrderService, OrderService>();

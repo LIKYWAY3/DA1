@@ -200,6 +200,107 @@
             </div>
         </div>
     </div>
+
+    <!-- HÀNG 4: CẤU HÌNH GMAIL HỆ THỐNG (GỬI OTP & THÔNG BÁO) -->
+    <div class="row g-3 mt-1 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; background: #fff;">
+                <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-1">📧 Cấu hình Gmail Hệ thống (Gửi mã OTP & Thông báo)</h5>
+                        <p class="text-muted small mb-0">Thiết lập tài khoản Gmail của Admin để gửi email xác thực tài khoản và thông báo đơn hàng</p>
+                    </div>
+                    <span id="emailStatusBadge" class="badge bg-secondary px-3 py-2 rounded-pill">Đang tải...</span>
+                </div>
+                <div class="card-body p-4 pt-3">
+                    <div id="emailSettingAlert"></div>
+
+                    <form id="emailSettingsForm" onsubmit="saveEmailSettings(event)">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-dark">Tên hiển thị người gửi</label>
+                                <input type="text" id="emailSenderName" class="form-control" placeholder="VD: FuuFishing Store" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-dark">Địa chỉ Gmail người gửi</label>
+                                <input type="email" id="emailSenderEmail" class="form-control" placeholder="VD: fuufishing.service@gmail.com" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-dark">
+                                    Mật khẩu ứng dụng (App Password)
+                                    <span class="text-muted fw-normal">(16 ký tự)</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" id="emailSenderPassword" class="form-control" placeholder="Nhập mật khẩu ứng dụng 16 ký tự">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('emailSenderPassword')">
+                                        👁️
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small text-dark">Máy chủ SMTP</label>
+                                <input type="text" id="emailSmtpServer" class="form-control" value="smtp.gmail.com" readonly>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold small text-dark">Cổng SMTP</label>
+                                <input type="number" id="emailSmtpPort" class="form-control" value="587" readonly>
+                            </div>
+
+                            <div class="col-md-6 d-flex align-items-end justify-content-end gap-2 flex-wrap">
+                                <button type="submit" id="btnSaveEmailSettings" class="btn btn-success px-4 py-2 fw-semibold">
+                                    💾 Lưu cấu hình
+                                </button>
+                                <button type="button" class="btn btn-outline-primary px-3 py-2 fw-semibold" onclick="openTestEmailModal()">
+                                    🧪 Kiểm tra gửi thử
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Hướng dẫn nhanh lấy mật khẩu ứng dụng Google -->
+                    <div class="alert alert-light border mt-4 mb-0 small">
+                        <div class="fw-bold text-dark mb-1">💡 Hướng dẫn lấy Mật khẩu ứng dụng (App Password) cho Gmail:</div>
+                        <ol class="mb-0 ps-3 text-muted" style="line-height: 1.6;">
+                            <li>Đăng nhập tài khoản Google của Admin và truy cập: <a href="https://myaccount.google.com/security" target="_blank" class="fw-semibold text-primary">Bảo mật tài khoản Google &rarr;</a></li>
+                            <li>Bật tính năng <strong>Xác minh 2 bước (2-Step Verification)</strong> nếu chưa bật.</li>
+                            <li>Tìm kiếm <strong>"Mật khẩu ứng dụng" (App passwords)</strong> &rarr; Đặt tên ứng dụng là <em>"FuuFishing"</em> và nhấn <strong>Tạo</strong>.</li>
+                            <li>Sao chép mã 16 ký tự vừa tạo và dán vào ô <em>"Mật khẩu ứng dụng"</em> ở trên rồi nhấn <strong>Lưu cấu hình</strong>.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gửi thư thử nghiệm -->
+<div class="modal fade" id="testEmailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fs-6">🧪 Gửi thư thử nghiệm kết nối SMTP</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="testEmailAlert"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Nhập địa chỉ email nhận thư thử nghiệm:</label>
+                    <input type="email" id="testRecipientEmail" class="form-control" placeholder="VD: admin@gmail.com" required>
+                    <div class="form-text">Hệ thống sẽ gửi 1 bức thư HTML thử nghiệm từ tài khoản Gmail đã cấu hình ở trên.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" id="btnSendTestEmail" class="btn btn-primary px-4" onclick="executeTestSendEmail()">
+                    Gửi thử nghiệm
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -209,6 +310,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             loadDashboardData();
+            loadEmailSettings();
         });
 
         let revenueChart = null;
@@ -348,6 +450,163 @@
                     return '<span class="badge bg-danger">Đã hủy</span>';
                 default:
                     return `<span class="badge bg-secondary">${status || 'N/A'}</span>`;
+            }
+        }
+
+        // ==================== EMAIL SETTINGS MANAGEMENT ====================
+        async function loadEmailSettings() {
+            const badge = document.getElementById("emailStatusBadge");
+            try {
+                const res = await fetch("/api/admin/email-settings", {
+                    method: "GET",
+                    credentials: "include"
+                });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                document.getElementById("emailSenderName").value = data.senderName || "FuuFishing Support";
+                document.getElementById("emailSenderEmail").value = data.senderEmail || "";
+                document.getElementById("emailSenderPassword").value = data.senderPassword || "";
+                document.getElementById("emailSmtpServer").value = data.smtpServer || "smtp.gmail.com";
+                document.getElementById("emailSmtpPort").value = data.smtpPort || 587;
+
+                if (badge) {
+                    if (data.isConfigured) {
+                        badge.className = "badge bg-success px-3 py-2 rounded-pill";
+                        badge.innerHTML = "✅ Đã kết nối Gmail";
+                    } else {
+                        badge.className = "badge bg-warning text-dark px-3 py-2 rounded-pill";
+                        badge.innerHTML = "⚠️ Chưa thiết lập";
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi tải cấu hình email:", err);
+            }
+        }
+
+        async function saveEmailSettings(event) {
+            event.preventDefault();
+            const alertBox = document.getElementById("emailSettingAlert");
+            const btn = document.getElementById("btnSaveEmailSettings");
+
+            const payload = {
+                senderName: document.getElementById("emailSenderName").value.trim(),
+                senderEmail: document.getElementById("emailSenderEmail").value.trim(),
+                senderPassword: document.getElementById("emailSenderPassword").value.trim(),
+                smtpServer: document.getElementById("emailSmtpServer").value.trim() || "smtp.gmail.com",
+                smtpPort: parseInt(document.getElementById("emailSmtpPort").value, 10) || 587,
+                enableSsl: true
+            };
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang lưu...';
+            }
+
+            try {
+                const res = await fetch("/api/admin/email-settings", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    if (alertBox) {
+                        alertBox.innerHTML = `<div class="alert alert-success alert-dismissible fade show py-2 mb-3 small">
+                            ${data.message}
+                            <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+                        </div>`;
+                    }
+                    await loadEmailSettings();
+                } else {
+                    if (alertBox) {
+                        alertBox.innerHTML = `<div class="alert alert-danger alert-dismissible fade show py-2 mb-3 small">
+                            ${data.message || 'Lỗi lưu cấu hình.'}
+                            <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+                        </div>`;
+                    }
+                }
+            } catch (err) {
+                if (alertBox) {
+                    alertBox.innerHTML = `<div class="alert alert-danger py-2 mb-3 small">Lỗi mạng khi lưu cấu hình.</div>`;
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '💾 Lưu cấu hình';
+                }
+            }
+        }
+
+        function openTestEmailModal() {
+            const alertBox = document.getElementById("testEmailAlert");
+            if (alertBox) alertBox.innerHTML = "";
+            const currentSender = document.getElementById("emailSenderEmail")?.value;
+            const testInput = document.getElementById("testRecipientEmail");
+            if (testInput && currentSender) {
+                testInput.value = currentSender;
+            }
+            const modal = new bootstrap.Modal(document.getElementById("testEmailModal"));
+            modal.show();
+        }
+
+        async function executeTestSendEmail() {
+            const recipient = document.getElementById("testRecipientEmail")?.value?.trim();
+            const alertBox = document.getElementById("testEmailAlert");
+            const btn = document.getElementById("btnSendTestEmail");
+
+            if (!recipient) {
+                if (alertBox) alertBox.innerHTML = '<div class="alert alert-warning py-2 small mb-3">Vui lòng nhập email nhận thư thử nghiệm.</div>';
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang kết nối SMTP & gửi...';
+            }
+
+            try {
+                const res = await fetch("/api/admin/email-settings/test", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ recipientEmail: recipient })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    if (alertBox) {
+                        alertBox.innerHTML = `<div class="alert alert-success py-2 small mb-3">
+                            ✅ ${data.message} Vui lòng kiểm tra hộp thư của <strong>${recipient}</strong>.
+                        </div>`;
+                    }
+                } else {
+                    if (alertBox) {
+                        alertBox.innerHTML = `<div class="alert alert-danger py-2 small mb-3">
+                            ❌ ${data.message || 'Lỗi gửi mail thử nghiệm.'}
+                        </div>`;
+                    }
+                }
+            } catch (err) {
+                if (alertBox) {
+                    alertBox.innerHTML = '<div class="alert alert-danger py-2 small mb-3">Lỗi mạng khi gửi email kiểm thử.</div>';
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Gửi thử nghiệm';
+                }
+            }
+        }
+
+        function togglePasswordVisibility(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.type = field.type === "password" ? "text" : "password";
             }
         }
     </script>

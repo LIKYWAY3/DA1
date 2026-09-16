@@ -1,4 +1,4 @@
-﻿using ASPtestShop.Auth;
+using ASPtestShop.Auth;
 using ASPtestShop.Models.ViewModels.Auth;
 using ASPtestShop.Services.Interfaces.User;
 using Microsoft.AspNetCore.Authentication;
@@ -31,9 +31,13 @@ using ASPtestShop.Services.Interfaces;
 
             // GET: /account/login
             [HttpGet("login")]
-            public IActionResult Login(string? returnUrl = null)
+            public IActionResult Login(string? returnUrl = null, bool sessionExpired = false)
             {
                 ViewBag.ReturnUrl = returnUrl;
+                if (sessionExpired)
+                {
+                    ViewBag.SessionExpiredMessage = "Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác. Phiên làm việc trên thiết bị này đã được tự động đăng xuất để bảo mật.";
+                }
                 return View();
             }
 
@@ -57,6 +61,16 @@ using ASPtestShop.Services.Interfaces;
                     return View(model);
                 }
 
+                // Single Session: Đổi SecurityStamp mới cho User trong CSDL => Ngay lập tức vô hiệu hóa mọi thiết bị cũ!
+                var appUser = await _userManager.FindByIdAsync(result.UserId);
+                if (appUser != null)
+                {
+                    await _userManager.UpdateSecurityStampAsync(appUser);
+                    appUser = await _userManager.FindByIdAsync(result.UserId);
+                }
+
+                var securityStamp = appUser?.SecurityStamp ?? Guid.NewGuid().ToString();
+
                 var displayName = !string.IsNullOrWhiteSpace(result.FullName)
                     ? result.FullName
                     : result.UserName;
@@ -66,7 +80,8 @@ using ASPtestShop.Services.Interfaces;
                     new Claim(ClaimTypes.NameIdentifier, result.UserId),
                     new Claim(ClaimTypes.Name, displayName),
                     new Claim(ClaimTypes.Email, result.Email),
-                    new Claim(ClaimTypes.Role, "Customer")
+                    new Claim(ClaimTypes.Role, "Customer"),
+                    new Claim("security_stamp", securityStamp)
                 };
 
                 var identity = new ClaimsIdentity(claims, UserCookieAuth.Scheme);
@@ -135,7 +150,47 @@ using ASPtestShop.Services.Interfaces;
                     return View(model);
                 }
 
-                var result = await _userAuthService.RegisterAsync(model);
+                var result = await _userAuthService.InitiateRegisterAsync(model);
+
+                if (!result.Success)
+                {
+                    ModelState.AddModelError("", result.Message);
+                    return View(model);
+                }
+
+                TempData["SuccessMessage"] = result.Message;
+
+                return RedirectToAction("VerifyEmail", new { email = model.Email });
+            }
+
+            // GET: /account/verify-email
+            [HttpGet("verify-email")]
+            public IActionResult VerifyEmail(string? email)
+            {
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    return RedirectToAction("Register");
+                }
+
+                var model = new VerifyEmailViewModel
+                {
+                    Email = email
+                };
+
+                return View(model);
+            }
+
+            // POST: /account/verify-email
+            [HttpPost("verify-email")]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> VerifyEmail(VerifyEmailViewModel model)
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(model);
+                }
+
+                var result = await _userAuthService.VerifyOtpAndRegisterAsync(model);
 
                 if (!result.Success)
                 {
@@ -146,6 +201,15 @@ using ASPtestShop.Services.Interfaces;
                 TempData["SuccessMessage"] = result.Message;
 
                 return RedirectToAction("Login");
+            }
+
+            // POST: /account/resend-otp
+            [HttpPost("resend-otp")]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> ResendOtp([FromForm] string email)
+            {
+                var result = await _userAuthService.ResendOtpAsync(email);
+                return Json(new { success = result.Success, message = result.Message });
             }
         // GET: /account/profile
         [HttpGet("profile")]

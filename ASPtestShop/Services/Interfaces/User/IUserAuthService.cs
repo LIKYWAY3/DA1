@@ -1,4 +1,4 @@
-﻿using ASPtestShop.Data.Entities;
+using ASPtestShop.Data.Entities;
 using ASPtestShop.Models.DTO.Auth;
 using ASPtestShop.Models.ViewModels.Auth;
 using ASPtestShop.Models.ViewModels.Profile;
@@ -10,6 +10,12 @@ namespace ASPtestShop.Services.Interfaces.User
         Task<UserLoginResultDto> LoginAsync(LoginViewModel model);
 
         Task<UserRegisterResultDto> RegisterAsync(RegisterViewModel model);
+
+        Task<UserRegisterResultDto> InitiateRegisterAsync(RegisterViewModel model);
+
+        Task<UserRegisterResultDto> VerifyOtpAndRegisterAsync(VerifyEmailViewModel model);
+
+        Task<UserRegisterResultDto> ResendOtpAsync(string email);
 
         Task<AuthResultDto> UpdateProfileAsync(string userId, UpdateProfileDto dto);
 

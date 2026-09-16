@@ -1,4 +1,4 @@
-﻿using ASPtestShop.Data;
+using ASPtestShop.Data;
 using ASPtestShop.Models.DTO.Auth;
 using ASPtestShop.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -88,6 +88,9 @@ namespace ASPtestShop.Services.Implementations
                     Message = "Tên đăng nhập hoặc mật khẩu không đúng"
                 };
             }
+
+            // Single Session: Cập nhật SecurityStamp mới để vô hiệu hóa token ở thiết bị cũ
+            await _userManager.UpdateSecurityStampAsync(user);
 
             // Tạo JWT token
             var token = await GenerateJwtTokenAsync(user);
