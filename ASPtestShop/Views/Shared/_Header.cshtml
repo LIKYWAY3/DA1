@@ -85,80 +85,14 @@
 		</button>
 
 		<div class="collapse navbar-collapse" id="navbarsFurni">
-			<ul class="custom-navbar-nav navbar-nav ms-auto mb-2 mb-md-0">
+			<ul class="custom-navbar-nav navbar-nav ms-auto mb-2 mb-md-0" id="mainNavbarNav">
 				<li class="nav-item">
 					<a class="nav-link" asp-controller="Home" asp-action="Index">Home</a>
 				</li>
 
-				<!-- CẦN CÂU -->
-				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle shop-category-dropdown"
-					   href="/Shop#products"
-					   id="rodDropdown">
-						Cần câu
-					</a>
+				<!-- Danh mục cha và con sẽ được nạp động từ API /api/categories -->
 
-					<ul class="dropdown-menu shop-category-dropdown-menu"
-						aria-labelledby="rodDropdown"
-						id="rodDropdownMenu">
-						<li>
-							<a class="dropdown-item" href="/Shop#products">Đang tải...</a>
-						</li>
-					</ul>
-				</li>
-
-				<!-- MỒI CÂU -->
-				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle shop-category-dropdown"
-					   href="/Shop#products"
-					   id="baitDropdown">
-						Mồi câu
-					</a>
-
-					<ul class="dropdown-menu shop-category-dropdown-menu"
-						aria-labelledby="baitDropdown"
-						id="baitDropdownMenu">
-						<li>
-							<a class="dropdown-item" href="/Shop#products">Đang tải...</a>
-						</li>
-					</ul>
-				</li>
-
-				<!-- DÂY CÂU -->
-				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle shop-category-dropdown"
-					   href="/Shop#products"
-					   id="lineDropdown">
-						Dây câu
-					</a>
-
-					<ul class="dropdown-menu shop-category-dropdown-menu"
-						aria-labelledby="lineDropdown"
-						id="lineDropdownMenu">
-						<li>
-							<a class="dropdown-item" href="/Shop#products">Đang tải...</a>
-						</li>
-					</ul>
-				</li>
-
-				<!-- PHỤ KIỆN -->
-				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle shop-category-dropdown"
-					   href="/Shop#products"
-					   id="accessoryDropdown">
-						Phụ kiện
-					</a>
-
-					<ul class="dropdown-menu shop-category-dropdown-menu"
-						aria-labelledby="accessoryDropdown"
-						id="accessoryDropdownMenu">
-						<li>
-							<a class="dropdown-item" href="/Shop#products">Đang tải...</a>
-						</li>
-					</ul>
-				</li>
-
-				<li class="nav-item">
+				<li class="nav-item" id="navShopAllItem">
 					<a class="nav-link"
 					   asp-controller="Shop"
 					   asp-action="Index">
@@ -304,74 +238,79 @@
 			}
 
 			const categories = await response.json();
-
-			renderCategoryDropdown(categories, "Cần câu", "rodDropdown", "rodDropdownMenu");
-			renderCategoryDropdown(categories, "Mồi câu", "baitDropdown", "baitDropdownMenu");
-			renderCategoryDropdown(categories, "Dây câu", "lineDropdown", "lineDropdownMenu");
-			renderCategoryDropdown(categories, "Phụ kiện", "accessoryDropdown", "accessoryDropdownMenu");
+			renderDynamicNavbarCategories(categories);
 
 		} catch (error) {
 			console.error("Lỗi load navbar categories:", error);
 		}
 	}
 
-	function normalizeText(text) {
-		return (text || "")
-			.toString()
-			.trim()
-			.toLowerCase();
-	}
+	function renderDynamicNavbarCategories(categories) {
+		const navBar = document.getElementById("mainNavbarNav");
+		if (!navBar) return;
 
-	function renderCategoryDropdown(categories, parentCategoryName, linkId, menuId) {
-		const link = document.getElementById(linkId);
-		const menu = document.getElementById(menuId);
+		// Xóa các danh mục cũ nếu đã có (giữ Home đầu và Shop cuối)
+		const existingCatItems = navBar.querySelectorAll('.nav-item-category');
+		existingCatItems.forEach(el => el.remove());
 
-		if (!link || !menu) {
-			return;
-		}
+		const shopItem = document.getElementById("navShopAllItem");
 
-		const parentCategory = categories.find(c =>
-			normalizeText(c.categoryName) === normalizeText(parentCategoryName)
-		);
+		const activeCats = categories.filter(c => c.isActive);
+		const rootCats = activeCats.filter(c => !c.parentCategoryId);
 
-		if (parentCategory) {
-			link.href = `/Shop?categoryId=${parentCategory.categoryId}#products`;
-		} else {
-			link.href = "/Shop#products";
-		}
+		rootCats.forEach(root => {
+			const children = activeCats.filter(c => c.parentCategoryId === root.categoryId);
 
-		const childCategories = categories.filter(c => {
-			const sameParentName =
-				normalizeText(c.parentCategoryName) === normalizeText(parentCategoryName);
+			const li = document.createElement("li");
+			li.className = "nav-item dropdown nav-item-category";
+			li.dataset.categoryId = root.categoryId;
 
-			const sameParentId =
-				parentCategory && c.parentCategoryId === parentCategory.categoryId;
+			let dropdownMenuHtml = `
+				<ul class="dropdown-menu shop-category-dropdown-menu" aria-labelledby="catDropdown_${root.categoryId}">
+					<li>
+						<a class="dropdown-item fw-bold" href="/Shop?categoryId=${root.categoryId}#products" style="color: #f9bf29 !important; border-bottom: 1px solid rgba(249,191,41,0.2);">
+							Tất cả ${root.categoryName}
+						</a>
+					</li>
+			`;
 
-			return sameParentName || sameParentId;
+			if (children.length === 0) {
+				dropdownMenuHtml += `
+					<li>
+						<span class="dropdown-item disabled">Chưa có danh mục con</span>
+					</li>
+				`;
+			} else {
+				children.forEach(child => {
+					dropdownMenuHtml += `
+						<li>
+							<a class="dropdown-item" href="/Shop?categoryId=${child.categoryId}#products">
+								${child.categoryName}
+							</a>
+						</li>
+					`;
+				});
+			}
+
+			dropdownMenuHtml += `</ul>`;
+
+			li.innerHTML = `
+				<a class="nav-link dropdown-toggle shop-category-dropdown"
+				   href="/Shop?categoryId=${root.categoryId}#products"
+				   id="catDropdown_${root.categoryId}">
+					${root.categoryName}
+				</a>
+				${dropdownMenuHtml}
+			`;
+
+			if (shopItem) {
+				navBar.insertBefore(li, shopItem);
+			} else {
+				navBar.appendChild(li);
+			}
 		});
 
-		menu.innerHTML = "";
-
-		if (childCategories.length === 0) {
-			menu.innerHTML = `
-				<li>
-					<span class="dropdown-item disabled">
-						Chưa có danh mục con
-					</span>
-				</li>
-			`;
-			return;
-		}
-
-		childCategories.forEach(category => {
-			menu.innerHTML += `
-				<li>
-					<a class="dropdown-item" href="/Shop?categoryId=${category.categoryId}#products">
-						${category.categoryName}
-					</a>
-				</li>
-			`;
-		});
+		setActiveNav();
 	}
 </script>
 <!-- End Header/Navigation -->

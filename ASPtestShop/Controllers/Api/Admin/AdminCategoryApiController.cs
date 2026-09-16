@@ -1,4 +1,4 @@
-﻿using ASPtestShop.Auth;
+using ASPtestShop.Auth;
 using ASPtestShop.Models.DTO.Category;
 using ASPtestShop.Services.Interfaces.Admin;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -101,6 +101,25 @@ namespace ASPtestShop.Controllers.Api.Admin
             {
                 result.Message,
                 result.Category
+            });
+        }
+
+        [HttpPost("migrate-taxonomy")]
+        public async Task<IActionResult> MigrateTaxonomy()
+        {
+            var result = await _adminCategoryService.MigrateTaxonomyAsync();
+
+            if (!result.Success)
+            {
+                return BadRequest(new
+                {
+                    result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                result.Message
             });
         }
     }

@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Admin Product";
     Layout = "_AdminLayout";
 }
@@ -173,17 +173,32 @@
             const categories = await response.json();
 
             const select = document.getElementById("categoryId");
-            select.innerHTML = `<option value="">Chọn danh mục</option>`;
+            const currentValue = select.value;
+            select.innerHTML = `<option value="">-- Chọn danh mục sản phẩm --</option>`;
 
-            categories
-                .filter(c => c.isActive)
-                .forEach(category => {
+            const activeCats = categories.filter(c => c.isActive);
+            const roots = activeCats.filter(c => !c.parentCategoryId);
+
+            roots.forEach(root => {
+                select.innerHTML += `
+                    <option value="${root.categoryId}" style="font-weight: bold; background-color: #f1f3f5;">
+                        📁 ${root.categoryName} (Danh mục gốc)
+                    </option>
+                `;
+
+                const children = activeCats.filter(c => c.parentCategoryId === root.categoryId);
+                children.forEach(child => {
                     select.innerHTML += `
-                        <option value="${category.categoryId}">
-                            ${category.categoryName}
+                        <option value="${child.categoryId}">
+                            &nbsp;&nbsp;&nbsp;&nbsp;↳ ${child.categoryName}
                         </option>
                     `;
                 });
+            });
+
+            if (currentValue) {
+                select.value = currentValue;
+            }
 
         } catch (error) {
             console.error(error);
