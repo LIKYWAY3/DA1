@@ -1,254 +1,773 @@
 @{
-    ViewData["Title"] = "Shop";
+    ViewData["Title"] = "Cửa Hàng Đồ Câu - FuuFishing";
     Layout = "~/Views/Shared/_LayoutCustomer.cshtml";
 }
+
 <!-- Start Hero Section -->
 <div class="hero">
     <div class="container">
-        <div class="row justify-content-between">
-            <div class="col-lg-5">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-lg-7">
                 <div class="intro-excerpt">
-                    <h1>Shop</h1>
+                    <nav aria-label="breadcrumb" class="mb-2">
+                        <ol class="breadcrumb text-white-50 small mb-0" id="shopBreadcrumb">
+                            <li class="breadcrumb-item"><a href="/" class="text-white-50 text-decoration-none">Trang chủ</a></li>
+                            <li class="breadcrumb-item"><a href="/Shop" class="text-white-50 text-decoration-none">Cửa hàng</a></li>
+                            <li class="breadcrumb-item active text-white" aria-current="page" id="breadcrumbCategoryName" style="display:none;">Danh mục</li>
+                        </ol>
+                    </nav>
+                    <h1 id="shopHeroTitle">Cửa Hàng FuuFishing</h1>
+                    <p class="mb-0 text-white-50" id="shopHeroDesc">Khám phá hơn 100+ mẫu cần câu, máy câu, mồi câu và phụ kiện đồ câu chính hãng.</p>
                 </div>
             </div>
-            <div class="col-lg-7">
+            <div class="col-lg-5 text-lg-end d-none d-lg-block">
+                <img src="/images/footer-rod.png" alt="Fishing Tackle" class="img-fluid" style="max-height: 160px; opacity: 0.9;" onerror="this.style.display='none'">
             </div>
         </div>
     </div>
 </div>
 <!-- End Hero Section -->
 
-<div id="products" class="untree_co-section product-section before-footer-section">
+<div id="products-section" class="untree_co-section product-section before-footer-section pt-4">
     <div class="container">
 
-        <!-- Search Bar -->
-        <div class="row mb-4">
-            <div class="col-12 col-md-6 offset-md-3">
-                <div class="input-group shadow-sm" id="searchWrapper">
-                    <span class="input-group-text bg-white border-end-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#3b5d50" class="bi bi-search" viewBox="0 0 16 16">
-                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.156a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z" />
-                        </svg>
-                    </span>
-                    <input type="text"
-                           id="searchInput"
-                           class="form-control border-start-0"
-                           placeholder="Tìm kiếm sản phẩm..."
-                           autocomplete="off" />
-                    <button class="btn btn-outline-secondary border-start-0"
-                            id="clearSearchBtn"
-                            type="button"
-                            title="Xóa tìm kiếm"
-                            style="display:none;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                            <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
-                        </svg>
+        <!-- ======================================================= -->
+        <!-- KHUNG BỘ LỌC TÍCH HỢP DUY NHẤT (Single Integrated Card)   -->
+        <!-- ======================================================= -->
+        <div class="filter-main-card mb-4 p-3 p-md-4 rounded-4 shadow-sm bg-white border">
+            
+            <!-- HÀNG 1: Thanh Tìm Kiếm Tích Hợp Gọn Gàng Trong Khung -->
+            <div class="row align-items-center g-2 mb-3">
+                <div class="col-12 col-md-8">
+                    <div class="input-group" id="searchWrapper">
+                        <span class="input-group-text bg-white border-end-0 text-secondary">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text"
+                               id="searchInput"
+                               class="form-control border-start-0 ps-1"
+                               placeholder="Tìm kiếm sản phẩm..."
+                               autocomplete="off" />
+                        <button class="btn-clear-input"
+                                id="clearSearchBtn"
+                                type="button"
+                                title="Xóa tìm kiếm"
+                                style="display:none;">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4 text-md-end">
+                    <button type="button" id="clearAllFiltersBtn" class="btn-reset-filters d-none" onclick="resetAllFilters()">
+                        <i class="fa-solid fa-arrow-rotate-left"></i>
+                        <span>Xóa tất cả bộ lọc</span>
                     </button>
                 </div>
-                <div id="searchStatus" class="text-muted small mt-1 text-center" style="min-height:20px;"></div>
+            </div>
+
+            <!-- ======================================================= -->
+            <!-- HÀNG 2A: BỘ TIÊU CHÍ DÀNH CHO SHOP TỔNG HỢP             -->
+            <!-- (Chỉ hiển thị khi bấm mục "Shop" trên thanh Nav)        -->
+            <!-- ======================================================= -->
+            <div id="shopAllCriteriaBar" class="pt-2 border-top">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <span class="filter-group-label text-dark fw-bold me-1">
+                        <i class="fa-solid fa-sliders me-1"></i>Chọn theo tiêu chí:
+                    </span>
+
+                    <!-- Quick Filter: Sẵn hàng -->
+                    <button type="button" class="filter-pill-btn" id="pillInStock" onclick="toggleQuickFilter('inStock')">
+                        <i class="fa-solid fa-boxes-stacked me-1"></i>Sẵn hàng
+                    </button>
+
+                    <!-- Quick Filter: Khuyến mãi HOT -->
+                    <button type="button" class="filter-pill-btn" id="pillOnSale" onclick="toggleQuickFilter('onSale')">
+                        <i class="fa-solid fa-bolt me-1"></i>Khuyến mãi HOT
+                    </button>
+
+                    <!-- Dropdown: Danh mục -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="filter-pill-btn dropdown-toggle" type="button" id="btnDropdownCategory" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-tag me-1"></i><span id="labelCategory">Danh mục</span>
+                        </button>
+                        <ul class="dropdown-menu shadow border-0 rounded-3 p-2" aria-labelledby="btnDropdownCategory">
+                            <li><a class="dropdown-item rounded-2 active" href="javascript:void(0)" onclick="setCategoryFilter('', 'Danh mục')">Tất cả danh mục</a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setCategoryFilter('Cần câu', 'Cần câu')">Cần câu</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setCategoryFilter('Máy câu', 'Máy câu')">Máy câu</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setCategoryFilter('Mồi câu', 'Mồi câu')">Mồi câu</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setCategoryFilter('Dây câu', 'Dây câu')">Dây câu</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setCategoryFilter('Phụ kiện', 'Phụ kiện')">Phụ kiện đồ câu</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Dropdown: Thương hiệu -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="filter-pill-btn dropdown-toggle" type="button" id="btnDropdownBrand" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-award me-1"></i><span id="labelBrand">Thương hiệu</span>
+                        </button>
+                        <ul class="dropdown-menu shadow border-0 rounded-3 p-2" aria-labelledby="btnDropdownBrand">
+                            <li><a class="dropdown-item rounded-2 active" href="javascript:void(0)" onclick="setBrandFilter('', 'Thương hiệu')">Tất cả thương hiệu</a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Shimano', 'Shimano')">Shimano</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Daiwa', 'Daiwa')">Daiwa</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Abu Garcia', 'Abu Garcia')">Abu Garcia</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Penn', 'Penn')">Penn</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Handing', 'Handing')">Handing</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('GW', 'GW Tương Vương')">GW</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Dropdown: Mức giá -->
+                    <div class="dropdown filter-dropdown">
+                        <button class="filter-pill-btn dropdown-toggle" type="button" id="btnDropdownPrice" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-coins me-1"></i><span id="labelPrice">Mức giá</span>
+                        </button>
+                        <ul class="dropdown-menu shadow border-0 rounded-3 p-2" aria-labelledby="btnDropdownPrice">
+                            <li><a class="dropdown-item rounded-2 active" href="javascript:void(0)" onclick="setPriceFilter('', 'Mức giá')">Tất cả mức giá</a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setPriceFilter('under-500k', 'Dưới 500.000 đ')">Dưới 500.000 đ</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setPriceFilter('500k-1m', '500.000 - 1 triệu')">500.000 đ - 1.000.000 đ</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setPriceFilter('1m-3m', '1 - 3 triệu')">1.000.000 đ - 3.000.000 đ</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setPriceFilter('above-3m', 'Trên 3 triệu')">Trên 3.000.000 đ</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================= -->
+            <!-- HÀNG 2B: BỘ TIÊU CHÍ TINH GỌN DÀNH CHO CÁC TRANG DANH MỤC NAV -->
+            <!-- (Chỉ hiển thị khi bấm Dây câu, Mồi câu, Cần câu... từ Nav)   -->
+            <!-- ======================================================= -->
+            <div id="categoryOnlyCriteriaBar" class="pt-2 border-top d-none">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <span class="filter-group-label text-dark fw-bold me-1">
+                        <i class="fa-solid fa-filter me-1"></i>Lọc theo mức giá:
+                    </span>
+
+                    <button type="button" class="filter-pill-btn active" data-price-pill="" onclick="setPriceFilter('', 'Tất cả giá')">
+                        Tất cả giá
+                    </button>
+                    <button type="button" class="filter-pill-btn" data-price-pill="under-500k" onclick="setPriceFilter('under-500k', 'Dưới 500.000 đ')">
+                        Dưới 500.000 đ
+                    </button>
+                    <button type="button" class="filter-pill-btn" data-price-pill="500k-1m" onclick="setPriceFilter('500k-1m', '500k - 1 triệu')">
+                        500.000 đ - 1.000.000 đ
+                    </button>
+                    <button type="button" class="filter-pill-btn" data-price-pill="1m-3m" onclick="setPriceFilter('1m-3m', '1 - 3 triệu')">
+                        1.000.000 đ - 3.000.000 đ
+                    </button>
+                    <button type="button" class="filter-pill-btn" data-price-pill="above-3m" onclick="setPriceFilter('above-3m', 'Trên 3 triệu')">
+                        Trên 3.000.000 đ
+                    </button>
+
+                    <button type="button" class="filter-pill-btn ms-md-1" id="pillInStockCategory" onclick="toggleQuickFilter('inStock')">
+                        <i class="fa-solid fa-boxes-stacked me-1"></i>Sẵn hàng
+                    </button>
+
+                    <!-- Dropdown Thương hiệu CHỈ HIỆN KHI Ở DANH MỤC CẦN CÂU HOẶC MÁY CÂU (Hãng lớn) -->
+                    <!-- Ẩn hoàn toàn đối với Dây câu, Mồi câu, Phụ kiện -->
+                    <div class="dropdown filter-dropdown d-none" id="categoryBrandDropdownWrapper">
+                        <button class="filter-pill-btn dropdown-toggle" type="button" id="btnDropdownBrandCategory" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-award me-1"></i><span id="labelBrandCategory">Thương hiệu</span>
+                        </button>
+                        <ul class="dropdown-menu shadow border-0 rounded-3 p-2" aria-labelledby="btnDropdownBrandCategory">
+                            <li><a class="dropdown-item rounded-2 active" href="javascript:void(0)" onclick="setBrandFilter('', 'Thương hiệu')">Tất cả thương hiệu</a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Shimano', 'Shimano')">Shimano</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Daiwa', 'Daiwa')">Daiwa</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Abu Garcia', 'Abu Garcia')">Abu Garcia</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Penn', 'Penn')">Penn</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('Handing', 'Handing')">Handing</a></li>
+                            <li><a class="dropdown-item rounded-2" href="javascript:void(0)" onclick="setBrandFilter('GW', 'GW Tương Vương')">GW</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================= -->
+            <!-- HÀNG 3: SẮP XẾP SẢN PHẨM (A-Z, Z-A, Giá Thấp-Cao, Cao-Thấp)-->
+            <!-- ======================================================= -->
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 pt-2 border-top">
+                <div class="d-flex align-items-center flex-wrap gap-2" id="sortButtonGroup">
+                    <span class="sort-heading text-dark fw-bold me-2">
+                        <i class="fa-solid fa-arrow-down-wide-short me-1"></i>Sắp xếp:
+                    </span>
+                    
+                    <!-- A -> Z và Z -> A -->
+                    <button type="button" class="sort-pill-btn" data-sort="az" onclick="setSortOption('az')">
+                        <i class="fa-solid fa-arrow-down-a-z me-1"></i>A → Z
+                    </button>
+                    <button type="button" class="sort-pill-btn" data-sort="za" onclick="setSortOption('za')">
+                        <i class="fa-solid fa-arrow-up-a-z me-1"></i>Z → A
+                    </button>
+
+                    <!-- Giá Thấp - Cao & Giá Cao - Thấp -->
+                    <button type="button" class="sort-pill-btn" data-sort="price-asc" onclick="setSortOption('price-asc')">
+                        <i class="fa-solid fa-arrow-trend-up me-1"></i>Giá Thấp - Cao
+                    </button>
+                    <button type="button" class="sort-pill-btn" data-sort="price-desc" onclick="setSortOption('price-desc')">
+                        <i class="fa-solid fa-arrow-trend-down me-1"></i>Giá Cao - Thấp
+                    </button>
+
+                    <!-- Các nút sắp xếp chỉ cho Shop tổng -->
+                    <button type="button" class="sort-pill-btn active" data-sort="popular" id="btnSortPopular" onclick="setSortOption('popular')">
+                        <i class="fa-solid fa-star me-1"></i>Phổ biến
+                    </button>
+                    <button type="button" class="sort-pill-btn" data-sort="latest" id="btnSortLatest" onclick="setSortOption('latest')">
+                        <i class="fa-solid fa-clock me-1"></i>Mới nhất
+                    </button>
+                </div>
+
+                <!-- Hiển thị số lượng sản phẩm tìm thấy -->
+                <div class="text-muted small text-md-end" id="searchStatus">
+                    Đang tải danh sách...
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- LƯỚI SẢN PHẨM (Product Grid 4 Columns) -->
+        <!-- ======================================================= -->
+        <div class="row g-4" id="productList">
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- PHÂN TRANG (Pagination Component) -->
+        <!-- ======================================================= -->
+        <div id="paginationWrapper" class="mt-5 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div class="text-muted small" id="paginationSummary">
+                Hiển thị 0 - 0 trên 0 sản phẩm
+            </div>
+
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-fuu mb-0" id="paginationControls">
+                </ul>
+            </nav>
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="small text-muted">Hiển thị:</span>
+                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
+                    <option value="12" selected>12 / trang</option>
+                    <option value="24">24 / trang</option>
+                    <option value="48">48 / trang</option>
+                </select>
             </div>
         </div>
 
-        <div class="row" id="productList">
-        </div>
     </div>
 </div>
 
 <style>
-    /* ================================================
-       Thanh Search — theme xanh #3b5d50
-    ================================================ */
-    #searchWrapper {
-        border-radius: 50px;
-        overflow: hidden;
-        border: 2px solid #ced4da;
-        background: #fff;
-        transition: border-color 0.25s, box-shadow 0.25s;
+    :root {
+        --fuu-primary: #3b5d50;
+        --fuu-primary-hover: #2f4c41;
+        --fuu-accent: #f9bf29;
+        --fuu-border: #e2e8e5;
     }
 
-        #searchWrapper:focus-within {
-            border-color: #3b5d50;
-            box-shadow: 0 0 0 3px rgba(59,93,80,.18);
-        }
+    /* Khung lọc chính chứa search, filter và sort liền mạch */
+    .filter-main-card {
+        border: 1px solid var(--fuu-border);
+        background: #ffffff;
+    }
+
+    .filter-group-label, .sort-heading {
+        font-size: 0.9rem;
+    }
+
+    /* Thanh Search tích hợp trong khung */
+    #searchWrapper {
+        border-radius: 30px;
+        overflow: hidden;
+        border: 1px solid #ced4da;
+        background: #fff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #searchWrapper:focus-within {
+        border-color: var(--fuu-primary);
+        box-shadow: 0 0 0 3px rgba(59,93,80,.12);
+    }
 
     #searchWrapper .input-group-text {
-        background: transparent;
         border: none;
-        padding-left: 16px;
-        padding-right: 8px;
+        padding-left: 14px;
+        padding-right: 6px;
     }
 
     #searchWrapper .form-control {
         border: none;
         background: transparent;
         box-shadow: none;
-        font-size: 0.95rem;
-        padding-left: 4px;
+        font-size: 0.92rem;
         color: #253f36;
     }
 
-        #searchWrapper .form-control::placeholder {
-            color: #9aafa8;
-        }
-
-    #searchWrapper #clearSearchBtn {
-        border: none;
+    .btn-clear-input {
         background: transparent;
-        color: #9aafa8;
-        padding-right: 12px;
+        border: none;
+        color: #adb5bd;
+        padding: 0 14px;
+        cursor: pointer;
         display: flex;
         align-items: center;
     }
 
-        #searchWrapper #clearSearchBtn:hover {
-            color: #3b5d50;
-        }
+    .btn-clear-input:hover {
+        color: var(--fuu-primary);
+    }
 
-    #searchStatus {
-        font-size: 0.82rem;
+    /* Nút Xóa tất cả bộ lọc */
+    .btn-reset-filters {
+        background: transparent !important;
+        border: 1px solid #ced4da !important;
+        color: #495057 !important;
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+        padding: 6px 14px !important;
+        border-radius: 20px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        box-shadow: none !important;
+    }
+
+    .btn-reset-filters:hover {
+        background: #e9ecef !important;
+        color: #212529 !important;
+        border-color: #adb5bd !important;
+    }
+
+    .btn-reset-filters i {
+        font-size: 0.75rem;
+        transition: transform 0.25s ease;
+    }
+
+    .btn-reset-filters:hover i {
+        transform: rotate(-45deg);
+    }
+
+    /* Nút dạng Chip / Pill */
+    .filter-pill-btn, .sort-pill-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 13px;
+        font-size: 0.86rem;
+        font-weight: 500;
+        color: #495057;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    .filter-pill-btn i, .sort-pill-btn i {
+        color: inherit !important;
+    }
+
+    .filter-pill-btn:hover, .sort-pill-btn:hover {
+        background-color: #e9ecef;
+        color: var(--fuu-primary);
+        border-color: #ced4da;
+    }
+
+    .filter-pill-btn.active, .sort-pill-btn.active {
+        background-color: var(--fuu-primary);
+        color: #ffffff !important;
+        border-color: var(--fuu-primary);
+        box-shadow: 0 2px 6px rgba(59,93,80,.25);
+    }
+
+    .filter-pill-btn.active i, .sort-pill-btn.active i {
+        color: #ffffff !important;
+    }
+
+    /* Dropdown menu items */
+    .filter-dropdown .dropdown-menu {
+        min-width: 190px;
+        font-size: 0.88rem;
+    }
+
+    .filter-dropdown .dropdown-item {
+        padding: 6px 14px;
+        color: #343a40;
+    }
+
+    .filter-dropdown .dropdown-item:hover {
+        background-color: #eef3f1;
+        color: var(--fuu-primary);
+    }
+
+    .filter-dropdown .dropdown-item.active {
+        background-color: var(--fuu-primary);
+        color: #fff;
+    }
+
+    /* Thẻ sản phẩm Card */
+    .product-item {
+        display: block;
+        text-align: center;
+        text-decoration: none;
+        position: relative;
+        padding: 16px;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #edf2f0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        height: 100%;
+    }
+
+    .product-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 24px rgba(59,93,80,0.12);
+        border-color: #d1ded8;
+    }
+
+    .product-item .product-thumbnail {
+        height: 190px;
+        width: 100%;
+        object-fit: contain;
+        margin-bottom: 14px;
+        transition: transform 0.3s ease;
+    }
+
+    .product-item:hover .product-thumbnail {
+        transform: scale(1.04);
+    }
+
+    .product-item .product-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #2b332f;
+        margin-bottom: 8px;
+        line-height: 1.35;
+        height: 2.7em;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .product-item .product-price {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--fuu-primary);
+    }
+
+    .product-item .product-original-price {
+        font-size: 0.85rem;
+        color: #8c9b95;
+        text-decoration: line-through;
+        margin-left: 6px;
+    }
+
+    .badge-discount {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: #dc3545;
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 12px;
+        z-index: 2;
+    }
+
+    .badge-stock-out {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: #6c757d;
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 12px;
+        z-index: 2;
+    }
+
+    .badge-brand-tag {
+        font-size: 0.72rem;
+        color: #637770;
+        background: #eef3f1;
+        padding: 2px 7px;
+        border-radius: 6px;
+        display: inline-block;
+        margin-bottom: 4px;
+    }
+
+    /* Icon Cross Quick Action */
+    .product-item .icon-cross {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #2f2f2f;
+        border-radius: 50%;
+        transition: background 0.2s, transform 0.2s;
+    }
+
+    .product-item:hover .icon-cross {
+        background: var(--fuu-primary);
+        transform: scale(1.1);
+    }
+
+    .product-item .icon-cross img {
+        width: 14px;
+    }
+
+    /* Phân trang Pagination */
+    .pagination-fuu .page-link {
         color: #3b5d50;
-        font-style: italic;
+        border-color: #dee2e6;
+        padding: 8px 15px;
+        margin: 0 2px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .pagination-fuu .page-link:hover {
+        background-color: #eef3f1;
+        border-color: var(--fuu-primary);
+        color: var(--fuu-primary);
+    }
+
+    .pagination-fuu .page-item.active .page-link {
+        background-color: var(--fuu-primary);
+        border-color: var(--fuu-primary);
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(59,93,80,.3);
+    }
+
+    .pagination-fuu .page-item.disabled .page-link {
+        color: #adb5bd;
+        background-color: transparent;
+        border-color: #dee2e6;
     }
 </style>
 
 <script>
     // ============================================================
-    // Trạng thái tìm kiếm
+    // State Management: Phân tách rõ ràng giữa Shop và Category Nav
     // ============================================================
-    const urlParams = new URLSearchParams(window.location.search);
-    const categoryId = urlParams.get("categoryId");
+    let allProducts = [];
+    let filteredProducts = [];
+    let currentNavCategoryId = null;
 
-    let currentKeyword = "";
+    const filterState = {
+        keyword: "",
+        inStock: false,
+        onSale: false,
+        category: "",
+        categoryLabel: "Danh mục",
+        brand: "",
+        brandLabel: "Thương hiệu",
+        priceRange: "",
+        priceLabel: "Mức giá",
+        sort: "az", // Mặc định A -> Z
+        page: 1,
+        pageSize: 12
+    };
+
     let debounceTimer = null;
 
+    // Các ID danh mục thuộc nhóm Cần câu & Máy câu (có thương hiệu lớn Shimano, Daiwa, Abu, Penn, GW, Handing)
+    const BRAND_ELIGIBLE_CATEGORY_IDS = [1, 5, 6, 7, 8, 9, 25, 26, 27, 28];
+
     // ============================================================
-    // Khởi động
+    // Khởi tạo trang
     // ============================================================
     document.addEventListener("DOMContentLoaded", function () {
-        // Phục hồi keyword từ URL nếu có
-        const keywordFromUrl = urlParams.get("keyword");
-        if (keywordFromUrl) {
-            document.getElementById("searchInput").value = keywordFromUrl;
-            currentKeyword = keywordFromUrl;
-            toggleClearBtn(keywordFromUrl);
-        }
-
-        loadProducts(currentKeyword);
-        setupSearch();
+        detectNavModeAndParams();
+        fetchProductsData();
+        setupSearchInput();
     });
 
-    // ============================================================
-    // Gắn sự kiện cho ô tìm kiếm
-    // ============================================================
-    function setupSearch() {
-        const searchInput = document.getElementById("searchInput");
-        const clearBtn = document.getElementById("clearSearchBtn");
+    // Nhận diện xem người dùng đang vào Shop tổng hay Danh mục Nav
+    function detectNavModeAndParams() {
+        const params = new URLSearchParams(window.location.search);
+        currentNavCategoryId = params.get("categoryId");
 
-        // Debounce: đợi 400ms sau khi ngừng gõ mới gọi API
-        searchInput.addEventListener("input", function () {
-            const keyword = this.value.trim();
-            toggleClearBtn(keyword);
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                currentKeyword = keyword;
-                loadProducts(keyword);
-            }, 400);
-        });
+        const shopAllCriteriaBar = document.getElementById("shopAllCriteriaBar");
+        const categoryOnlyCriteriaBar = document.getElementById("categoryOnlyCriteriaBar");
+        const btnSortPopular = document.getElementById("btnSortPopular");
+        const btnSortLatest = document.getElementById("btnSortLatest");
+        const categoryBrandWrapper = document.getElementById("categoryBrandDropdownWrapper");
 
-        // Enter để search ngay
-        searchInput.addEventListener("keydown", function (e) {
-            if (e.key === "Enter") {
-                clearTimeout(debounceTimer);
-                currentKeyword = this.value.trim();
-                toggleClearBtn(currentKeyword);
-                loadProducts(currentKeyword);
+        if (currentNavCategoryId) {
+            // === CHẾ ĐỘ 1: BẤM TỪ THANH NAV (Cần câu, Mồi câu, Dây câu, Phụ kiện) ===
+            // Dùng d-none của Bootstrap để ẩn/hiện triệt để không bị ghi đè
+            shopAllCriteriaBar.classList.add("d-none");
+            categoryOnlyCriteriaBar.classList.remove("d-none");
+
+            // Ẩn các nút sắp xếp không cần thiết, ưu tiên A->Z và Giá
+            if (btnSortPopular) btnSortPopular.classList.add("d-none");
+            if (btnSortLatest) btnSortLatest.classList.add("d-none");
+
+            filterState.sort = params.get("sort") || "az";
+
+            // Kiểm tra xem danh mục này có phải Cần câu hoặc Máy câu không để hiện Thương hiệu
+            const catIdNum = parseInt(currentNavCategoryId);
+            const canShowBrand = BRAND_ELIGIBLE_CATEGORY_IDS.includes(catIdNum);
+            if (categoryBrandWrapper) {
+                categoryBrandWrapper.classList.toggle("d-none", !canShowBrand);
             }
-        });
 
-        // Nút xóa tìm kiếm
-        clearBtn.addEventListener("click", function () {
-            searchInput.value = "";
-            currentKeyword = "";
-            toggleClearBtn("");
-            clearTimeout(debounceTimer);
-            loadProducts("");
-        });
-    }
-
-    function toggleClearBtn(keyword) {
-        const clearBtn = document.getElementById("clearSearchBtn");
-        clearBtn.style.display = keyword ? "inline-flex" : "none";
-    }
-
-    // ============================================================
-    // Load sản phẩm (có hoặc không có keyword)
-    // ============================================================
-    async function loadProducts(keyword) {
-        const productList = document.getElementById("productList");
-        const searchStatus = document.getElementById("searchStatus");
-
-        let apiUrl;
-
-        if (keyword) {
-            // Tìm kiếm: nếu có categoryId thì tìm trong danh mục, không thì tìm toàn bộ
-            apiUrl = `/api/products/search?keyword=${encodeURIComponent(keyword)}`;
-            if (categoryId) {
-                apiUrl += `&categoryId=${categoryId}`;
-            }
-        } else if (categoryId) {
-            // Không có keyword, có categoryId → lấy sản phẩm theo danh mục
-            apiUrl = `/api/products/category/${categoryId}`;
+            // Nạp tên danh mục lên Hero & Search placeholder
+            loadCategoryName(currentNavCategoryId);
         } else {
-            // Không có gì → lấy toàn bộ
-            apiUrl = "/api/products";
+            // === CHẾ ĐỘ 2: MỤC "SHOP" TỔNG HỢP TRÊN THANH NAV ===
+            shopAllCriteriaBar.classList.remove("d-none");
+            categoryOnlyCriteriaBar.classList.add("d-none");
+
+            if (btnSortPopular) btnSortPopular.classList.remove("d-none");
+            if (btnSortLatest) btnSortLatest.classList.remove("d-none");
+
+            filterState.sort = params.get("sort") || "popular";
+            document.getElementById("searchInput").placeholder = "Tìm kiếm cần câu, máy câu, mồi, dây, phụ kiện...";
         }
 
-        // Hiển thị spinner
-        productList.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <div class="spinner-border text-success" role="status">
-                    <span class="visually-hidden">Đang tải...</span>
+        // Đọc các URL parameters còn lại
+        if (params.get("keyword")) filterState.keyword = params.get("keyword");
+        if (params.get("inStock") === "1") filterState.inStock = true;
+        if (params.get("onSale") === "1") filterState.onSale = true;
+        if (params.get("category") && !currentNavCategoryId) filterState.category = params.get("category");
+        if (params.get("brand")) filterState.brand = params.get("brand");
+        if (params.get("price")) filterState.priceRange = params.get("price");
+        if (params.get("page")) filterState.page = parseInt(params.get("page")) || 1;
+        if (params.get("pageSize")) filterState.pageSize = parseInt(params.get("pageSize")) || 12;
+
+        // Đồng bộ lên giao diện
+        if (filterState.keyword) {
+            document.getElementById("searchInput").value = filterState.keyword;
+            toggleClearBtn(filterState.keyword);
+        }
+        if (filterState.inStock) {
+            const p1 = document.getElementById("pillInStock");
+            const p2 = document.getElementById("pillInStockCategory");
+            if (p1) p1.classList.add("active");
+            if (p2) p2.classList.add("active");
+        }
+        if (filterState.onSale) {
+            const ps = document.getElementById("pillOnSale");
+            if (ps) ps.classList.add("active");
+        }
+
+        // Active sort button
+        document.querySelectorAll(".sort-pill-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.sort === filterState.sort);
+        });
+
+        // Active price pill trong danh mục nếu có
+        document.querySelectorAll("[data-price-pill]").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.pricePill === (filterState.priceRange || ""));
+        });
+    }
+
+    // Lấy tên danh mục để hiển thị lên Hero Banner và Placeholder
+    async function loadCategoryName(catId) {
+        try {
+            const res = await fetch(`/api/categories/${catId}`);
+            if (res.ok) {
+                const cat = await res.json();
+                const name = cat.categoryName || "Danh mục";
+                document.getElementById("shopHeroTitle").textContent = name;
+                document.getElementById("shopHeroDesc").textContent = cat.description || `Các sản phẩm ${name} chính hãng chất lượng cao tại FuuFishing.`;
+                document.getElementById("searchInput").placeholder = `Tìm kiếm trong ${name}...`;
+                
+                const breadcrumbCat = document.getElementById("breadcrumbCategoryName");
+                if (breadcrumbCat) {
+                    breadcrumbCat.textContent = name;
+                    breadcrumbCat.style.display = "inline-block";
+                }
+            }
+        } catch (e) {
+            console.warn("Could not fetch category name:", e);
+        }
+    }
+
+    // Cập nhật URL Parameters
+    function updateUrlState() {
+        const params = new URLSearchParams();
+        if (currentNavCategoryId) {
+            params.set("categoryId", currentNavCategoryId);
+        }
+
+        if (filterState.keyword) params.set("keyword", filterState.keyword);
+        if (filterState.inStock) params.set("inStock", "1");
+        if (filterState.onSale) params.set("onSale", "1");
+        if (filterState.category && !currentNavCategoryId) params.set("category", filterState.category);
+        if (filterState.brand) params.set("brand", filterState.brand);
+        if (filterState.priceRange) params.set("price", filterState.priceRange);
+        
+        const defaultSort = currentNavCategoryId ? "az" : "popular";
+        if (filterState.sort !== defaultSort) params.set("sort", filterState.sort);
+        if (filterState.page > 1) params.set("page", filterState.page);
+        if (filterState.pageSize !== 12) params.set("pageSize", filterState.pageSize);
+
+        const newUrl = window.location.pathname + (params.toString() ? "?" + params.toString() : "");
+        window.history.replaceState({}, "", newUrl);
+    }
+
+    // ============================================================
+    // Tải dữ liệu từ API
+    // ============================================================
+    async function fetchProductsData() {
+        const productList = document.getElementById("productList");
+        
+        let skeletonHtml = "";
+        for (let i = 0; i < 8; i++) {
+            skeletonHtml += `
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="skeleton-product-card p-3 bg-white rounded-4 border">
+                        <div class="skeleton-thumb skeleton-shimmer mb-3" style="height: 190px; border-radius: 12px; background:#edf2f0;"></div>
+                        <div class="skeleton-title skeleton-shimmer mb-2" style="height: 18px; width: 85%; border-radius: 4px; background:#edf2f0;"></div>
+                        <div class="skeleton-price skeleton-shimmer" style="height: 18px; width: 45%; border-radius: 4px; background:#edf2f0;"></div>
+                    </div>
                 </div>
-                <p class="text-muted mt-3">Đang tải sản phẩm...</p>
-            </div>
-        `;
-        searchStatus.textContent = "";
+            `;
+        }
+        productList.innerHTML = skeletonHtml;
 
         try {
-            const response = await fetch(apiUrl, {
+            const apiUrl = currentNavCategoryId 
+                ? `/api/products/category/${currentNavCategoryId}` 
+                : "/api/products";
+
+            const res = await fetch(apiUrl, {
                 method: "GET",
                 headers: { "Accept": "application/json" }
             });
 
-            if (!response.ok) {
-                throw new Error(`Không tải được sản phẩm. Lỗi ${response.status}`);
-            }
+            if (!res.ok) throw new Error(`Lỗi tải dữ liệu (${res.status})`);
 
-            const result = await response.json();
+            const data = await res.json();
+            allProducts = Array.isArray(data) ? data : (data.items || data.data || []);
 
-            const products = Array.isArray(result)
-                ? result
-                : Array.isArray(result?.data)
-                    ? result.data
-                    : Array.isArray(result?.items)
-                        ? result.items
-                        : [];
-
-            // Cập nhật trạng thái tìm kiếm
-            if (keyword) {
-                searchStatus.textContent = `Tìm thấy ${products.length} sản phẩm cho "${keyword}"`;
-            } else {
-                searchStatus.textContent = "";
-            }
-
-            renderProducts(products, keyword);
-        }
-        catch (error) {
-            console.error("Load products error:", error);
+            applyFiltersAndRender();
+        } catch (err) {
+            console.error("Fetch products error:", err);
             productList.innerHTML = `
-                <div class="col-12">
-                    <div class="alert alert-danger text-center">
-                        ${error.message}
+                <div class="col-12 py-5 text-center">
+                    <div class="alert alert-danger d-inline-block">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>Không thể tải danh sách sản phẩm. Vui lòng thử lại!
                     </div>
                 </div>
             `;
@@ -256,44 +775,440 @@
     }
 
     // ============================================================
-    // Render danh sách sản phẩm
+    // Engine Lọc và Sắp xếp
     // ============================================================
-    function renderProducts(products, keyword) {
+    function applyFiltersAndRender(keepPage = false) {
+        if (!keepPage) {
+            filterState.page = 1;
+        }
+
+        let result = allProducts.filter(p => {
+            // 1. Từ khóa tìm kiếm
+            if (filterState.keyword) {
+                const kw = filterState.keyword.toLowerCase();
+                const nameMatch = p.productName && p.productName.toLowerCase().includes(kw);
+                const catMatch = p.categoryName && p.categoryName.toLowerCase().includes(kw);
+                if (!nameMatch && !catMatch) return false;
+            }
+
+            // 2. Tồn kho
+            if (filterState.inStock && p.stockQuantity <= 0) {
+                return false;
+            }
+
+            // 3. Khuyến mãi
+            if (filterState.onSale && !(p.originalPrice > p.price)) {
+                return false;
+            }
+
+            // 4. Mức giá
+            if (filterState.priceRange) {
+                const pr = p.price;
+                if (filterState.priceRange === "under-500k" && !(pr < 500000)) return false;
+                if (filterState.priceRange === "500k-1m" && !(pr >= 500000 && pr <= 1000000)) return false;
+                if (filterState.priceRange === "1m-3m" && !(pr > 1000000 && pr <= 3000000)) return false;
+                if (filterState.priceRange === "above-3m" && !(pr > 3000000)) return false;
+            }
+
+            // 5. Thương hiệu (Nếu có chọn)
+            if (filterState.brand) {
+                const brand = filterState.brand.toLowerCase();
+                if (!(p.productName || "").toLowerCase().includes(brand)) return false;
+            }
+
+            // Các bộ lọc chỉ cho Shop All
+            if (!currentNavCategoryId) {
+                if (filterState.category) {
+                    const cat = filterState.category.toLowerCase();
+                    if (!p.categoryName || !p.categoryName.toLowerCase().includes(cat)) return false;
+                }
+            }
+
+            return true;
+        });
+
+        // 6. SẮP XẾP (Sorting)
+        result.sort((a, b) => {
+            if (filterState.sort === "az") {
+                return (a.productName || "").localeCompare(b.productName || "", "vi", { sensitivity: "base" });
+            } else if (filterState.sort === "za") {
+                return (b.productName || "").localeCompare(a.productName || "", "vi", { sensitivity: "base" });
+            } else if (filterState.sort === "price-asc") {
+                return a.price - b.price;
+            } else if (filterState.sort === "price-desc") {
+                return b.price - a.price;
+            } else if (filterState.sort === "latest") {
+                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            } else {
+                if (b.isFeatured !== a.isFeatured) {
+                    return b.isFeatured ? 1 : -1;
+                }
+                return b.productId - a.productId;
+            }
+        });
+
+        filteredProducts = result;
+        updateUrlState();
+        checkActiveFiltersCount();
+        renderProductsGrid();
+        renderPagination();
+    }
+
+    // ============================================================
+    // Render Lưới Sản Phẩm
+    // ============================================================
+    function renderProductsGrid() {
         const productList = document.getElementById("productList");
-        productList.innerHTML = "";
+        const statusEl = document.getElementById("searchStatus");
+        const total = filteredProducts.length;
 
-        if (!products || products.length === 0) {
-            const message = keyword
-                ? `Không tìm thấy sản phẩm nào cho "<strong>${keyword}</strong>".`
-                : "Không có sản phẩm trong danh mục này.";
+        statusEl.innerHTML = `Tìm thấy <strong class="text-dark">${total}</strong> sản phẩm`;
 
+        if (total === 0) {
             productList.innerHTML = `
-                <div class="col-12 text-center py-4">
-                    <p class="text-muted">${message}</p>
+                <div class="col-12 text-center py-5">
+                    <div class="py-4">
+                        <i class="fa-solid fa-box-open fa-3x text-muted mb-3 opacity-50"></i>
+                        <h5 class="fw-bold text-dark">Không tìm thấy sản phẩm phù hợp</h5>
+                        <p class="text-muted small">Hãy thử điều chỉnh mức giá, từ khóa tìm kiếm hoặc bấm đặt lại bộ lọc.</p>
+                        <button class="btn btn-sm btn-outline-success rounded-pill px-4" onclick="resetAllFilters()">
+                            <i class="fa-solid fa-arrow-rotate-left me-1"></i>Xem tất cả sản phẩm
+                        </button>
+                    </div>
                 </div>
             `;
             return;
         }
 
-        products.forEach(product => {
-            const imageUrl = product.imageUrl || product.thumbnailUrl || "/images/no-image.png";
-            const price = product.price ? product.price.toLocaleString("vi-VN") : "0";
+        const startIndex = (filterState.page - 1) * filterState.pageSize;
+        const pageItems = filteredProducts.slice(startIndex, startIndex + filterState.pageSize);
 
-            productList.innerHTML += `
-                <div class="col-12 col-md-4 col-lg-3 mb-5">
-                    <a class="product-item" href="/Product/Detail/${product.productId}">
-                        <img src="${imageUrl}" class="img-fluid product-thumbnail">
+        let html = "";
+        pageItems.forEach(p => {
+            const imgUrl = p.thumbnailUrl || p.imageUrl || "/images/no-image.png";
+            const currentPrice = p.price ? p.price.toLocaleString("vi-VN") : "0";
+            const originalPrice = (p.originalPrice && p.originalPrice > p.price) ? p.originalPrice.toLocaleString("vi-VN") : null;
+            const discountPercent = originalPrice ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0;
+            const isOutOfStock = p.stockQuantity <= 0;
 
-                        <h3 class="product-title">${product.productName}</h3>
+            let brandTag = "";
+            const brands = ["Shimano", "Daiwa", "Abu Garcia", "Penn", "Handing", "GW"];
+            for (let b of brands) {
+                if (p.productName && p.productName.toLowerCase().includes(b.toLowerCase())) {
+                    brandTag = `<span class="badge-brand-tag">${b}</span>`;
+                    break;
+                }
+            }
 
-                        <strong class="product-price">${price} đ</strong>
+            html += `
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a class="product-item" href="/Product/Detail/${p.productId}">
+                        ${discountPercent > 0 ? `<span class="badge-discount">-${discountPercent}%</span>` : ""}
+                        ${isOutOfStock ? `<span class="badge-stock-out">Hết hàng</span>` : ""}
 
-                        <span class="icon-cross">
+                        <img src="${imgUrl}" 
+                             class="img-fluid product-thumbnail" 
+                             alt="${p.productName}"
+                             loading="lazy" 
+                             onerror="this.onerror=null; this.src='/images/no-image.png';">
+
+                        ${brandTag}
+
+                        <h3 class="product-title" title="${p.productName}">${p.productName}</h3>
+
+                        <div class="d-flex align-items-baseline justify-content-center">
+                            <span class="product-price">${currentPrice} đ</span>
+                            ${originalPrice ? `<span class="product-original-price">${originalPrice} đ</span>` : ""}
+                        </div>
+
+                        <span class="icon-cross" title="Xem chi tiết">
                             <img src="/images/cross.svg" class="img-fluid">
                         </span>
                     </a>
                 </div>
             `;
         });
+
+        productList.innerHTML = html;
+    }
+
+    // ============================================================
+    // Render Phân Trang
+    // ============================================================
+    function renderPagination() {
+        const total = filteredProducts.length;
+        const totalPages = Math.ceil(total / filterState.pageSize) || 1;
+        const currentPage = Math.min(filterState.page, totalPages);
+        filterState.page = currentPage;
+
+        const summaryEl = document.getElementById("paginationSummary");
+        const controlsEl = document.getElementById("paginationControls");
+
+        if (total === 0) {
+            summaryEl.textContent = "Không có sản phẩm";
+            controlsEl.innerHTML = "";
+            return;
+        }
+
+        const startIdx = (currentPage - 1) * filterState.pageSize + 1;
+        const endIdx = Math.min(currentPage * filterState.pageSize, total);
+        summaryEl.innerHTML = `Hiển thị <strong>${startIdx} - ${endIdx}</strong> trên <strong>${total}</strong> sản phẩm`;
+
+        if (totalPages <= 1) {
+            controlsEl.innerHTML = "";
+            return;
+        }
+
+        let html = "";
+
+        // Nút Prev
+        html += `
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <button class="page-link" onclick="goToPage(${currentPage - 1})" aria-label="Previous">
+                    <i class="fa-solid fa-angle-left"></i>
+                </button>
+            </li>
+        `;
+
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+
+        if (startPage > 1) {
+            html += `<li class="page-item"><button class="page-link" onclick="goToPage(1)">1</button></li>`;
+            if (startPage > 2) {
+                html += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            html += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <button class="page-link" onclick="goToPage(${i})">${i}</button>
+                </li>
+            `;
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
+            }
+            html += `<li class="page-item"><button class="page-link" onclick="goToPage(${totalPages})">${totalPages}</button></li>`;
+        }
+
+        // Nút Next
+        html += `
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <button class="page-link" onclick="goToPage(${currentPage + 1})" aria-label="Next">
+                    <i class="fa-solid fa-angle-right"></i>
+                </button>
+            </li>
+        `;
+
+        controlsEl.innerHTML = html;
+    }
+
+    function goToPage(page) {
+        const totalPages = Math.ceil(filteredProducts.length / filterState.pageSize) || 1;
+        if (page < 1 || page > totalPages) return;
+        filterState.page = page;
+        renderProductsGrid();
+        renderPagination();
+        updateUrlState();
+
+        const target = document.getElementById("products-section");
+        if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }
+
+    function changePageSize(size) {
+        filterState.pageSize = parseInt(size) || 12;
+        filterState.page = 1;
+        applyFiltersAndRender(false);
+    }
+
+    // ============================================================
+    // Tương tác Bộ lọc & Sắp xếp
+    // ============================================================
+    function toggleQuickFilter(type) {
+        if (type === "inStock") {
+            filterState.inStock = !filterState.inStock;
+            const p1 = document.getElementById("pillInStock");
+            const p2 = document.getElementById("pillInStockCategory");
+            if (p1) p1.classList.toggle("active", filterState.inStock);
+            if (p2) p2.classList.toggle("active", filterState.inStock);
+        } else if (type === "onSale") {
+            filterState.onSale = !filterState.onSale;
+            const ps = document.getElementById("pillOnSale");
+            if (ps) ps.classList.toggle("active", filterState.onSale);
+        }
+        applyFiltersAndRender(false);
+    }
+
+    function setCategoryFilter(cat, label) {
+        filterState.category = cat;
+        filterState.categoryLabel = label;
+        const btn = document.getElementById("btnDropdownCategory");
+        if (btn) {
+            document.getElementById("labelCategory").textContent = label;
+            btn.classList.toggle("active", Boolean(cat));
+        }
+        applyFiltersAndRender(false);
+    }
+
+    function setBrandFilter(brand, label) {
+        filterState.brand = brand;
+        filterState.brandLabel = label;
+        
+        const btn1 = document.getElementById("btnDropdownBrand");
+        if (btn1) {
+            document.getElementById("labelBrand").textContent = label;
+            btn1.classList.toggle("active", Boolean(brand));
+        }
+
+        const btn2 = document.getElementById("btnDropdownBrandCategory");
+        if (btn2) {
+            document.getElementById("labelBrandCategory").textContent = label;
+            btn2.classList.toggle("active", Boolean(brand));
+        }
+
+        applyFiltersAndRender(false);
+    }
+
+    function setPriceFilter(range, label) {
+        filterState.priceRange = range;
+        filterState.priceLabel = label;
+
+        const btn = document.getElementById("btnDropdownPrice");
+        if (btn) {
+            document.getElementById("labelPrice").textContent = label;
+            btn.classList.toggle("active", Boolean(range));
+        }
+
+        document.querySelectorAll("[data-price-pill]").forEach(el => {
+            el.classList.toggle("active", el.dataset.pricePill === range);
+        });
+
+        applyFiltersAndRender(false);
+    }
+
+    function setSortOption(sortKey) {
+        filterState.sort = sortKey;
+        document.querySelectorAll(".sort-pill-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.sort === sortKey);
+        });
+        applyFiltersAndRender(false);
+    }
+
+    function checkActiveFiltersCount() {
+        let activeCount = 0;
+        if (filterState.inStock) activeCount++;
+        if (filterState.onSale) activeCount++;
+        if (filterState.category && !currentNavCategoryId) activeCount++;
+        if (filterState.brand) activeCount++;
+        if (filterState.priceRange) activeCount++;
+        if (filterState.keyword) activeCount++;
+
+        const clearBtn = document.getElementById("clearAllFiltersBtn");
+        if (clearBtn) {
+            clearBtn.classList.toggle("d-none", activeCount === 0);
+        }
+    }
+
+    function resetAllFilters() {
+        filterState.keyword = "";
+        filterState.inStock = false;
+        filterState.onSale = false;
+        filterState.category = "";
+        filterState.categoryLabel = "Danh mục";
+        filterState.brand = "";
+        filterState.brandLabel = "Thương hiệu";
+        filterState.priceRange = "";
+        filterState.priceLabel = "Mức giá";
+        filterState.sort = currentNavCategoryId ? "az" : "popular";
+        filterState.page = 1;
+
+        document.getElementById("searchInput").value = "";
+        toggleClearBtn("");
+
+        const p1 = document.getElementById("pillInStock");
+        const p2 = document.getElementById("pillInStockCategory");
+        if (p1) p1.classList.remove("active");
+        if (p2) p2.classList.remove("active");
+
+        const ps = document.getElementById("pillOnSale");
+        if (ps) ps.classList.remove("active");
+
+        const bCat = document.getElementById("btnDropdownCategory");
+        if (bCat) {
+            bCat.classList.remove("active");
+            document.getElementById("labelCategory").textContent = "Danh mục";
+        }
+
+        const bBrand = document.getElementById("btnDropdownBrand");
+        if (bBrand) {
+            bBrand.classList.remove("active");
+            document.getElementById("labelBrand").textContent = "Thương hiệu";
+        }
+
+        const bBrandCat = document.getElementById("btnDropdownBrandCategory");
+        if (bBrandCat) {
+            bBrandCat.classList.remove("active");
+            document.getElementById("labelBrandCategory").textContent = "Thương hiệu";
+        }
+
+        const bPrice = document.getElementById("btnDropdownPrice");
+        if (bPrice) {
+            bPrice.classList.remove("active");
+            document.getElementById("labelPrice").textContent = "Mức giá";
+        }
+
+        document.querySelectorAll("[data-price-pill]").forEach(el => {
+            el.classList.toggle("active", el.dataset.pricePill === "");
+        });
+
+        document.querySelectorAll(".sort-pill-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.sort === filterState.sort);
+        });
+
+        applyFiltersAndRender(false);
+    }
+
+    // ============================================================
+    // Ô Search Bar Tích Hợp
+    // ============================================================
+    function setupSearchInput() {
+        const searchInput = document.getElementById("searchInput");
+        const clearBtn = document.getElementById("clearSearchBtn");
+
+        searchInput.addEventListener("input", function () {
+            const val = this.value.trim();
+            toggleClearBtn(val);
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                filterState.keyword = val;
+                applyFiltersAndRender(false);
+            }, 300);
+        });
+
+        searchInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                clearTimeout(debounceTimer);
+                filterState.keyword = this.value.trim();
+                toggleClearBtn(filterState.keyword);
+                applyFiltersAndRender(false);
+            }
+        });
+
+        clearBtn.addEventListener("click", function () {
+            searchInput.value = "";
+            filterState.keyword = "";
+            toggleClearBtn("");
+            applyFiltersAndRender(false);
+        });
+    }
+
+    function toggleClearBtn(val) {
+        document.getElementById("clearSearchBtn").style.display = val ? "inline-flex" : "none";
     }
 </script>

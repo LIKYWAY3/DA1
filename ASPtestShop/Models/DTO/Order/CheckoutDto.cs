@@ -27,5 +27,13 @@ namespace ASPtestShop.Models.DTO.Order
 
         [MinLength(1, ErrorMessage = "Vui lòng chọn ít nhất một sản phẩm để thanh toán")]
         public List<int> CartItemIds { get; set; } = new();
+
+        // Base URL của website (ví dụ: https://fuufishing.onrender.com)
+        // Dùng để xây dựng ReturnUrl đầy đủ cho VNPay, MoMo, ZaloPay
+        // Không cần validate – server sẽ tự lấy từ Request nếu để trống
+        public string? BaseUrl { get; set; }
+
+        // IP của khách hàng – VNPay yêu cầu
+        public string? IpAddress { get; set; }
     }
 }

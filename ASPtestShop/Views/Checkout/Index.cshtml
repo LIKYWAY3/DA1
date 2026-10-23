@@ -74,7 +74,16 @@
 
                             <select id="paymentMethod" class="form-select">
                                 <option value="COD" selected>
-                                    Thanh toán khi nhận hàng COD
+                                    Thanh toán khi nhận hàng (COD)
+                                </option>
+                                <option value="VNPAY">
+                                    Cổng thanh toán VNPay (Thẻ ATM / QR / Visa / Master)
+                                </option>
+                                <option value="MOMO">
+                                    Ví điện tử MoMo
+                                </option>
+                                <option value="ZALOPAY">
+                                    Ví điện tử ZaloPay
                                 </option>
                             </select>
                         </div>
@@ -690,6 +699,12 @@
                     selectedCartItemsStorageKey
                 );
                 sessionStorage.removeItem("appliedCouponCode");
+
+                // Nếu là thanh toán Online (VNPay, MoMo, ZaloPay), chuyển hướng người dùng sang cổng thanh toán
+                if (result?.requiresRedirect && result?.paymentUrl) {
+                    window.location.href = result.paymentUrl;
+                    return;
+                }
 
                 const orderCode =
                     result?.orderCode ?? "";

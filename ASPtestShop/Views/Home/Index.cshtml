@@ -1,4 +1,4 @@
-﻿<!-- Start Hero Section -->
+<!-- Start Hero Section -->
 <div class="hero">
 	<div class="container">
 		<div class="row justify-content-between">
@@ -281,20 +281,21 @@
 				return;
 			}
 
-			productList.innerHTML = `
-				<div class="col-12 text-center py-5">
-					<div class="spinner-border text-success"
-						 role="status">
-						<span class="visually-hidden">
-							Đang tải...
-						</span>
+			let skeletonHtml = "";
+			for (let i = 0; i < 6; i++) {
+				skeletonHtml += `
+					<div class="marquee-item skeleton-marquee-item">
+						<div class="skeleton-product-card">
+							<div class="skeleton-thumb skeleton-shimmer"></div>
+							<div class="skeleton-title skeleton-shimmer"></div>
+							<div class="skeleton-subtitle skeleton-shimmer"></div>
+							<div class="skeleton-price skeleton-shimmer"></div>
+							<div class="skeleton-btn skeleton-shimmer"></div>
+						</div>
 					</div>
-
-					<p class="text-muted mt-3">
-						Đang tải sản phẩm nổi bật...
-					</p>
-				</div>
-			`;
+				`;
+			}
+			productList.innerHTML = skeletonHtml;
 
 			try {
 				const response = await fetch(
@@ -378,6 +379,7 @@
 							<img src="${escapeAttribute(imageUrl)}"
 								 alt="${escapeAttribute(productName)}"
 								 class="img-fluid product-thumbnail"
+								 loading="lazy"
 								 onerror="this.onerror=null; this.src='/images/no-image.png';">
 
 							<h3 class="product-title">${escapeHtml(productName)}</h3>

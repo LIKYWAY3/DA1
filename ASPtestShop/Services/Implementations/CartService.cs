@@ -62,6 +62,16 @@ namespace ASPtestShop.Services.Implementations
                 };
             }
 
+            if (!product.IsActive)
+            {
+                return new CartResultDto
+                {
+                    Success = false,
+                    ErrorCode = "InactiveProduct",
+                    Message = "Sản phẩm hiện không mở bán"
+                };
+            }
+
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
@@ -81,6 +91,17 @@ namespace ASPtestShop.Services.Implementations
                 .FirstOrDefaultAsync(ci =>
                     ci.CartId == cart.CartId &&
                     ci.ProductId == dto.ProductId);
+
+            var existingQty = cartItem?.Quantity ?? 0;
+            if (existingQty + dto.Quantity > product.StockQuantity)
+            {
+                return new CartResultDto
+                {
+                    Success = false,
+                    ErrorCode = "OutOfStock",
+                    Message = $"Số lượng tồn kho không đủ (chỉ còn {product.StockQuantity} sản phẩm)"
+                };
+            }
 
             if (cartItem != null)
             {
@@ -122,6 +143,21 @@ namespace ASPtestShop.Services.Implementations
                     Items = new List<CartItemDto>(),
                     TotalAmount = 0
                 };
+            }
+
+            var hasPriceChange = false;
+            foreach (var ci in cart.CartItems)
+            {
+                var currentPrice = ci.Product.SalePrice ?? ci.Product.Price;
+                if (ci.UnitPrice != currentPrice)
+                {
+                    ci.UnitPrice = currentPrice;
+                    hasPriceChange = true;
+                }
+            }
+            if (hasPriceChange)
+            {
+                await _context.SaveChangesAsync();
             }
 
             var items = cart.CartItems.Select(ci => new CartItemDto
@@ -172,6 +208,7 @@ namespace ASPtestShop.Services.Implementations
 
             var cartItem = await _context.CartItems
                 .Include(ci => ci.Cart)
+                .Include(ci => ci.Product)
                 .FirstOrDefaultAsync(ci =>
                     ci.CartItemId == dto.CartItemId &&
                     ci.Cart.UserId == userId);
@@ -184,6 +221,29 @@ namespace ASPtestShop.Services.Implementations
                     ErrorCode = "NotFound",
                     Message = "Sản phẩm không tồn tại trong giỏ hàng"
                 };
+            }
+
+            if (cartItem.Product != null)
+            {
+                if (!cartItem.Product.IsActive)
+                {
+                    return new CartResultDto
+                    {
+                        Success = false,
+                        ErrorCode = "InactiveProduct",
+                        Message = "Sản phẩm hiện không mở bán"
+                    };
+                }
+
+                if (dto.Quantity > cartItem.Product.StockQuantity)
+                {
+                    return new CartResultDto
+                    {
+                        Success = false,
+                        ErrorCode = "OutOfStock",
+                        Message = $"Số lượng tồn kho không đủ (chỉ còn {cartItem.Product.StockQuantity} sản phẩm)"
+                    };
+                }
             }
 
             cartItem.Quantity = dto.Quantity;

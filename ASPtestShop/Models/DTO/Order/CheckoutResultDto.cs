@@ -1,4 +1,4 @@
-﻿namespace ASPtestShop.Models.DTO.Order
+namespace ASPtestShop.Models.DTO.Order
 {
     public class CheckoutResultDto
     {
@@ -23,5 +23,12 @@
         public string? PaymentStatus { get; set; }
 
         public string? PaymentMethod { get; set; }
+
+        // URL chuyển hướng sang cổng thanh toán online (VNPay, MoMo, ZaloPay)
+        // null nếu là COD
+        public string? PaymentUrl { get; set; }
+
+        // True nếu cần redirect người dùng qua PaymentUrl
+        public bool RequiresRedirect { get; set; }
     }
 }

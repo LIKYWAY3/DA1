@@ -12,5 +12,8 @@ namespace ASPtestShop.Services.Interfaces
         Task<OrderHistoryDto?> GetOrderDetailAsync(string userId, int orderId);
 
         Task<CancelOrderResultDto> CancelOrderAsync(string userId, int orderId, string? cancelReason = null);
+
+        // UC-19: Tự động hủy đơn hàng quá hạn (SystemScheduler)
+        Task<AutoCancelResultDto> AutoCancelExpiredOrdersAsync(int timeoutHours = 24, int onlineTimeoutMinutes = 30);
     }
 }

@@ -2,16 +2,19 @@ using ASPtestShop.Data;
 using ASPtestShop.Models.DTO.Product;
 using ASPtestShop.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ASPtestShop.Services.Implementations
 {
     public class ProductService : IProductService
     {
         private readonly AppDbContext _context;
+        private readonly IMemoryCache _cache;
 
-        public ProductService(AppDbContext context)
+        public ProductService(AppDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         // =====================================================
@@ -21,7 +24,13 @@ namespace ASPtestShop.Services.Implementations
         // =====================================================
         public async Task<List<ProductListItemDto>> GetProductsAsync()
         {
-            return await _context.Products
+            const string cacheKey = "Cache_AllActiveProducts";
+            if (_cache.TryGetValue(cacheKey, out List<ProductListItemDto>? cached) && cached != null)
+            {
+                return cached;
+            }
+
+            var products = await _context.Products
                 .AsNoTracking()
                 .Where(p => p.IsActive)
                 .OrderByDescending(p => p.CreatedAt)
@@ -39,9 +48,18 @@ namespace ASPtestShop.Services.Implementations
                         .OrderByDescending(img => img.IsPrimary)
                         .ThenBy(img => img.SortOrder)
                         .Select(img => img.ImageUrl)
-                        .FirstOrDefault()
+                        .FirstOrDefault(),
+
+                    CategoryId = p.CategoryId,
+                    CategoryName = p.Category != null ? p.Category.CategoryName : null,
+                    StockQuantity = p.StockQuantity,
+                    CreatedAt = p.CreatedAt,
+                    IsFeatured = p.IsFeatured
                 })
                 .ToListAsync();
+
+            _cache.Set(cacheKey, products, TimeSpan.FromMinutes(3));
+            return products;
         }
 
         // =====================================================
@@ -122,7 +140,13 @@ namespace ASPtestShop.Services.Implementations
                         .OrderByDescending(img => img.IsPrimary)
                         .ThenBy(img => img.SortOrder)
                         .Select(img => img.ImageUrl)
-                        .FirstOrDefault()
+                        .FirstOrDefault(),
+
+                    CategoryId = p.CategoryId,
+                    CategoryName = p.Category != null ? p.Category.CategoryName : null,
+                    StockQuantity = p.StockQuantity,
+                    CreatedAt = p.CreatedAt,
+                    IsFeatured = p.IsFeatured
                 })
                 .ToListAsync();
         }
@@ -173,7 +197,13 @@ namespace ASPtestShop.Services.Implementations
         public async Task<List<ProductListItemDto>>
             GetFeaturedProductsAsync()
         {
-            return await _context.Products
+            const string cacheKey = "Cache_FeaturedProducts";
+            if (_cache.TryGetValue(cacheKey, out List<ProductListItemDto>? cached) && cached != null)
+            {
+                return cached;
+            }
+
+            var featured = await _context.Products
                 .AsNoTracking()
                 .Where(p =>
                     p.IsActive
@@ -193,9 +223,18 @@ namespace ASPtestShop.Services.Implementations
                         .OrderByDescending(img => img.IsPrimary)
                         .ThenBy(img => img.SortOrder)
                         .Select(img => img.ImageUrl)
-                        .FirstOrDefault()
+                        .FirstOrDefault(),
+
+                    CategoryId = p.CategoryId,
+                    CategoryName = p.Category != null ? p.Category.CategoryName : null,
+                    StockQuantity = p.StockQuantity,
+                    CreatedAt = p.CreatedAt,
+                    IsFeatured = p.IsFeatured
                 })
                 .ToListAsync();
+
+            _cache.Set(cacheKey, featured, TimeSpan.FromMinutes(5));
+            return featured;
         }
 
         // =====================================================
@@ -232,7 +271,13 @@ namespace ASPtestShop.Services.Implementations
                         .OrderByDescending(img => img.IsPrimary)
                         .ThenBy(img => img.SortOrder)
                         .Select(img => img.ImageUrl)
-                        .FirstOrDefault()
+                        .FirstOrDefault(),
+
+                    CategoryId = p.CategoryId,
+                    CategoryName = p.Category != null ? p.Category.CategoryName : null,
+                    StockQuantity = p.StockQuantity,
+                    CreatedAt = p.CreatedAt,
+                    IsFeatured = p.IsFeatured
                 })
                 .ToListAsync();
         }
@@ -319,7 +364,13 @@ namespace ASPtestShop.Services.Implementations
                         .OrderByDescending(img => img.IsPrimary)
                         .ThenBy(img => img.SortOrder)
                         .Select(img => img.ImageUrl)
-                        .FirstOrDefault()
+                        .FirstOrDefault(),
+
+                    CategoryId = p.CategoryId,
+                    CategoryName = p.Category != null ? p.Category.CategoryName : null,
+                    StockQuantity = p.StockQuantity,
+                    CreatedAt = p.CreatedAt,
+                    IsFeatured = p.IsFeatured
                 })
                 .ToListAsync();
         }

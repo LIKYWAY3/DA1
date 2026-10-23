@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ASPtestShop.Controllers.MVC.User
 {
@@ -23,7 +23,8 @@ namespace ASPtestShop.Controllers.MVC.User
 
             ViewBag.ProductId = id;
 
-            return View("Detail");
+            // Render view chi tiết sản phẩm đầy đủ có khối Đánh giá (Reviews)
+            return View("~/Views/Product/Detail.cshtml");
         }
     }
 }

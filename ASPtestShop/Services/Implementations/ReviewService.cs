@@ -79,6 +79,20 @@ namespace ASPtestShop.Services.Implementations
                 return (false, "Không tìm thấy thông tin tài khoản người dùng!", null);
             }
 
+            // BẢO MẬT & NGHIỆP VỤ: Chỉ người dùng đã mua sản phẩm và đơn hàng đã Completed mới được đánh giá
+            var matchingOrderItem = await _context.OrderItems
+                .Include(oi => oi.Order)
+                .Where(oi => oi.ProductId == dto.ProductId &&
+                             oi.Order.UserId == userId &&
+                             oi.Order.OrderStatus == "Completed")
+                .OrderByDescending(oi => oi.Order.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (matchingOrderItem == null)
+            {
+                return (false, "Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và đơn hàng hoàn tất!", null);
+            }
+
             // Kiểm tra xem người dùng đã từng đánh giá sản phẩm này chưa
             var existingReview = await _context.Reviews
                 .FirstOrDefaultAsync(r => r.ProductId == dto.ProductId && r.UserId == userId);
@@ -86,6 +100,7 @@ namespace ASPtestShop.Services.Implementations
             if (existingReview != null)
             {
                 // Cập nhật đánh giá cũ
+                existingReview.OrderItemId = matchingOrderItem.OrderItemId;
                 existingReview.Rating = dto.Rating;
                 existingReview.Comment = dto.Comment?.Trim();
                 existingReview.IsApproved = true; // Duyệt tự động, admin có thể ẩn nếu vi phạm
@@ -111,6 +126,7 @@ namespace ASPtestShop.Services.Implementations
             {
                 ProductId = dto.ProductId,
                 UserId = userId,
+                OrderItemId = matchingOrderItem.OrderItemId,
                 Rating = dto.Rating,
                 Comment = dto.Comment?.Trim(),
                 IsApproved = true, // Tự động duyệt để khách hàng thấy ngay, admin vẫn có quyền duyệt/ẩn ở trang Admin

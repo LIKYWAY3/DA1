@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Chi tiết đơn hàng";
     var orderId = ViewBag.OrderId;
 }
@@ -17,6 +17,48 @@
     <div id="orderDetailContent">
         <div class="text-center text-muted py-5">
             Đang tải chi tiết đơn hàng...
+        </div>
+    </div>
+
+    <!-- UC-20: Modal Yêu cầu hoàn tiền -->
+    <div class="modal fade" id="refundModal" tabindex="-1" aria-labelledby="refundModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="refundModalLabel">Yêu cầu hoàn tiền đơn hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="refundModalMessage"></div>
+                    <form id="refundForm">
+                        <div class="mb-3">
+                            <label class="form-label">Số tiền hoàn dự kiến</label>
+                            <input type="text" id="refundAmountDisplay" class="form-control fw-bold text-danger" readonly />
+                        </div>
+                        <div class="mb-3">
+                            <label for="refundReason" class="form-label">Lý do yêu cầu hoàn tiền <span class="text-danger">*</span></label>
+                            <textarea id="refundReason" class="form-control" rows="3" placeholder="Nhập lý do muốn hoàn tiền..." required maxlength="500"></textarea>
+                        </div>
+                        <h6 class="border-top pt-3 mt-3">Thông tin nhận tiền hoàn</h6>
+                        <div class="mb-3">
+                            <label for="refundBankName" class="form-label">Tên ngân hàng</label>
+                            <input type="text" id="refundBankName" class="form-control" placeholder="VD: Vietcombank, MB, Techcombank..." maxlength="100" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="refundAccountNumber" class="form-label">Số tài khoản</label>
+                            <input type="text" id="refundAccountNumber" class="form-control" placeholder="Nhập số tài khoản ngân hàng" maxlength="50" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="refundAccountHolderName" class="form-label">Tên chủ tài khoản</label>
+                            <input type="text" id="refundAccountHolderName" class="form-control text-uppercase" placeholder="VD: NGUYEN VAN A" maxlength="100" />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnSubmitRefund" class="btn btn-danger" onclick="submitRefundRequest()">Xác nhận gửi yêu cầu</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -149,22 +191,22 @@
                             <div class="card-body">
                                 <p>
                                     <strong>Người nhận:</strong>
-                                    ${order.receiverName || ""}
+                                    ${escapeHtml(order.receiverName)}
                                 </p>
 
                                 <p>
                                     <strong>Số điện thoại:</strong>
-                                    ${order.receiverPhone || ""}
+                                    ${escapeHtml(order.receiverPhone)}
                                 </p>
 
                                 <p>
                                     <strong>Địa chỉ:</strong>
-                                    ${order.shippingAddress || ""}
+                                    ${escapeHtml(order.shippingAddress)}
                                 </p>
 
                                 <p>
                                     <strong>Ghi chú:</strong>
-                                    ${order.note || "Không có"}
+                                    ${escapeHtml(order.note || "Không có")}
                                 </p>
                             </div>
                         </div>
@@ -196,6 +238,8 @@
                                     <span>Tổng thanh toán</span>
                                     <strong>${formatCurrency(order.finalAmount)}</strong>
                                 </div>
+
+                                ${renderRefundAction(order)}
                             </div>
                         </div>
                     </div>
@@ -271,11 +315,125 @@
         const value = status || "Unpaid";
 
         let badgeClass = "bg-secondary";
+        let text = value;
 
-        if (value === "Unpaid") badgeClass = "bg-warning text-dark";
-        if (value === "Paid") badgeClass = "bg-success";
-        if (value === "Failed") badgeClass = "bg-danger";
+        if (value === "Unpaid") { badgeClass = "bg-warning text-dark"; text = "Chưa thanh toán"; }
+        if (value === "Pending") { badgeClass = "bg-warning text-dark"; text = "Chờ TT Online"; }
+        if (value === "Paid") { badgeClass = "bg-success"; text = "Đã thanh toán"; }
+        if (value === "Failed") { badgeClass = "bg-danger"; text = "Thất bại"; }
+        if (value === "RefundPending") { badgeClass = "bg-info text-dark"; text = "Chờ hoàn tiền"; }
+        if (value === "Refunded") { badgeClass = "bg-dark text-white"; text = "Đã hoàn tiền"; }
 
-        return `<span class="badge ${badgeClass}">${value}</span>`;
+        return `<span class="badge ${badgeClass}">${text}</span>`;
+    }
+
+    // ==========================================
+    // UC-20: HÀNH ĐỘNG YÊU CẦU HOÀN TIỀN
+    // ==========================================
+    let currentRefundOrderId = 0;
+
+    function renderRefundAction(order) {
+        if (order.paymentStatus === "Paid") {
+            return `
+                <div class="mt-3 pt-3 border-top">
+                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" onclick="openRefundModal(${order.orderId}, ${order.finalAmount})">
+                        Yêu cầu hoàn tiền
+                    </button>
+                </div>
+            `;
+        }
+        if (order.paymentStatus === "RefundPending") {
+            return `
+                <div class="alert alert-info mt-3 mb-0 small">
+                    <h6 class="alert-heading mb-1 fw-bold">Đang chờ hoàn tiền</h6>
+                    Yêu cầu hoàn tiền của bạn đang được Ban quản trị xét duyệt.
+                </div>
+            `;
+        }
+        if (order.paymentStatus === "Refunded") {
+            return `
+                <div class="alert alert-success mt-3 mb-0 small">
+                    <h6 class="alert-heading mb-1 fw-bold">Đã hoàn tiền</h6>
+                    Đơn hàng này đã được xét duyệt và hoàn tiền thành công.
+                </div>
+            `;
+        }
+        return "";
+    }
+
+    function openRefundModal(orderId, amount) {
+        currentRefundOrderId = orderId;
+        document.getElementById("refundAmountDisplay").value = formatCurrency(amount);
+        document.getElementById("refundReason").value = "";
+        document.getElementById("refundModalMessage").innerHTML = "";
+        
+        const modal = new bootstrap.Modal(document.getElementById("refundModal"));
+        modal.show();
+    }
+
+    async function submitRefundRequest() {
+        const reason = document.getElementById("refundReason").value.trim();
+        const bankName = document.getElementById("refundBankName").value.trim();
+        const accountNumber = document.getElementById("refundAccountNumber").value.trim();
+        const accountHolderName = document.getElementById("refundAccountHolderName").value.trim();
+        const msgDiv = document.getElementById("refundModalMessage");
+        const btn = document.getElementById("btnSubmitRefund");
+
+        if (!reason) {
+            msgDiv.innerHTML = `<div class="alert alert-danger py-2">Vui lòng nhập lý do yêu cầu hoàn tiền.</div>`;
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...`;
+
+        try {
+            const response = await fetch("/api/refunds", {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    orderId: currentRefundOrderId,
+                    reason: reason,
+                    bankName: bankName || null,
+                    accountNumber: accountNumber || null,
+                    accountHolderName: accountHolderName || null
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "Gửi yêu cầu hoàn tiền thất bại.");
+            }
+
+            msgDiv.innerHTML = `<div class="alert alert-success py-2">${result.message}</div>`;
+            setTimeout(() => {
+                const modalEl = document.getElementById("refundModal");
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                loadOrderDetail();
+            }, 1500);
+
+        } catch (err) {
+            msgDiv.innerHTML = `<div class="alert alert-danger py-2">${err.message || "Có lỗi xảy ra, vui lòng thử lại."}</div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = "Xác nhận gửi yêu cầu";
+        }
+    }
+
+    // BẢO MẬT: Hàm mã hóa HTML để phòng chống lỗ hổng Cross-Site Scripting (XSS)
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 </script>

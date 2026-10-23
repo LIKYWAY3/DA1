@@ -1,0 +1,83 @@
+/**
+ * FuuFishing Skeleton Loading & Shimmer Animation System
+ * Thiết kế cho trải nghiệm tải trang mượt mà chuẩn thương mại điện tử cao cấp
+ */
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(
+        90deg,
+        #eef1f3 0%,
+        #eef1f3 35%,
+        #f7f9fa 50%,
+        #eef1f3 65%,
+        #eef1f3 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    border-radius: 6px;
+}
+
+/* Skeleton Card dùng cho lưới sản phẩm */
+.skeleton-product-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-thumb {
+    width: 100%;
+    height: 220px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+}
+
+.skeleton-title {
+    width: 80%;
+    height: 18px;
+    margin-bottom: 10px;
+}
+
+.skeleton-subtitle {
+    width: 50%;
+    height: 14px;
+    margin-bottom: 14px;
+}
+
+.skeleton-price {
+    width: 40%;
+    height: 20px;
+    margin-top: auto;
+}
+
+.skeleton-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+}
+
+/* Skeleton cho Marquee trang chủ */
+.skeleton-marquee-item {
+    flex: 0 0 280px;
+    margin: 0 12px;
+    height: 340px;
+}

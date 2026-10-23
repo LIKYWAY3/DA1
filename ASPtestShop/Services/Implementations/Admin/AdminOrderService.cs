@@ -21,8 +21,11 @@ namespace ASPtestShop.Services.Implementations.Admin
         private readonly string[] _validPaymentStatuses =
         {
             "Unpaid",
+            "Pending",
             "Paid",
-            "Failed"
+            "Failed",
+            "RefundPending",
+            "Refunded"
         };
 
         public AdminOrderService(AppDbContext context)
@@ -123,6 +126,25 @@ namespace ASPtestShop.Services.Implementations.Admin
                 };
             }
 
+            // RÀNG BUỘC STATE MACHINE: Ngăn chặn thao túng trạng thái kết thúc (Terminal States)
+            if (order.OrderStatus == "Cancelled" && dto.OrderStatus != "Cancelled")
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Đơn hàng đã hủy là trạng thái kết thúc (terminal state), không thể mở lại. Vui lòng tạo đơn hàng mới."
+                };
+            }
+
+            if (order.OrderStatus == "Completed" && dto.OrderStatus != "Completed")
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Đơn hàng đã hoàn tất không thể chuyển về trạng thái đang xử lý."
+                };
+            }
+
             // Nếu đơn hàng chuyển sang Cancelled từ trạng thái khác -> Hoàn lại tồn kho & lượt dùng Coupon
             if (dto.OrderStatus == "Cancelled" && order.OrderStatus != "Cancelled")
             {
@@ -216,4 +238,4 @@ namespace ASPtestShop.Services.Implementations.Admin
             });
         }
     }
-}
+}

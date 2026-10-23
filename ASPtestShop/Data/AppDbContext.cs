@@ -21,6 +21,7 @@ namespace ASPtestShop.Data
         public DbSet<Coupon> Coupons { get; set; }
         public DbSet<UserAddress> UserAddresses { get; set; }
         public DbSet<BankAccount> BankAccounts { get; set; }
+        public DbSet<RefundRequest> RefundRequests { get; set; }
 
         // ==========================================
         // DBSETS: CHAT SYSTEM
@@ -70,6 +71,37 @@ namespace ASPtestShop.Data
 
             builder.Entity<ChatMessage>()
                 .HasIndex(cm => cm.Intent);
+
+            // ==========================================
+            // TỐI ƯU HIỆU NĂNG: INDEXES CHO AZURE SQL
+            // ==========================================
+            // Tối ưu trang chủ & sản phẩm nổi bật
+            builder.Entity<Product>()
+                .HasIndex(p => new { p.IsActive, p.IsFeatured, p.CreatedAt });
+
+            // Tối ưu lọc theo danh mục
+            builder.Entity<Product>()
+                .HasIndex(p => new { p.CategoryId, p.IsActive });
+
+            // Tối ưu tìm kiếm sản phẩm theo tên
+            builder.Entity<Product>()
+                .HasIndex(p => p.ProductName);
+
+            // Tối ưu lịch sử đơn hàng của người dùng
+            builder.Entity<Order>()
+                .HasIndex(o => new { o.UserId, o.CreatedAt });
+
+            // Tối ưu lọc đơn theo trạng thái và tác vụ quét timeout
+            builder.Entity<Order>()
+                .HasIndex(o => new { o.OrderStatus, o.PaymentStatus, o.CreatedAt });
+
+            // Tối ưu tìm kiếm theo mã đơn hàng
+            builder.Entity<Order>()
+                .HasIndex(o => o.OrderCode);
+
+            // Tối ưu truy vấn OrderItems theo OrderId
+            builder.Entity<OrderItem>()
+                .HasIndex(oi => oi.OrderId);
 
 
             // ==========================================
@@ -182,6 +214,21 @@ namespace ASPtestShop.Data
                 .HasForeignKey(b => b.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // UC-20: RefundRequest Relationships
+            builder.Entity<RefundRequest>()
+                .HasOne(r => r.Order)
+                .WithMany()
+                .HasForeignKey(r => r.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RefundRequest>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RefundRequest>()
+                .HasIndex(r => r.OrderId);
 
             // ==========================================
             // RELATIONSHIPS: CHAT SYSTEM

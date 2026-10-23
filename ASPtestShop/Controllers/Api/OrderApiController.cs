@@ -5,6 +5,7 @@ using ASPtestShop.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace ASPtestShop.Controllers.Api
@@ -15,14 +16,17 @@ namespace ASPtestShop.Controllers.Api
     public class OrderApiController : ControllerBase
     {
         private readonly IOrderService _orderService;
+        private readonly IOrderNotificationService _orderNotificationService;
 
-        public OrderApiController(IOrderService orderService)
+        public OrderApiController(IOrderService orderService, IOrderNotificationService orderNotificationService)
         {
             _orderService = orderService;
+            _orderNotificationService = orderNotificationService;
         }
 
         //===============================CHECKOUT======================================
         [HttpPost("checkout")]
+        [EnableRateLimiting("CheckoutRateLimit")]
         public async Task<IActionResult> Checkout([FromBody] CheckoutDto checkoutDto)
         {
             //xác thực người dùng bản này để bắt chuỗi rỗng nếu chưa đăng nhập
@@ -34,6 +38,17 @@ namespace ASPtestShop.Controllers.Api
                     Message = "Bạn chưa đăng nhập"
                 });
             }
+
+            // Tự động điền BaseUrl và IpAddress từ HTTP request (cổng thanh toán online cần)
+            if (string.IsNullOrEmpty(checkoutDto.BaseUrl))
+            {
+                checkoutDto.BaseUrl = $"{Request.Scheme}://{Request.Host}";
+            }
+            if (string.IsNullOrEmpty(checkoutDto.IpAddress))
+            {
+                checkoutDto.IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            }
+
             var result = await _orderService.CheckoutAsync(userId, checkoutDto);
             if (!result.Success)
             {
@@ -42,6 +57,15 @@ namespace ASPtestShop.Controllers.Api
                     result.Message
                 });
             }
+
+            // GIAI ĐOẠN 1: BẮN THÔNG BÁO REAL-TIME CHO ADMIN QUA SIGNALR
+            _ = _orderNotificationService.NotifyAdminNewOrderAsync(
+                result.OrderCode ?? "",
+                checkoutDto.ReceiverName ?? "Khách hàng",
+                result.FinalAmount,
+                checkoutDto.PaymentMethod ?? "COD",
+                result.PaymentStatus ?? "Pending"
+            );
 
             return Ok(result);
         }
@@ -131,6 +155,17 @@ namespace ASPtestShop.Controllers.Api
                 });
             }
 
+            return Ok(result);
+        }
+
+        //===============================UC-19: AUTO CANCEL EXPIRED ORDERS================
+        [HttpPost("auto-cancel-expired")]
+        [AllowAnonymous] // Cho phép SystemScheduler hoặc Background worker gọi
+        public async Task<IActionResult> AutoCancelExpiredOrders(
+            [FromQuery] int timeoutHours = 24,
+            [FromQuery] int onlineTimeoutMinutes = 30)
+        {
+            var result = await _orderService.AutoCancelExpiredOrdersAsync(timeoutHours, onlineTimeoutMinutes);
             return Ok(result);
         }
     }

@@ -1,4 +1,4 @@
-﻿namespace ASPtestShop.Models.DTO.Product
+namespace ASPtestShop.Models.DTO.Product
 {
     // DTO dùng cho danh sách sản phẩm:
     // GET /api/products
@@ -26,5 +26,20 @@
 
         // Ảnh đầu tiên trong bảng ProductImages, sắp xếp theo SortOrder
         public string? ImageUrl { get; set; }
+
+        // Mã danh mục
+        public int CategoryId { get; set; }
+
+        // Tên danh mục
+        public string? CategoryName { get; set; }
+
+        // Số lượng tồn kho
+        public int StockQuantity { get; set; }
+
+        // Thời gian tạo
+        public DateTime CreatedAt { get; set; }
+
+        // Sản phẩm nổi bật
+        public bool IsFeatured { get; set; }
     }
 }

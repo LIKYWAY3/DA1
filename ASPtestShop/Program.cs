@@ -12,12 +12,17 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer; // Thêm namespace cho JWT Bearer Authentication
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;             // Bảo mật: Rate Limiter
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;                // Thêm namespace cho Token Validation
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;                // Bảo mật: Rate Limiter Queue
 
 var builder = WebApplication.CreateBuilder(args);
+
+// GIAI ĐOẠN 1: Hỗ trợ nạp Secret và ConnectionString từ Biến môi trường (Environment Variables)
+builder.Configuration.AddEnvironmentVariables();
 
 // Hỗ trợ Render tự động gán PORT (ví dụ PORT=10000)
 var port = Environment.GetEnvironmentVariable("PORT");
@@ -227,14 +232,65 @@ builder.Services.AddScoped<IAdminReviewService, AdminReviewService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 //user services
 builder.Services.AddScoped<IUserAuthService, UserAuthService>();
+// UC-20: Dịch vụ Yêu cầu hoàn tiền
+builder.Services.AddScoped<IRefundService, RefundService>();
 // Payment providers
 builder.Services.AddScoped<IPaymentProvider, CodPaymentProvider>();
-// tạm thời chưa dùng
-//builder.Services.AddScoped<IPaymentProvider, MomoPaymentProvider>();
-//builder.Services.AddScoped<IPaymentProvider, ZaloPayPaymentProvider>();
-//builder.Services.AddScoped<IPaymentProvider, VnPayPaymentProvider>();
+// UC-18: Thanh toán Online – VNPay, MoMo, ZaloPay
+builder.Services.AddScoped<IPaymentProvider, VnPayPaymentProvider>();
+builder.Services.AddScoped<IPaymentProvider, MomoPaymentProvider>();
+builder.Services.AddScoped<IPaymentProvider, ZaloPayPaymentProvider>();
 builder.Services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
 builder.Services.AddHttpClient();
+
+// UC-19: Tự động hủy đơn hàng quá hạn (SystemScheduler Hosted Service)
+builder.Services.AddHostedService<ASPtestShop.Services.BackgroundServices.OrderTimeoutBackgroundService>();
+
+// =========================================================================
+// REAL-TIME NOTIFICATIONS: SIGNALR VÀ THÔNG BÁO ĐƠN HÀNG CHO ADMIN
+// =========================================================================
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IOrderNotificationService, OrderNotificationService>();
+
+// =========================================================================
+// CẤU HÌNH BẢO MẬT: RATE LIMITING (CHỐNG BRUTE FORCE & TẤN CÔNG SPAM ĐƠN HÀNG)
+// =========================================================================
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync("{\"message\": \"Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.\"}", token);
+    };
+
+    // Giới hạn tần suất đăng nhập (Chống Brute Force mật khẩu)
+    options.AddFixedWindowLimiter(policyName: "AuthRateLimit", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+
+    // Giới hạn tần suất đặt hàng (Chống Spam / Giữ chỗ tồn kho ảo)
+    options.AddFixedWindowLimiter(policyName: "CheckoutRateLimit", opt =>
+    {
+        opt.PermitLimit = 15;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+});
+
+// =========================================================================
+// TỐI ƯU HIỆU NĂNG: IN-MEMORY CACHE & RESPONSE COMPRESSION (BROTLI / GZIP)
+// =========================================================================
+builder.Services.AddMemoryCache();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
 
 var app = builder.Build();
 
@@ -246,6 +302,26 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// =========================================================================
+// CẤU HÌNH BẢO MẬT: HTTP SECURITY HEADERS (OWASP DEFENSE-IN-DEPTH)
+// =========================================================================
+app.Use(async (context, next) =>
+{
+    // Ngăn chặn tấn công Clickjacking (chống iframe trang web từ site khác)
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    // Ngăn chặn trình duyệt đoán sai MIME type (Anti MIME-sniffing)
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    // Bảo vệ quyền riêng tư Referrer khi chuyển hướng
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    // Bật bộ lọc XSS trên các trình duyệt cũ
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+
+    await next();
+});
+
+// Kích hoạt nén phản hồi HTTP (tiết kiệm băng thông 60-80%)
+app.UseResponseCompression();
+
 var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
@@ -255,8 +331,20 @@ forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+// Cấu hình Cache-Control 7 ngày cho toàn bộ file tĩnh (CSS, JS, hình ảnh)
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.Append("Cache-Control", "public,max-age=604800");
+    }
+});
+
 app.UseRouting();
+
+// Kích hoạt Middleware Rate Limiting
+app.UseRateLimiter();
 
 app.UseAuthentication();
 
@@ -265,6 +353,7 @@ app.UseAuthorization();
 app.MapStaticAssets();
 
 app.MapControllers();
+app.MapHub<ASPtestShop.Hubs.OrderHub>("/hubs/order");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")

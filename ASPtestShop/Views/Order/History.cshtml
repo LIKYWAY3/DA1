@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Lịch sử đơn hàng";
 }
 
@@ -193,11 +193,15 @@
         const value = status || "Unpaid";
 
         let badgeClass = "bg-secondary";
+        let text = value;
 
-        if (value === "Unpaid") badgeClass = "bg-warning text-dark";
-        if (value === "Paid") badgeClass = "bg-success";
-        if (value === "Failed") badgeClass = "bg-danger";
+        if (value === "Unpaid") { badgeClass = "bg-warning text-dark"; text = "Chưa thanh toán"; }
+        if (value === "Pending") { badgeClass = "bg-warning text-dark"; text = "Chờ TT Online"; }
+        if (value === "Paid") { badgeClass = "bg-success"; text = "Đã thanh toán"; }
+        if (value === "Failed") { badgeClass = "bg-danger"; text = "Thất bại"; }
+        if (value === "RefundPending") { badgeClass = "bg-info text-dark"; text = "Chờ hoàn tiền"; }
+        if (value === "Refunded") { badgeClass = "bg-dark text-white"; text = "Đã hoàn tiền"; }
 
-        return `<span class="badge ${badgeClass}">${value}</span>`;
+        return `<span class="badge ${badgeClass}">${text}</span>`;
     }
 </script>

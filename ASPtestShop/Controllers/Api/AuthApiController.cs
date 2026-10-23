@@ -2,6 +2,7 @@ using ASPtestShop.Models.DTO.Auth;
 using ASPtestShop.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication;
@@ -46,8 +47,9 @@ namespace ASPtestShop.Controllers.Api
 
         //===================================LOGIN=========================================
         // POST: api/auth/login
-        // Đăng nhập và nhận JWT token
+        // Đăng nhập và nhận JWT token (Áp dụng Rate Limiting chống Brute Force)
         [HttpPost("login")]
+        [EnableRateLimiting("AuthRateLimit")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
             var result = await _authService.LoginAsync(dto);

@@ -415,13 +415,35 @@ namespace ASPtestShop.Services.Implementations.User
 
             if (dto.AvatarFile != null && dto.AvatarFile.Length > 0)
             {
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var extension = Path.GetExtension(dto.AvatarFile.FileName).ToLowerInvariant();
+
+                if (!allowedExtensions.Contains(extension))
+                {
+                    return new AuthResultDto
+                    {
+                        Success = false,
+                        Message = "Chỉ cho phép upload file ảnh định dạng .jpg, .jpeg, .png, .webp"
+                    };
+                }
+
+                var maxFileSize = 5 * 1024 * 1024; // 5MB
+                if (dto.AvatarFile.Length > maxFileSize)
+                {
+                    return new AuthResultDto
+                    {
+                        Success = false,
+                        Message = "File ảnh đại diện không được vượt quá 5MB"
+                    };
+                }
+
                 string uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "Uploads", "Avatars");
                 if (!Directory.Exists(uploadFolder))
                 {
                     Directory.CreateDirectory(uploadFolder);
                 }
 
-                string uniqueFileName = Guid.NewGuid().ToString() + "_" + dto.AvatarFile.FileName;
+                string uniqueFileName = $"{Guid.NewGuid():N}{extension}";
                 string filePath = Path.Combine(uploadFolder, uniqueFileName);
 
                 using (var fileStream = new FileStream(filePath, FileMode.Create))

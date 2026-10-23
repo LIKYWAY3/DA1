@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Chi tiết đơn hàng";
     var orderId = ViewBag.OrderId;
@@ -71,6 +71,7 @@
             const order = await response.json();
 
             renderOrderDetail(order);
+            loadRefundInfo(order.orderId);
 
         } catch (error) {
             console.error("Lỗi tải chi tiết đơn:", error);
@@ -152,6 +153,8 @@
                     </div>
 
                     <div class="col-lg-5">
+                        <div id="refundSection"></div>
+
                         <div class="admin-card mb-4">
                             <div class="admin-section-header admin-section-header-accent">
                                 <h5 class="mb-0">Cập nhật trạng thái</h5>
@@ -196,22 +199,22 @@
                             <div class="admin-section-body">
                                 <div class="admin-info-row">
                                     <span>Người nhận</span>
-                                    <strong>${order.receiverName || ""}</strong>
+                                    <strong>${escapeHtml(order.receiverName)}</strong>
                                 </div>
 
                                 <div class="admin-info-row">
                                     <span>Số điện thoại</span>
-                                    <strong>${order.receiverPhone || ""}</strong>
+                                    <strong>${escapeHtml(order.receiverPhone)}</strong>
                                 </div>
 
                                 <div class="admin-info-block">
                                     <span>Địa chỉ</span>
-                                    <strong>${order.shippingAddress || ""}</strong>
+                                    <strong>${escapeHtml(order.shippingAddress)}</strong>
                                 </div>
 
                                 <div class="admin-info-block">
                                     <span>Ghi chú</span>
-                                    <strong>${order.note || "Không có"}</strong>
+                                    <strong>${escapeHtml(order.note || "Không có")}</strong>
                                 </div>
                             </div>
                         </div>
@@ -341,7 +344,7 @@
     }
 
     function renderPaymentStatusOptions(currentStatus) {
-        const statuses = ["Unpaid", "Paid", "Failed"];
+        const statuses = ["Unpaid", "Pending", "Paid", "Failed", "RefundPending", "Refunded"];
 
         return statuses.map(status => `
                 <option value="${status}" ${status === currentStatus ? "selected" : ""}>
@@ -368,12 +371,103 @@
         const value = status || "Unpaid";
 
         let badgeClass = "bg-secondary";
+        let text = value;
 
-        if (value === "Unpaid") badgeClass = "bg-warning text-dark";
-        if (value === "Paid") badgeClass = "bg-success";
-        if (value === "Failed") badgeClass = "bg-danger";
+        if (value === "Unpaid") { badgeClass = "bg-warning text-dark"; text = "Chưa thanh toán"; }
+        if (value === "Pending") { badgeClass = "bg-warning text-dark"; text = "Chờ TT Online"; }
+        if (value === "Paid") { badgeClass = "bg-success"; text = "Đã thanh toán"; }
+        if (value === "Failed") { badgeClass = "bg-danger"; text = "Thất bại"; }
+        if (value === "RefundPending") { badgeClass = "bg-info text-dark"; text = "Chờ hoàn tiền"; }
+        if (value === "Refunded") { badgeClass = "bg-dark text-white"; text = "Đã hoàn tiền"; }
 
-        return `<span class="badge ${badgeClass}">${value}</span>`;
+        return `<span class="badge ${badgeClass}">${text}</span>`;
+    }
+
+    // ==========================================
+    // UC-20: XỬ LÝ HOÀN TIỀN DÀNH CHO ADMIN
+    // ==========================================
+    async function loadRefundInfo(orderId) {
+        const container = document.getElementById("refundSection");
+        if (!container) return;
+
+        try {
+            const res = await fetch(`/api/refunds/order/${orderId}`, { credentials: "include" });
+            if (!res.ok) {
+                container.innerHTML = "";
+                return;
+            }
+
+            const refund = await res.json();
+            if (!refund) {
+                container.innerHTML = "";
+                return;
+            }
+
+            const isPending = refund.status === "Pending";
+            let statusBadge = `<span class="badge ${isPending ? 'bg-warning text-dark' : (refund.status === 'Approved' ? 'bg-success' : 'bg-danger')}">${refund.status}</span>`;
+
+            container.innerHTML = `
+                <div class="admin-card mb-4 border border-warning shadow-sm">
+                    <div class="admin-section-header bg-warning bg-opacity-25 d-flex justify-content-between align-items-center py-2 px-3">
+                        <h6 class="mb-0 text-dark fw-bold"><i class="bi bi-cash-stack"></i> Yêu cầu hoàn tiền (UC-20)</h6>
+                        ${statusBadge}
+                    </div>
+                    <div class="admin-section-body p-3">
+                        <div class="admin-info-row mb-2"><span>Số tiền yêu cầu:</span><strong class="text-danger fs-5">${formatCurrency(refund.amount)}</strong></div>
+                        <div class="admin-info-block mb-2"><span>Lý do hoàn tiền:</span><strong>${escapeHtml(refund.reason)}</strong></div>
+                        <div class="admin-info-row mb-1"><span>Ngân hàng nhận:</span><strong>${escapeHtml(refund.bankName || "Chưa cung cấp")}</strong></div>
+                        <div class="admin-info-row mb-1"><span>Số tài khoản:</span><strong>${escapeHtml(refund.accountNumber || "Chưa cung cấp")}</strong></div>
+                        <div class="admin-info-row mb-2"><span>Chủ tài khoản:</span><strong>${escapeHtml(refund.accountHolderName || "Chưa cung cấp")}</strong></div>
+                        ${refund.adminNote ? `<div class="admin-info-block mb-2"><span>Ghi chú Admin:</span><strong>${escapeHtml(refund.adminNote)}</strong></div>` : ''}
+                        
+                        ${isPending ? `
+                            <div class="mt-3 pt-3 border-top">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Ghi chú xét duyệt (tùy chọn)</label>
+                                    <input type="text" id="adminRefundNote" class="form-control form-control-sm" placeholder="Nhập lý do duyệt hoặc từ chối..." />
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-success btn-sm flex-fill fw-bold" onclick="processRefund(${refund.refundRequestId}, 'Approved')">
+                                        Duyệt hoàn tiền
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm flex-fill fw-bold" onclick="processRefund(${refund.refundRequestId}, 'Rejected')">
+                                        Từ chối
+                                    </button>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        } catch (e) {
+            console.error("Load refund info error:", e);
+        }
+    }
+
+    async function processRefund(refundId, status) {
+        const actionText = status === 'Approved' ? 'DUYỆT HOÀN TIỀN' : 'TỪ CHỐI HOÀN TIỀN';
+        if (!confirm(`Bạn có chắc chắn muốn ${actionText} cho yêu cầu này không?`)) return;
+
+        const note = document.getElementById("adminRefundNote")?.value?.trim() || "";
+        try {
+            const res = await fetch(`/api/refunds/admin/${refundId}/process`, {
+                method: "PUT",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: status, adminNote: note })
+            });
+
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+                alert(result.message || "Xử lý thất bại");
+                return;
+            }
+
+            alert(result.message);
+            loadOrderDetail();
+        } catch (e) {
+            alert("Có lỗi xảy ra: " + e.message);
+        }
     }
 
     function formatCurrency(value) {
@@ -392,5 +486,16 @@
             hour: "2-digit",
             minute: "2-digit"
         });
+    }
+
+    // BẢO MẬT: Hàm mã hóa HTML để phòng chống lỗ hổng Cross-Site Scripting (XSS)
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 </script>

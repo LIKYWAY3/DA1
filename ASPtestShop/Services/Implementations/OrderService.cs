@@ -5,6 +5,7 @@ using ASPtestShop.Models.DTO.Payment;
 using ASPtestShop.Services.Interfaces;
 using ASPtestShop.Services.PaymentProviders;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ASPtestShop.Services.Implementations
 {
@@ -12,13 +13,16 @@ namespace ASPtestShop.Services.Implementations
     {
         private readonly AppDbContext _context;
         private readonly IPaymentProviderFactory _paymentProviderFactory;
+        private readonly IConfiguration _config;
 
         public OrderService(
             AppDbContext context,
-            IPaymentProviderFactory paymentProviderFactory)
+            IPaymentProviderFactory paymentProviderFactory,
+            IConfiguration config)
         {
             _context = context;
             _paymentProviderFactory = paymentProviderFactory;
+            _config = config;
         }
 
         public async Task<CheckoutResultDto> CheckoutAsync(
@@ -288,11 +292,14 @@ namespace ASPtestShop.Services.Implementations
                         await provider.CreatePaymentAsync(
                             new CreatePaymentRequestDto
                             {
-                                OrderId = order.OrderId,
-                                OrderCode = order.OrderCode,
-                                UserId = userId,
-                                Amount = order.FinalAmount,
-                                PaymentMethod = paymentMethod
+                                OrderId          = order.OrderId,
+                                OrderCode        = order.OrderCode,
+                                UserId           = userId,
+                                Amount           = order.FinalAmount,
+                                PaymentMethod    = paymentMethod,
+                                ReturnUrl        = BuildReturnUrl(checkoutDto, paymentMethod),
+                                IpAddress        = checkoutDto.IpAddress ?? "127.0.0.1",
+                                OrderDescription = $"Thanh toan don hang {order.OrderCode}"
                             }
                         );
 
@@ -343,17 +350,21 @@ namespace ASPtestShop.Services.Implementations
 
                     return new CheckoutResultDto
                     {
-                        Success = true,
-                        Message = "Đặt hàng thành công",
-                        OrderId = order.OrderId,
-                        OrderCode = order.OrderCode,
-                        TotalAmount = order.TotalAmount,
-                        DiscountAmount = order.DiscountAmount,
-                        ShippingFee = order.ShippingFee,
-                        FinalAmount = order.FinalAmount,
-                        OrderStatus = order.OrderStatus,
-                        PaymentStatus = order.PaymentStatus,
-                        PaymentMethod = order.PaymentMethod
+                        Success          = true,
+                        Message          = paymentResult.RequiresRedirect
+                            ? $"Đơn hàng đã được tạo. Vui lòng thanh toán qua {paymentMethod}."
+                            : "Đặt hàng thành công",
+                        OrderId          = order.OrderId,
+                        OrderCode        = order.OrderCode,
+                        TotalAmount      = order.TotalAmount,
+                        DiscountAmount   = order.DiscountAmount,
+                        ShippingFee      = order.ShippingFee,
+                        FinalAmount      = order.FinalAmount,
+                        OrderStatus      = order.OrderStatus,
+                        PaymentStatus    = order.PaymentStatus,
+                        PaymentMethod    = order.PaymentMethod,
+                        PaymentUrl       = paymentResult.PaymentUrl,
+                        RequiresRedirect = paymentResult.RequiresRedirect
                     };
                 }
                 catch
@@ -551,5 +562,106 @@ namespace ASPtestShop.Services.Implementations
                 }
             });
         }
+
+        // =======================================================================
+        // UC-19: Tự động hủy đơn hàng quá hạn (SystemScheduler)
+        // =======================================================================
+        public async Task<AutoCancelResultDto> AutoCancelExpiredOrdersAsync(int timeoutHours = 24, int onlineTimeoutMinutes = 30)
+        {
+            var result = new AutoCancelResultDto();
+            var now = DateTime.UtcNow;
+            var generalDeadline = now.AddHours(-timeoutHours);
+            var onlineDeadline = now.AddMinutes(-onlineTimeoutMinutes);
+
+            // Tìm các đơn hàng thỏa mãn điều kiện quá hạn:
+            // 1. Đơn Pending quá timeoutHours
+            // 2. Đơn Pending chọn Online (VNPay/MoMo/ZaloPay) nhưng Unpaid quá onlineTimeoutMinutes
+            var expiredOrders = await _context.Orders
+                .Include(o => o.OrderItems)
+                .Where(o => o.OrderStatus == "Pending" && (o.PaymentStatus == "Unpaid" || o.PaymentStatus == "Pending") &&
+                    (
+                        o.CreatedAt <= generalDeadline ||
+                        (!string.IsNullOrEmpty(o.PaymentMethod) && o.PaymentMethod != "COD" && o.CreatedAt <= onlineDeadline)
+                    )
+                )
+                .ToListAsync();
+
+            if (!expiredOrders.Any())
+            {
+                result.Message = "Không có đơn hàng nào quá hạn cần hủy.";
+                return result;
+            }
+
+            foreach (var order in expiredOrders)
+            {
+                var strategy = _context.Database.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
+                {
+                    await using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
+                    {
+                        // Hoàn lại số lượng tồn kho nguyên tử
+                        foreach (var item in order.OrderItems)
+                        {
+                            await _context.Database.ExecuteSqlInterpolatedAsync(
+                                $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
+                            );
+                        }
+
+                        // Hoàn lại lượt dùng Coupon nếu có
+                        if (order.CouponId.HasValue)
+                        {
+                            await _context.Database.ExecuteSqlInterpolatedAsync(
+                                $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {order.CouponId.Value}"
+                            );
+                        }
+
+                        order.OrderStatus = "Cancelled";
+                        var cancelNote = "Hệ thống tự động hủy do quá hạn thanh toán";
+                        order.Note = string.IsNullOrWhiteSpace(order.Note)
+                            ? cancelNote
+                            : $"{order.Note} | {cancelNote}";
+
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        result.CancelledCount++;
+                        result.CancelledOrderCodes.Add(order.OrderCode);
+                    }
+                    catch
+                    {
+                        await transaction.RollbackAsync();
+                    }
+                });
+            }
+
+            result.Message = $"Đã tự động hủy {result.CancelledCount} đơn hàng quá hạn thanh toán.";
+            return result;
+        }
+
+        // ── Private helpers ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Xây dựng ReturnUrl đầy đủ cho cổng thanh toán dựa trên PaymentMethod.
+        /// Ưu tiên BaseUrl từ CheckoutDto (client gửi lên), fallback về config.
+        /// </summary>
+        private string BuildReturnUrl(CheckoutDto checkoutDto, string paymentMethod)
+        {
+            var baseUrl = checkoutDto.BaseUrl?.TrimEnd('/') ?? string.Empty;
+
+            var relativeReturnUrl = paymentMethod.ToUpperInvariant() switch
+            {
+                "VNPAY"   => _config["VnPay:ReturnUrl"]   ?? "/checkout/vnpay-return",
+                "MOMO"    => _config["MoMo:ReturnUrl"]    ?? "/checkout/momo-return",
+                "ZALOPAY" => _config["ZaloPay:ReturnUrl"] ?? "/checkout/zalopay-return",
+                _         => "/checkout/success"
+            };
+
+            // Nếu relativeReturnUrl đã là URL tuyệt đối thì dùng luôn
+            if (relativeReturnUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                return relativeReturnUrl;
+
+            return $"{baseUrl}{relativeReturnUrl}";
+        }
     }
-}
+}
