@@ -19,7 +19,7 @@
             <div class="row g-2 align-items-center">
                 <div class="col-md-6 col-lg-5">
                     <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0">🔍</span>
+                        <span class="input-group-text bg-light border-end-0"><i class="fa fa-search text-secondary"></i></span>
                         <input type="text" class="form-control border-start-0 bg-light" id="searchInput" placeholder="Tìm theo tên, email, số điện thoại..." onkeyup="handleSearchKeyup(event)">
                         <button class="btn btn-dark" type="button" onclick="searchUsers()">Tìm kiếm</button>
                     </div>
@@ -286,7 +286,7 @@
                         <td class="text-end">
                             <div class="d-inline-flex gap-1">
                                 <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="viewUserDetail('${u.id}')">
-                                    👁️ Chi tiết
+                                    <i class="fa fa-eye me-1"></i> Chi tiết
                                 </button>
                                 <button type="button" class="btn btn-sm ${lockBtnClass} rounded-pill px-3" onclick="toggleLock('${u.id}', '${u.userName}', ${isLocked})">
                                     ${lockBtnText}
@@ -348,8 +348,8 @@
                                 <strong class="text-dark">${escapeHtml(a.fullName)}</strong>
                                 ${a.isDefault ? '<span class="badge bg-primary">Mặc định</span>' : ''}
                             </div>
-                            <div class="small text-muted mb-1">📞 ${escapeHtml(a.phoneNumber)}</div>
-                            <div class="small text-dark">🏠 ${escapeHtml(a.specificAddress)}</div>
+                            <div class="small text-muted mb-1"><i class="fa fa-phone me-1 text-secondary"></i> ${escapeHtml(a.phoneNumber)}</div>
+                            <div class="small text-dark"><i class="fa fa-map-marker-alt me-1 text-secondary"></i> ${escapeHtml(a.specificAddress)}</div>
                         </div>
                     `).join('');
                 }

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using ASPtestShop.Data;
 using ASPtestShop.Data.Entities;
 using ASPtestShop.Models.DTO.Auth;
@@ -17,6 +18,7 @@ namespace ASPtestShop.Services.Implementations.User
         public string OtpCode { get; set; } = "";
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(5);
+        public int FailedAttempts { get; set; } = 0;
     }
 
     public class UserAuthService : IUserAuthService
@@ -94,46 +96,63 @@ namespace ASPtestShop.Services.Implementations.User
             };
         }
 
-        public async Task<UserRegisterResultDto> RegisterAsync(RegisterViewModel model)
+        public Task<UserRegisterResultDto> RegisterAsync(RegisterViewModel model)
         {
-            var emailExists = await _userManager.FindByEmailAsync(model.Email ?? "");
+            return CreateCustomerAccountWithCartAsync(
+                model.UserName ?? "",
+                model.Email ?? "",
+                model.FullName,
+                model.PhoneNumber,
+                model.Address,
+                model.Gender,
+                model.Password ?? ""
+            );
+        }
 
+        public async Task<UserRegisterResultDto> CreateCustomerAccountWithCartAsync(
+            string userName,
+            string email,
+            string? fullName,
+            string? phoneNumber,
+            string? address,
+            string? gender,
+            string password)
+        {
+            var emailExists = await _userManager.FindByEmailAsync(email.Trim());
             if (emailExists != null)
             {
                 return new UserRegisterResultDto
                 {
                     Success = false,
-                    Message = "Email này đã được sử dụng"
+                    Message = "Email này đã được sử dụng."
                 };
             }
 
-            var usernameExists = await _userManager.FindByNameAsync(model.UserName ?? "");
-
+            var usernameExists = await _userManager.FindByNameAsync(userName.Trim());
             if (usernameExists != null)
             {
                 return new UserRegisterResultDto
                 {
                     Success = false,
-                    Message = "Username này đã được sử dụng"
+                    Message = "Username này đã được sử dụng."
                 };
             }
 
             var user = new ApplicationUser
             {
-                UserName = model.UserName,
-                Email = model.Email,
-                FullName = model.FullName,
-                Address = model.Address,
-                Gender = model.Gender,
+                UserName = userName.Trim(),
+                Email = email.Trim(),
+                FullName = string.IsNullOrWhiteSpace(fullName) ? userName.Trim() : fullName.Trim(),
+                PhoneNumber = phoneNumber?.Trim(),
+                Address = address?.Trim(),
+                Gender = gender?.Trim(),
                 EmailConfirmed = true
             };
 
-            var createResult = await _userManager.CreateAsync(user, model.Password ?? "");
-
+            var createResult = await _userManager.CreateAsync(user, password);
             if (!createResult.Succeeded)
             {
                 var errors = string.Join(" | ", createResult.Errors.Select(e => e.Description));
-
                 return new UserRegisterResultDto
                 {
                     Success = false,
@@ -154,7 +173,11 @@ namespace ASPtestShop.Services.Implementations.User
             return new UserRegisterResultDto
             {
                 Success = true,
-                Message = "Đăng ký tài khoản thành công"
+                Message = "Đăng ký tài khoản thành công",
+                UserId = user.Id,
+                UserName = user.UserName ?? "",
+                Email = user.Email ?? "",
+                FullName = user.FullName ?? ""
             };
         }
 
@@ -178,7 +201,7 @@ namespace ASPtestShop.Services.Implementations.User
             }
 
             // Sinh mã OTP 6 chữ số
-            var otpCode = Random.Shared.Next(100000, 999999).ToString();
+            var otpCode = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
             var pending = new PendingRegistration
             {
@@ -219,12 +242,20 @@ namespace ASPtestShop.Services.Implementations.User
 
             var (sendSuccess, sendMsg) = await _emailService.SendEmailAsync(model.Email.Trim(), subject, body);
 
+            if (!sendSuccess)
+            {
+                _cache.Remove(cacheKey);
+                return new UserRegisterResultDto
+                {
+                    Success = false,
+                    Message = $"Không thể gửi mã xác thực qua Email: {sendMsg}. Vui lòng kiểm tra lại địa chỉ email hoặc thử lại sau."
+                };
+            }
+
             return new UserRegisterResultDto
             {
                 Success = true,
-                Message = sendSuccess
-                    ? "Mã xác thực OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư."
-                    : $"Mã xác thực đã được tạo (Thông báo hệ thống: {sendMsg})."
+                Message = "Mã xác thực OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư."
             };
         }
 
@@ -263,39 +294,40 @@ namespace ASPtestShop.Services.Implementations.User
 
             if (pending.OtpCode != model.OtpCode.Trim())
             {
+                pending.FailedAttempts++;
+                if (pending.FailedAttempts >= 5)
+                {
+                    _cache.Remove(cacheKey);
+                    return new UserRegisterResultDto
+                    {
+                        Success = false,
+                        Message = "Bạn đã nhập sai mã xác thực quá 5 lần. Phiên đăng ký đã bị hủy để đảm bảo an toàn. Vui lòng đăng ký lại."
+                    };
+                }
+
+                _cache.Set(cacheKey, pending, pending.ExpiresAt - DateTime.UtcNow);
+
                 return new UserRegisterResultDto
                 {
                     Success = false,
-                    Message = "Mã xác thực không chính xác. Vui lòng kiểm tra lại hộp thư."
+                    Message = $"Mã xác thực không chính xác. Bạn còn {5 - pending.FailedAttempts} lần thử. Vui lòng kiểm tra lại hộp thư."
                 };
             }
 
-            // Tạo tài khoản chính thức
-            var user = new ApplicationUser
-            {
-                UserName = pending.Model.UserName,
-                Email = pending.Model.Email,
-                FullName = pending.Model.FullName,
-                Address = pending.Model.Address,
-                Gender = pending.Model.Gender,
-                EmailConfirmed = true
-            };
+            // Tạo tài khoản chính thức qua phương thức dùng chung (BR-03)
+            var createRes = await CreateCustomerAccountWithCartAsync(
+                pending.Model.UserName ?? "",
+                pending.Model.Email ?? "",
+                pending.Model.FullName,
+                pending.Model.PhoneNumber,
+                pending.Model.Address,
+                pending.Model.Gender,
+                pending.Model.Password ?? ""
+            );
 
-            var createResult = await _userManager.CreateAsync(user, pending.Model.Password ?? "");
-            if (!createResult.Succeeded)
+            if (!createRes.Success)
             {
-                var errors = string.Join(" | ", createResult.Errors.Select(e => e.Description));
-                return new UserRegisterResultDto { Success = false, Message = errors };
-            }
-
-            await _userManager.AddToRoleAsync(user, "Customer");
-
-            // Tự động tạo 01 Cart rỗng liên kết UserId (Theo PTTK BR-03)
-            var existingCart = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == user.Id);
-            if (existingCart == null)
-            {
-                _context.Carts.Add(new Cart { UserId = user.Id });
-                await _context.SaveChangesAsync();
+                return createRes;
             }
 
             _cache.Remove(cacheKey);
@@ -303,7 +335,11 @@ namespace ASPtestShop.Services.Implementations.User
             return new UserRegisterResultDto
             {
                 Success = true,
-                Message = "Xác minh email thành công! Tài khoản của bạn đã được kích hoạt."
+                Message = "Xác minh email thành công! Tài khoản của bạn đã được kích hoạt.",
+                UserId = createRes.UserId,
+                UserName = createRes.UserName,
+                Email = createRes.Email,
+                FullName = createRes.FullName
             };
         }
 

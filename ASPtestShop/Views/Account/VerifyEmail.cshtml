@@ -5,18 +5,24 @@
 }
 
 <div class="container mt-5 register-container" style="max-width: 520px;">
-    <div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
-        <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #253f36 0%, #3b5d50 100%); color: #ffffff;">
-            <div style="font-size: 2.5rem; margin-bottom: 8px;">📬</div>
-            <h4 class="mb-1 text-white fw-bold">Xác minh tài khoản Gmail</h4>
-            <p class="mb-0 small" style="opacity: 0.85;">Nhập mã OTP để hoàn tất đăng ký</p>
+    <div class="card shadow-sm border-0">
+        <div class="card-header text-center">
+            <h4 class="mb-0">Xác minh tài khoản</h4>
         </div>
 
-        <div class="card-body p-4 p-md-5">
+        <div class="card-body p-4">
             @if (TempData["SuccessMessage"] != null)
             {
                 <div class="alert alert-success small mb-3">
                     @TempData["SuccessMessage"]
+                </div>
+            }
+            @if (ViewBag.DevOtpCode != null)
+            {
+                <div class="alert alert-secondary text-center small mb-3 border">
+                    <span class="badge bg-dark me-1">[DEV MODE]</span> Mã OTP thử nghiệm: 
+                    <span class="badge bg-dark fs-6 px-3 py-1 user-select-all" style="cursor: pointer;" onclick="document.getElementById('otpCodeInput').value='@ViewBag.DevOtpCode'">@ViewBag.DevOtpCode</span>
+                    <div class="mt-1 text-muted" style="font-size: 0.8rem;">(Nhấn vào mã để tự điền nhanh)</div>
                 </div>
             }
 
@@ -34,11 +40,11 @@
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small mb-3"></div>
 
                 <div class="mb-4 text-center">
-                    <label asp-for="OtpCode" class="form-label fw-semibold text-dark mb-2">Mã xác thực OTP (6 chữ số)</label>
+                    <label asp-for="OtpCode" class="form-label mb-2">Mã xác thực OTP (6 chữ số)</label>
                     <input asp-for="OtpCode"
                            id="otpCodeInput"
                            class="form-control text-center fw-bold fs-3"
-                           style="letter-spacing: 12px; height: 56px; border-radius: 8px; border: 2px solid #ced4da;"
+                           style="letter-spacing: 12px; height: 56px; border: 2px solid #2f2f2f; background: #ffffff; color: #121617;"
                            placeholder="••••••"
                            maxlength="6"
                            pattern="[0-9]*"
@@ -55,8 +61,8 @@
                     <div class="fw-bold fs-5 text-danger" id="countdownTimer">05:00</div>
                 </div>
 
-                <button type="submit" class="btn w-100 py-3 fw-bold text-white mb-3" style="background-color: #3b5d50; border-radius: 8px; font-size: 1rem;">
-                    Xác nhận & Kích hoạt
+                <button type="submit" class="btn w-100 register-btn mb-3">
+                    Xác nhận &amp; Kích hoạt
                 </button>
 
                 <!-- Nút gửi lại mã -->
@@ -72,8 +78,8 @@
 
                 <hr class="my-4">
 
-                <div class="text-center">
-                    <a href="/account/register" class="small text-muted text-decoration-none">
+                <div class="text-center login-links">
+                    <a href="/account/register">
                         &larr; Đăng ký bằng email khác
                     </a>
                 </div>
@@ -123,10 +129,6 @@
         if (otpInput) {
             otpInput.addEventListener("input", function (e) {
                 this.value = this.value.replace(/[^0-9]/g, '');
-                if (this.value.length === 6) {
-                    // Tự động submit khi đã nhập đủ 6 số
-                    // document.getElementById("verifyOtpForm").submit();
-                }
             });
         }
 
@@ -139,7 +141,7 @@
             const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
             if (!email) {
-                if (resendMsgEl) resendMsgEl.innerHTML = '<span class="text-danger">Không tìm thấy email.</span>';
+                if (resendMsgEl) resendMsgEl.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle me-1"></i>Không tìm thấy email.</span>';
                 return;
             }
 
@@ -164,18 +166,18 @@
                     timeLeft = 300; // Reset đồng hồ 5 phút
                     resendCooldown = 60; // Cooldown 60s
                     if (resendMsgEl) {
-                        resendMsgEl.innerHTML = `<span class="text-success">✅ ${data.message}</span>`;
+                        resendMsgEl.innerHTML = `<span class="text-success"><i class="fa fa-check-circle me-1"></i>${data.message}</span>`;
                     }
                 } else {
                     if (btnResend) btnResend.disabled = false;
                     if (resendMsgEl) {
-                        resendMsgEl.innerHTML = `<span class="text-danger">❌ ${data.message}</span>`;
+                        resendMsgEl.innerHTML = `<span class="text-danger"><i class="fa fa-times-circle me-1"></i>${data.message}</span>`;
                     }
                 }
             } catch (err) {
                 if (btnResend) btnResend.disabled = false;
                 if (resendMsgEl) {
-                    resendMsgEl.innerHTML = '<span class="text-danger">Lỗi kết nối mạng khi gửi lại mã.</span>';
+                    resendMsgEl.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle me-1"></i>Lỗi kết nối mạng khi gửi lại mã.</span>';
                 }
             }
         }

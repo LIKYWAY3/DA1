@@ -166,6 +166,32 @@ using ASPtestShop.Services.Interfaces;
                 return RedirectToAction("VerifyEmail", new { email = model.Email });
             }
 
+            // GET: /account/check-availability
+            [HttpGet("check-availability")]
+            public async Task<IActionResult> CheckAvailability([FromQuery] string? userName, [FromQuery] string? email)
+            {
+                bool userNameAvailable = true;
+                bool emailAvailable = true;
+
+                if (!string.IsNullOrWhiteSpace(userName))
+                {
+                    var existingUser = await _userManager.FindByNameAsync(userName.Trim());
+                    userNameAvailable = (existingUser == null);
+                }
+
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    var existingEmail = await _userManager.FindByEmailAsync(email.Trim());
+                    emailAvailable = (existingEmail == null);
+                }
+
+                return Json(new
+                {
+                    userNameAvailable,
+                    emailAvailable
+                });
+            }
+
             // GET: /account/verify-email
             [HttpGet("verify-email")]
             public async Task<IActionResult> VerifyEmail(string? email)
@@ -182,6 +208,10 @@ using ASPtestShop.Services.Interfaces;
 
                 var emailSettings = await _emailService.GetSettingsAsync();
                 ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
+                if (_webHostEnvironment.IsDevelopment())
+                {
+                    ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(model.Email);
+                }
 
                 return View(model);
             }
@@ -195,6 +225,10 @@ using ASPtestShop.Services.Interfaces;
                 {
                     var emailSettings = await _emailService.GetSettingsAsync();
                     ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
+                if (_webHostEnvironment.IsDevelopment())
+                {
+                    ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(model.Email);
+                }
                     return View(model);
                 }
 
@@ -205,12 +239,44 @@ using ASPtestShop.Services.Interfaces;
                     ModelState.AddModelError("", result.Message);
                     var emailSettings = await _emailService.GetSettingsAsync();
                     ViewBag.IsEmailConfigured = emailSettings.IsConfigured;
+                if (_webHostEnvironment.IsDevelopment())
+                {
+                    ViewBag.DevOtpCode = await _userAuthService.GetPendingOtpCodeAsync(model.Email);
+                }
                     return View(model);
                 }
 
-                TempData["SuccessMessage"] = result.Message;
+                var user = !string.IsNullOrEmpty(result.UserId) ? await _userManager.FindByIdAsync(result.UserId) : null;
+                var securityStamp = user?.SecurityStamp ?? Guid.NewGuid().ToString();
+                var displayName = !string.IsNullOrWhiteSpace(result.FullName) ? result.FullName : (result.UserName ?? "Khách hàng");
 
-                return RedirectToAction("Login");
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, result.UserId ?? ""),
+                    new Claim(ClaimTypes.Name, displayName),
+                    new Claim(ClaimTypes.Email, result.Email ?? model.Email),
+                    new Claim(ClaimTypes.Role, "Customer"),
+                    new Claim("security_stamp", securityStamp)
+                };
+
+                var identity = new ClaimsIdentity(claims, UserCookieAuth.Scheme);
+                var principal = new ClaimsPrincipal(identity);
+
+                var authProperties = new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+                };
+
+                await HttpContext.SignInAsync(
+                    UserCookieAuth.Scheme,
+                    principal,
+                    authProperties
+                );
+
+                TempData["SuccessMessage"] = $"Đăng ký và kích hoạt tài khoản thành công! Chào mừng {displayName} gia nhập FuuFishing.";
+
+                return RedirectToAction("Index", "Home");
             }
 
             // POST: /account/resend-otp

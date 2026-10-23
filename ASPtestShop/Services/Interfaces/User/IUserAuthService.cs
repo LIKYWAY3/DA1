@@ -11,6 +11,15 @@ namespace ASPtestShop.Services.Interfaces.User
 
         Task<UserRegisterResultDto> RegisterAsync(RegisterViewModel model);
 
+        Task<UserRegisterResultDto> CreateCustomerAccountWithCartAsync(
+            string userName,
+            string email,
+            string? fullName,
+            string? phoneNumber,
+            string? address,
+            string? gender,
+            string password);
+
         Task<UserRegisterResultDto> InitiateRegisterAsync(RegisterViewModel model);
 
         Task<UserRegisterResultDto> VerifyOtpAndRegisterAsync(VerifyEmailViewModel model);

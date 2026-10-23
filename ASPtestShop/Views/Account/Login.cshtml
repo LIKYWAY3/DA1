@@ -14,7 +14,7 @@
             @if (ViewBag.SessionExpiredMessage != null)
             {
                 <div class="alert alert-warning d-flex align-items-center mb-3">
-                    <span class="me-2" style="font-size: 1.2rem;">⚠️</span>
+                    <i class="fa fa-exclamation-triangle me-2 text-warning fs-5"></i>
                     <div>@ViewBag.SessionExpiredMessage</div>
                 </div>
             }
@@ -40,7 +40,12 @@
 
                 <div class="mb-3">
                     <label asp-for="Password" class="form-label">Mật khẩu</label>
-                    <input asp-for="Password" class="form-control" placeholder="Nhập mật khẩu" />
+                    <div class="password-wrapper">
+                        <input asp-for="Password" type="password" class="form-control" id="loginPassword" placeholder="Nhập mật khẩu" autocomplete="current-password" />
+                        <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('loginPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
+                            <i class="fa fa-eye"></i>
+                        </button>
+                    </div>
                     <span asp-validation-for="Password" class="text-danger"></span>
                 </div>
 
@@ -64,3 +69,25 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const icon = btn.querySelector("i");
+            if (input.type === "password") {
+                input.type = "text";
+                if (icon) {
+                    icon.className = "fa fa-eye-slash";
+                }
+            } else {
+                input.type = "password";
+                if (icon) {
+                    icon.className = "fa fa-eye";
+                }
+            }
+        }
+    </script>
+}

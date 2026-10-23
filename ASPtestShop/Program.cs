@@ -44,7 +44,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
             maxRetryCount: 5,
             maxRetryDelay: TimeSpan.FromSeconds(30),
-            errorNumbersToAdd: null));
+            errorNumbersToAdd: new[] { 40613 }));
 });
 // Cấu hình Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()

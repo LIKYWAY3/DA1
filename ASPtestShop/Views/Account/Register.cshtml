@@ -1,4 +1,4 @@
-﻿@model ASPtestShop.Models.ViewModels.Auth.RegisterViewModel
+@model ASPtestShop.Models.ViewModels.Auth.RegisterViewModel
 
 @{
     ViewData["Title"] = "Đăng ký";
@@ -7,47 +7,57 @@
 <div class="container mt-5 register-container">
     <div class="card shadow-sm border-0">
         <div class="card-header text-center">
-            <h4 class="mb-0">Đăng ký tài khoản</h4>
+            <h4 class="mb-0">Đăng ký</h4>
         </div>
 
-        <div class="card-body p-4 p-md-5">
-            <form asp-action="Register" asp-controller="Account" method="post">
+        <div class="card-body p-4">
+            <form asp-action="Register" asp-controller="Account" method="post" id="registerForm">
                 @Html.AntiForgeryToken()
 
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-4 font-weight-bold"></div>
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small mb-4 font-weight-bold"></div>
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label asp-for="UserName" class="form-label">Username <span class="text-danger">*</span></label>
-                        <input asp-for="UserName" class="form-control" placeholder="Nhập username" />
-                        <span asp-validation-for="UserName" class="text-danger d-block mt-1"></span>
+                        <input asp-for="UserName" class="form-control" id="regUserName" placeholder="Ví dụ: canthuvip01" autocomplete="username" />
+                        <span asp-validation-for="UserName" class="text-danger small d-block mt-1"></span>
+                        <span id="userNameAvailability" class="small mt-1 d-block"></span>
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label asp-for="FullName" class="form-label">Họ tên <span class="text-danger">*</span></label>
-                        <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên" />
-                        <span asp-validation-for="FullName" class="text-danger d-block mt-1"></span>
+                        <input asp-for="FullName" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" autocomplete="name" />
+                        <span asp-validation-for="FullName" class="text-danger small d-block mt-1"></span>
                     </div>
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="Email" class="form-label">Email <span class="text-danger">*</span></label>
-                    <input asp-for="Email" class="form-control" placeholder="Nhập email" />
-                    <span asp-validation-for="Email" class="text-danger d-block mt-1"></span>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label asp-for="Address" class="form-label">Địa chỉ</label>
-                        <input asp-for="Address" class="form-control" placeholder="Có thể bỏ trống" />
-                        <span asp-validation-for="Address" class="text-danger d-block mt-1"></span>
+                        <label asp-for="Email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input asp-for="Email" class="form-control" id="regEmail" placeholder="name@example.com" autocomplete="email" />
+                        <span asp-validation-for="Email" class="text-danger small d-block mt-1"></span>
+                        <span id="emailAvailability" class="small mt-1 d-block"></span>
                     </div>
 
                     <div class="col-md-6 mb-3">
+                        <label asp-for="PhoneNumber" class="form-label">Số điện thoại <span class="text-muted fw-normal">(Để nhận hàng)</span></label>
+                        <input asp-for="PhoneNumber" class="form-control" placeholder="Ví dụ: 0912345678" maxlength="10" autocomplete="tel" />
+                        <span asp-validation-for="PhoneNumber" class="text-danger small d-block mt-1"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-7 mb-3">
+                        <label asp-for="Address" class="form-label">Địa chỉ giao hàng</label>
+                        <input asp-for="Address" class="form-control" placeholder="Số nhà, tên đường, phường/xã..." autocomplete="street-address" />
+                        <span asp-validation-for="Address" class="text-danger small d-block mt-1"></span>
+                    </div>
+
+                    <div class="col-md-5 mb-3">
                         <label class="form-label">Giới tính</label>
                         <div class="d-flex align-items-center gap-4 pt-2">
                             <div class="form-check mb-0">
-                                <input class="form-check-input custom-radio-umi" type="radio" asp-for="Gender" value="Nam" id="regGenderMale">
+                                <input class="form-check-input custom-radio-umi" type="radio" asp-for="Gender" value="Nam" id="regGenderMale" checked>
                                 <label class="form-check-label" for="regGenderMale">Nam</label>
                             </div>
                             <div class="form-check mb-0">
@@ -61,25 +71,102 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label asp-for="Password" class="form-label">Mật khẩu <span class="text-danger">*</span></label>
-                        <input asp-for="Password" class="form-control" placeholder="Nhập mật khẩu" />
-                        <span asp-validation-for="Password" class="text-danger d-block mt-1"></span>
+                        <div class="password-wrapper">
+                            <input asp-for="Password" type="password" class="form-control" id="regPassword" placeholder="Nhập mật khẩu" autocomplete="new-password" />
+                            <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('regPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text small text-muted" style="font-size: 0.8rem;">
+                            Tối thiểu 6 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small d-block mt-1"></span>
                     </div>
 
                     <div class="col-md-6 mb-4">
                         <label asp-for="ConfirmPassword" class="form-label">Nhập lại mật khẩu <span class="text-danger">*</span></label>
-                        <input asp-for="ConfirmPassword" class="form-control" placeholder="Nhập lại mật khẩu" />
-                        <span asp-validation-for="ConfirmPassword" class="text-danger d-block mt-1"></span>
+                        <div class="password-wrapper">
+                            <input asp-for="ConfirmPassword" type="password" class="form-control" id="regConfirmPassword" placeholder="Nhập lại mật khẩu" autocomplete="new-password" />
+                            <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('regConfirmPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                        </div>
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small d-block mt-1"></span>
                     </div>
                 </div>
 
-                <button type="submit" class="btn w-100 register-btn mt-2">
-                    Đăng ký tài khoản
+                <button type="submit" class="btn w-100 register-btn">
+                    Đăng ký
                 </button>
 
-                <div class="text-center mt-4 register-links">
-                    <p class="mb-0 text-muted">Đã có tài khoản? <a href="/account/login">Đăng nhập ngay</a></p>
+                <div class="text-center mt-3 login-links">
+                    <a href="/account/login">Đã có tài khoản? Đăng nhập</a>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const icon = btn.querySelector("i");
+            if (input.type === "password") {
+                input.type = "text";
+                if (icon) {
+                    icon.className = "fa fa-eye-slash";
+                }
+            } else {
+                input.type = "password";
+                if (icon) {
+                    icon.className = "fa fa-eye";
+                }
+            }
+        }
+
+        // Kiểm tra khả dụng Username & Email Real-time khi rời khỏi ô nhập
+        const userNameInput = document.getElementById("regUserName");
+        const emailInput = document.getElementById("regEmail");
+        const userNameMsg = document.getElementById("userNameAvailability");
+        const emailMsg = document.getElementById("emailAvailability");
+
+        if (userNameInput) {
+            userNameInput.addEventListener("blur", async function () {
+                const val = this.value.trim();
+                if (val.length < 3) return;
+                try {
+                    const res = await fetch(`/account/check-availability?userName=${encodeURIComponent(val)}`);
+                    const data = await res.json();
+                    if (!data.userNameAvailable) {
+                        userNameMsg.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle me-1"></i>Username này đã có người sử dụng.</span>';
+                    } else {
+                        userNameMsg.innerHTML = '<span class="text-success"><i class="fa fa-check-circle me-1"></i>Username khả dụng.</span>';
+                    }
+                } catch (e) {
+                    userNameMsg.innerHTML = '';
+                }
+            });
+        }
+
+        if (emailInput) {
+            emailInput.addEventListener("blur", async function () {
+                const val = this.value.trim();
+                if (!val.includes("@@")) return;
+                try {
+                    const res = await fetch(`/account/check-availability?email=${encodeURIComponent(val)}`);
+                    const data = await res.json();
+                    if (!data.emailAvailable) {
+                        emailMsg.innerHTML = '<span class="text-danger"><i class="fa fa-times-circle me-1"></i>Email này đã được đăng ký.</span>';
+                    } else {
+                        emailMsg.innerHTML = '<span class="text-success"><i class="fa fa-check-circle me-1"></i>Email hợp lệ và khả dụng.</span>';
+                    }
+                } catch (e) {
+                    emailMsg.innerHTML = '';
+                }
+            });
+        }
+    </script>
+}

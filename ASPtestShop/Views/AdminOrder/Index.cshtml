@@ -12,7 +12,7 @@
 
         <div class="d-flex gap-2">
             <button type="button" id="btnCleanupCancelled" class="btn btn-outline-danger d-none" onclick="cleanupAllCancelledOrders()">
-                🧹 Dọn dẹp tất cả đơn đã hủy (<span id="cancelledCountBadge">0</span>)
+                <i class="fa fa-broom me-1"></i> Dọn dẹp tất cả đơn đã hủy (<span id="cancelledCountBadge">0</span>)
             </button>
             <a href="/admin" class="btn btn-outline-dark">
                 Quay lại Admin
@@ -62,7 +62,7 @@
             <div class="row g-2 align-items-center">
                 <div class="col-md-5">
                     <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0">🔍</span>
+                        <span class="input-group-text bg-light border-end-0"><i class="fa fa-search text-secondary"></i></span>
                         <input type="text" class="form-control border-start-0 bg-light" id="orderSearchInput" placeholder="Tìm theo mã đơn, người nhận, SĐT..." onkeyup="handleOrderSearch()">
                     </div>
                 </div>
@@ -251,7 +251,7 @@
 
                 const deleteBtnHtml = isCancelled
                     ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Xóa đơn hàng đã hủy" onclick="deleteCancelledOrder(${order.orderId}, '${order.orderCode}')">
-                            🗑️
+                            <i class="fa fa-trash"></i>
                        </button>`
                     : '';
 

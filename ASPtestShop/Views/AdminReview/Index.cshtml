@@ -137,7 +137,7 @@
 
                 const thumb = r.productThumbnail
                     ? `<img src="${r.productThumbnail}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;" />`
-                    : `<div class="rounded bg-light me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">🎣</div>`;
+                    : `<div class="rounded bg-light me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="fa fa-box text-secondary"></i></div>`;
 
                 const createdDate = new Date(r.createdAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -169,7 +169,7 @@
                             <div class="btn-group">
                                 ${!r.isApproved ? `
                                     <button type="button" class="btn btn-sm btn-success rounded-pill px-3 me-1" onclick="approveReview(${r.reviewId})">
-                                        ✓ Duyệt
+                                        <i class="fa fa-check me-1"></i> Duyệt
                                     </button>
                                 ` : `
                                     <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 me-1" onclick="rejectReview(${r.reviewId})">
@@ -177,7 +177,7 @@
                                     </button>
                                 `}
                                 <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2" onclick="deleteReview(${r.reviewId})">
-                                    🗑️
+                                    <i class="fa fa-trash"></i>
                                 </button>
                             </div>
                         </td>

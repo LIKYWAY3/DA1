@@ -1,4 +1,6 @@
 using ASPtestShop.Data;
+using ASPtestShop.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using ASPtestShop.Models.DTO.Auth;
 using ASPtestShop.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -16,12 +18,16 @@ namespace ASPtestShop.Services.Implementations
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _configuration;
 
+        private readonly AppDbContext _context;
+
         public AuthService(
             UserManager<ApplicationUser> userManager,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            AppDbContext context)
         {
             _userManager = userManager;
             _configuration = configuration;
+            _context = context;
         }
 
         //=================================Register========================================
@@ -31,11 +37,13 @@ namespace ASPtestShop.Services.Implementations
             // Tạo đối tượng ApplicationUser từ dữ liệu client gửi lên
             var user = new ApplicationUser
             {
-                UserName = dto.UserName,
-                Email = dto.Email,
-                FullName = dto.FullName,
-                Address = dto.Address, 
-                Gender = dto.Gender
+                UserName = dto.UserName.Trim(),
+                Email = dto.Email.Trim(),
+                FullName = string.IsNullOrWhiteSpace(dto.FullName) ? dto.UserName.Trim() : dto.FullName.Trim(),
+                PhoneNumber = dto.PhoneNumber?.Trim(),
+                Address = dto.Address?.Trim(), 
+                Gender = dto.Gender?.Trim(),
+                EmailConfirmed = true
             };
 
             // UserManager sẽ tự hash password và lưu user vào bảng AspNetUsers
@@ -52,6 +60,17 @@ namespace ASPtestShop.Services.Implementations
                         .Select(e => e.Description)
                         .ToList()
                 };
+            }
+
+            // Gán role Customer
+            await _userManager.AddToRoleAsync(user, "Customer");
+
+            // Tự động tạo 01 Cart rỗng liên kết UserId (Theo PTTK BR-03)
+            var existingCart = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            if (existingCart == null)
+            {
+                _context.Carts.Add(new Cart { UserId = user.Id });
+                await _context.SaveChangesAsync();
             }
 
             return new AuthResultDto
