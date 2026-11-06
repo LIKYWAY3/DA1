@@ -7,8 +7,10 @@ obj/
 *.userosscache
 *.sln.docstates
 
-## Cấu hình bảo mật appsettings (Giữ nguyên của bạn)
-**/appsettings.json
+## BẢO MẬT: Chặn tuyệt đối các file cấu hình chứa Secret, Key, Password
+**/appsettings.Secrets.json
+appsettings.Secrets.json
+*.Secrets.json
 **/appsettings.Development.json
 
 ## Thư mục khi deploy / publish code

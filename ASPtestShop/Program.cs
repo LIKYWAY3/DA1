@@ -21,6 +21,9 @@ using System.Threading.RateLimiting;                // Bảo mật: Rate Limiter
 
 var builder = WebApplication.CreateBuilder(args);
 
+// BẢO MẬT: Nạp file cấu hình nhạy cảm appsettings.Secrets.json nếu tồn tại (File này không bao giờ đẩy lên Git)
+builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: true);
+
 // GIAI ĐOẠN 1: Hỗ trợ nạp Secret và ConnectionString từ Biến môi trường (Environment Variables)
 builder.Configuration.AddEnvironmentVariables();
 
@@ -220,6 +223,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<ICaptchaService, CloudflareTurnstileService>();
 //admin services
 builder.Services.AddScoped<IAdminProductService, AdminProductService>();
 builder.Services.AddScoped<IAdminUploadService, AdminUploadService>();

@@ -28,6 +28,16 @@ namespace ASPtestShop.Controllers.Api
             return Ok(result);
         }
 
+        // GET: /api/reviews/eligibility/{productId}
+        [HttpGet("eligibility/{productId:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CheckEligibility(int productId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _reviewService.CheckEligibilityAsync(userId ?? "", productId);
+            return Ok(result);
+        }
+
         // POST: /api/reviews
         [HttpPost("")]
         [Authorize(AuthenticationSchemes = UserCookieAuth.Scheme + "," + JwtBearerDefaults.AuthenticationScheme)]

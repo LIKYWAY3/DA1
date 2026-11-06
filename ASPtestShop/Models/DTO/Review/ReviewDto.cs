@@ -34,4 +34,13 @@ namespace ASPtestShop.Models.DTO.Review
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
+    public class ReviewEligibilityDto
+    {
+        public bool IsAuthenticated { get; set; }
+        public bool CanReview { get; set; }
+        public bool HasReviewed { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public ProductReviewItemDto? ExistingReview { get; set; }
+    }
 }

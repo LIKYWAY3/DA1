@@ -74,16 +74,8 @@ namespace ASPtestShop.Services.Implementations.User
                     Message = "Tài khoản hoặc mật khẩu không đúng"
                 };
             }
-            var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
-
-            if (isAdmin)
-            {
-                return new UserLoginResultDto
-                {
-                    Success = false,
-                    Message = "Tài khoản Admin vui lòng đăng nhập tại trang quản trị"
-                };
-            }
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var isAdmin = userRoles.Contains("Admin");
 
             return new UserLoginResultDto
             {
@@ -92,7 +84,9 @@ namespace ASPtestShop.Services.Implementations.User
                 UserId = user.Id,
                 UserName = user.UserName ?? "",
                 Email = user.Email ?? "",
-                FullName = user.FullName ?? ""
+                FullName = user.FullName ?? "",
+                IsAdmin = isAdmin,
+                Roles = userRoles.ToList()
             };
         }
 
@@ -167,6 +161,20 @@ namespace ASPtestShop.Services.Implementations.User
             if (existingCart == null)
             {
                 _context.Carts.Add(new Cart { UserId = user.Id });
+                await _context.SaveChangesAsync();
+            }
+
+            if (!string.IsNullOrWhiteSpace(address))
+            {
+                var userAddress = new UserAddress
+                {
+                    UserId = user.Id,
+                    FullName = user.FullName ?? user.UserName ?? "Khách hàng",
+                    PhoneNumber = phoneNumber?.Trim() ?? "",
+                    SpecificAddress = address.Trim(),
+                    IsDefault = true
+                };
+                _context.UserAddresses.Add(userAddress);
                 await _context.SaveChangesAsync();
             }
 
@@ -558,7 +566,10 @@ namespace ASPtestShop.Services.Implementations.User
 
         public async Task<AuthResultDto> AddAddressAsync(string userId, AddAddressViewModel model)
         {
-            if (model.IsDefault)
+            var existingCount = await _context.UserAddresses.CountAsync(x => x.UserId == userId);
+            var shouldBeDefault = model.IsDefault || existingCount == 0;
+
+            if (shouldBeDefault)
             {
                 var currentDefaults = await _context.UserAddresses
                     .Where(x => x.UserId == userId && x.IsDefault)
@@ -568,12 +579,6 @@ namespace ASPtestShop.Services.Implementations.User
                 {
                     addr.IsDefault = false;
                 }
-                var user = await _userManager.FindByIdAsync(userId);
-                if (user != null)
-                {
-                    user.PhoneNumber = model.PhoneNumber;
-                    await _userManager.UpdateAsync(user);
-                }
             }
 
             var newAddress = new UserAddress
@@ -582,13 +587,42 @@ namespace ASPtestShop.Services.Implementations.User
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
                 SpecificAddress = model.SpecificAddress,
-                IsDefault = model.IsDefault
+                IsDefault = shouldBeDefault
             };
 
             _context.UserAddresses.Add(newAddress);
             await _context.SaveChangesAsync();
 
             return new AuthResultDto { Success = true, Message = "Thêm địa chỉ mới thành công!" };
+        }
+
+        public async Task<AuthResultDto> DeleteAddressAsync(string userId, int addressId)
+        {
+            var address = await _context.UserAddresses
+                .FirstOrDefaultAsync(x => x.Id == addressId && x.UserId == userId);
+
+            if (address == null)
+                return new AuthResultDto { Success = false, Message = "Không tìm thấy địa chỉ hoặc bạn không có quyền xóa." };
+
+            var wasDefault = address.IsDefault;
+            _context.UserAddresses.Remove(address);
+            await _context.SaveChangesAsync();
+
+            if (wasDefault)
+            {
+                var nextAddress = await _context.UserAddresses
+                    .Where(x => x.UserId == userId)
+                    .OrderBy(x => x.Id)
+                    .FirstOrDefaultAsync();
+
+                if (nextAddress != null)
+                {
+                    nextAddress.IsDefault = true;
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return new AuthResultDto { Success = true, Message = "Đã xóa địa chỉ thành công!" };
         }
         public async Task<AuthResultDto> SetDefaultAddressAsync(string userId, int addressId)
         {

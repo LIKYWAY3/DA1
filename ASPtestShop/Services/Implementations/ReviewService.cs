@@ -148,5 +148,83 @@ namespace ASPtestShop.Services.Implementations
                 CreatedAt = review.CreatedAt
             });
         }
-    }
+    
+        public async Task<ReviewEligibilityDto> CheckEligibilityAsync(string userId, int productId)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return new ReviewEligibilityDto
+                {
+                    IsAuthenticated = false,
+                    CanReview = false,
+                    HasReviewed = false,
+                    Message = "Vui lòng đăng nhập để đánh giá sản phẩm."
+                };
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return new ReviewEligibilityDto
+                {
+                    IsAuthenticated = false,
+                    CanReview = false,
+                    HasReviewed = false,
+                    Message = "Không tìm thấy tài khoản người dùng."
+                };
+            }
+
+            var hasCompletedOrder = await _context.OrderItems
+                .Include(oi => oi.Order)
+                .AnyAsync(oi =>
+                    oi.ProductId == productId &&
+                    oi.Order.UserId == userId &&
+                    oi.Order.OrderStatus == "Completed");
+
+            if (!hasCompletedOrder)
+            {
+                return new ReviewEligibilityDto
+                {
+                    IsAuthenticated = true,
+                    CanReview = false,
+                    HasReviewed = false,
+                    Message = "Bạn chỉ có thể đánh giá sản phẩm sau khi mua hàng và đơn hàng đã được giao thành công."
+                };
+            }
+
+            var existingReview = await _context.Reviews
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.ProductId == productId && r.UserId == userId);
+
+            if (existingReview != null)
+            {
+                return new ReviewEligibilityDto
+                {
+                    IsAuthenticated = true,
+                    CanReview = true,
+                    HasReviewed = true,
+                    Message = "Bạn đã đánh giá sản phẩm này. Bạn có thể cập nhật đánh giá của mình.",
+                    ExistingReview = new ProductReviewItemDto
+                    {
+                        ReviewId = existingReview.ReviewId,
+                        UserId = existingReview.UserId,
+                        UserName = user.UserName ?? "Khách hàng",
+                        FullName = user.FullName ?? user.UserName ?? "Khách hàng",
+                        AvatarUrl = user.AvatarUrl,
+                        Rating = existingReview.Rating,
+                        Comment = existingReview.Comment,
+                        CreatedAt = existingReview.CreatedAt
+                    }
+                };
+            }
+
+            return new ReviewEligibilityDto
+            {
+                IsAuthenticated = true,
+                CanReview = true,
+                HasReviewed = false,
+                Message = "Hãy chia sẻ trải nghiệm của bạn về sản phẩm này!"
+            };
+        }
+}
 }

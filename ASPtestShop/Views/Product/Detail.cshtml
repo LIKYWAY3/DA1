@@ -213,49 +213,78 @@
                 <div class="col-lg-8">
                     <!-- Form viết đánh giá -->
                     <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 12px; background: #fff;">
-                        <h5 class="fw-bold mb-3">Viết nhận xét của bạn</h5>
+                        <h5 class="fw-bold mb-3 d-flex align-items-center justify-content-between">
+                            <span><i class="fa fa-pen-nib text-primary me-2"></i>Viết nhận xét của bạn</span>
+                            <span id="review-eligibility-badge" class="badge bg-success small d-none">Đã mua hàng</span>
+                        </h5>
                         <div id="review-alert-container"></div>
 
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <form id="submitReviewForm">
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold text-muted mb-1">Đánh giá số sao:</label>
-                                    <div class="star-rating-selector fs-3 text-warning d-flex align-items-center gap-1" id="starSelector" style="cursor: pointer;">
-                                        <span class="star-btn" data-star="1">★</span>
-                                        <span class="star-btn" data-star="2">★</span>
-                                        <span class="star-btn" data-star="3">★</span>
-                                        <span class="star-btn" data-star="4">★</span>
-                                        <span class="star-btn" data-star="5">★</span>
-                                        <span class="ms-2 fs-6 text-muted" id="starLabel">Tuyệt vời (5/5)</span>
-                                    </div>
-                                    <input type="hidden" id="selectedStarValue" value="5">
-                                </div>
+                        <!-- Trạng thái kiểm tra điều kiện đánh giá (Dynamic via API) -->
+                        <div id="review-eligibility-loading" class="text-center py-3 text-muted">
+                            <span class="spinner-border spinner-border-sm me-2"></span> Đang kiểm tra điều kiện đánh giá...
+                        </div>
 
-                                <div class="mb-3">
-                                    <label for="reviewCommentInput" class="form-label small fw-semibold text-muted">Nội dung nhận xét:</label>
-                                    <textarea id="reviewCommentInput" class="form-control" rows="3" maxlength="1000" placeholder="Chia sẻ trải nghiệm thực tế của bạn về sản phẩm này..." required></textarea>
-                                </div>
+                        <!-- Trường hợp chưa đăng nhập -->
+                        <div id="review-unauthenticated-box" class="p-3 bg-light rounded text-center border d-none">
+                            <i class="fa fa-user-lock text-muted fa-2x mb-2"></i>
+                            <p class="mb-2 text-muted">Vui lòng đăng nhập tài khoản để kiểm tra điều kiện đánh giá sản phẩm.</p>
+                            <a id="reviewLoginLink" href="/account/login" class="btn btn-outline-primary btn-sm px-4">
+                                <i class="fa fa-sign-in-alt me-1"></i> Đăng nhập ngay
+                            </a>
+                        </div>
 
-                                <button type="submit" id="btnSubmitReview" class="btn btn-dark px-4 py-2">
-                                    Gửi đánh giá
-                                </button>
-                            </form>
-                        }
-                        else
-                        {
-                            <div class="p-3 bg-light rounded text-center border">
-                                <p class="mb-2 text-muted">Vui lòng đăng nhập tài khoản để viết nhận xét và đánh giá cho sản phẩm này.</p>
-                                <a href="/account/login?returnUrl=/Product/Detail/@ViewBag.ProductId" class="btn btn-outline-dark btn-sm px-4">
-                                    Đăng nhập ngay
-                                </a>
+                        <!-- Trường hợp chưa mua hàng hoặc chưa Completed -->
+                        <div id="review-not-eligible-box" class="alert alert-warning mb-0 d-none">
+                            <div class="d-flex align-items-center">
+                                <i class="fa fa-shield-alt text-warning fs-3 me-3"></i>
+                                <div>
+                                    <strong class="d-block mb-1">Chưa đủ điều kiện đánh giá</strong>
+                                    <span id="review-not-eligible-msg" class="small text-dark">
+                                        Chỉ những khách hàng đã mua sản phẩm này và đơn hàng được giao thành công mới có thể gửi đánh giá.
+                                    </span>
+                                </div>
                             </div>
-                        }
+                        </div>
+
+                        <!-- Trường hợp đủ điều kiện đánh giá -->
+                        <form id="submitReviewForm" class="d-none">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-muted mb-1">Đánh giá số sao:</label>
+                                <div class="star-rating-selector fs-3 text-warning d-flex align-items-center gap-1" id="starSelector" style="cursor: pointer;">
+                                    <span class="star-btn" data-star="1">★</span>
+                                    <span class="star-btn" data-star="2">★</span>
+                                    <span class="star-btn" data-star="3">★</span>
+                                    <span class="star-btn" data-star="4">★</span>
+                                    <span class="star-btn" data-star="5">★</span>
+                                    <span class="ms-2 fs-6 text-muted" id="starLabel">Tuyệt vời (5/5)</span>
+                                </div>
+                                <input type="hidden" id="selectedStarValue" value="5">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reviewCommentInput" class="form-label small fw-semibold text-muted">Nội dung nhận xét:</label>
+                                <textarea id="reviewCommentInput" class="form-control" rows="3" maxlength="1000" placeholder="Chia sẻ cảm nhận chi tiết về độ bền, độ hoàn thiện, cảm giác cầm nắm của sản phẩm..." required></textarea>
+                            </div>
+
+                            <button type="submit" id="btnSubmitReview" class="btn btn-dark px-4 py-2">
+                                <i class="fa fa-paper-plane me-1"></i> Gửi đánh giá
+                            </button>
+                        </form>
                     </div>
 
                     <!-- Danh sách đánh giá -->
                     <div class="card border-0 shadow-sm p-4" style="border-radius: 12px; background: #fff;">
-                        <h5 class="fw-bold mb-3">Nhận xét từ khách hàng (<span id="reviewListCount">0</span>)</h5>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                            <h5 class="fw-bold mb-0">Nhận xét từ khách hàng (<span id="reviewListCount">0</span>)</h5>
+                            <div class="btn-group btn-group-sm" role="group" id="reviewStarFilterGroup">
+                                <button type="button" class="btn btn-outline-secondary active" onclick="filterReviewsByStar(0, this)">Tất cả</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterReviewsByStar(5, this)">5 ★</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterReviewsByStar(4, this)">4 ★</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterReviewsByStar(3, this)">3 ★</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterReviewsByStar(2, this)">2 ★</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterReviewsByStar(1, this)">1 ★</button>
+                            </div>
+                        </div>
                         <div id="reviewsListContainer" class="d-flex flex-column gap-3">
                             <div class="text-center text-muted py-4">Đang tải nhận xét...</div>
                         </div>
@@ -774,9 +803,65 @@
             }
         }
 
+        let rawReviewsList = [];
+        let currentStarFilter = 0;
+
+        async function checkReviewEligibility(productId) {
+            const loadingEl = document.getElementById("review-eligibility-loading");
+            const unauthBox = document.getElementById("review-unauthenticated-box");
+            const notEligibleBox = document.getElementById("review-not-eligible-box");
+            const notEligibleMsg = document.getElementById("review-not-eligible-msg");
+            const formEl = document.getElementById("submitReviewForm");
+            const badgeEl = document.getElementById("review-eligibility-badge");
+
+            if (!loadingEl) return;
+
+            try {
+                const res = await fetch(`/api/reviews/eligibility/${productId}`, {
+                    method: "GET",
+                    credentials: "include",
+                    headers: { "Accept": "application/json" }
+                });
+
+                loadingEl.classList.add("d-none");
+
+                if (!res.ok) {
+                    unauthBox.classList.remove("d-none");
+                    return;
+                }
+
+                const data = await res.json();
+
+                if (!data.isAuthenticated) {
+                    unauthBox.classList.remove("d-none");
+                    const loginLink = document.getElementById("reviewLoginLink");
+                    if (loginLink) loginLink.href = `/account/login?returnUrl=${encodeURIComponent(window.location.pathname)}`;
+                } else if (!data.canReview) {
+                    notEligibleBox.classList.remove("d-none");
+                    if (data.message && notEligibleMsg) notEligibleMsg.textContent = data.message;
+                } else {
+                    formEl.classList.remove("d-none");
+                    badgeEl.classList.remove("d-none");
+
+                    if (data.hasReviewed && data.existingReview) {
+                        badgeEl.textContent = "Đã đánh giá";
+                        badgeEl.className = "badge bg-info small";
+                        document.getElementById("reviewCommentInput").value = data.existingReview.comment || "";
+                        setStarRating(data.existingReview.rating || 5);
+                        document.getElementById("btnSubmitReview").innerHTML = '<i class="fa fa-sync-alt me-1"></i> Cập nhật đánh giá của bạn';
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi kiểm tra điều kiện đánh giá:", err);
+                loadingEl.classList.add("d-none");
+            }
+        }
+
         async function loadProductReviews(productId) {
             const listContainer = document.getElementById("reviewsListContainer");
             if (!listContainer || !productId) return;
+
+            checkReviewEligibility(productId);
 
             try {
                 const res = await fetch(`/api/reviews/product/${productId}`, {
@@ -787,11 +872,65 @@
                 if (!res.ok) throw new Error("Không thể tải danh sách đánh giá");
                 const data = await res.json();
 
+                rawReviewsList = data.reviews || [];
                 renderReviews(data);
             } catch (err) {
                 console.error("Lỗi tải reviews:", err);
                 listContainer.innerHTML = '<div class="text-center text-muted py-3">Không thể tải nhận xét của sản phẩm.</div>';
             }
+        }
+
+        function filterReviewsByStar(star, btn) {
+            currentStarFilter = star;
+            const group = document.getElementById("reviewStarFilterGroup");
+            if (group) {
+                group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+            }
+            if (btn) btn.classList.add("active");
+
+            renderReviewsListFiltered();
+        }
+
+        function renderReviewsListFiltered() {
+            const listContainer = document.getElementById("reviewsListContainer");
+            if (!listContainer) return;
+
+            let filtered = rawReviewsList;
+            if (currentStarFilter > 0) {
+                filtered = rawReviewsList.filter(r => r.rating === currentStarFilter);
+            }
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <div class="fs-1 mb-2 text-muted"><i class="fa fa-comment-alt"></i></div>
+                        <div>${currentStarFilter > 0 ? `Không có nhận xét ${currentStarFilter} sao nào.` : 'Chưa có đánh giá nào cho sản phẩm này.'}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            listContainer.innerHTML = filtered.map(r => `
+                <div class="p-3 bg-light rounded border">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-dark text-white fw-bold d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.9rem;">
+                                ${(r.fullName || r.userName || 'K').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <strong class="text-dark d-block">${escapeHtml(r.fullName || r.userName)}</strong>
+                                <small class="text-muted">${new Date(r.createdAt).toLocaleDateString('vi-VN')}</small>
+                            </div>
+                        </div>
+                        <div class="text-warning fs-6">
+                            ${getStarString(r.rating)}
+                        </div>
+                    </div>
+                    <p class="mb-0 text-secondary" style="font-size: 0.95rem; line-height: 1.6;">
+                        ${escapeHtml(r.comment || "")}
+                    </p>
+                </div>
+            `).join('');
         }
 
         function renderReviews(data) {
@@ -828,6 +967,8 @@
                 return;
             }
 
+            renderReviewsListFiltered();
+            return;
             listContainer.innerHTML = reviews.map(r => `
                 <div class="p-3 bg-light rounded border">
                     <div class="d-flex justify-content-between align-items-start mb-2">

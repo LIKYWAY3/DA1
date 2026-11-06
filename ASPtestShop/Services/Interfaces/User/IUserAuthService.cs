@@ -11,26 +11,17 @@ namespace ASPtestShop.Services.Interfaces.User
 
         Task<UserRegisterResultDto> RegisterAsync(RegisterViewModel model);
 
-        Task<UserRegisterResultDto> CreateCustomerAccountWithCartAsync(
-            string userName,
-            string email,
-            string? fullName,
-            string? phoneNumber,
-            string? address,
-            string? gender,
-            string password);
-
         Task<UserRegisterResultDto> InitiateRegisterAsync(RegisterViewModel model);
 
         Task<UserRegisterResultDto> VerifyOtpAndRegisterAsync(VerifyEmailViewModel model);
 
-        Task<UserRegisterResultDto> ResendOtpAsync(string email);
-
         Task<string?> GetPendingOtpCodeAsync(string email);
 
-        Task<AuthResultDto> UpdateProfileAsync(string userId, UpdateProfileDto dto);
+        Task<UserRegisterResultDto> ResendOtpAsync(string email);
 
         Task<UserProfileDto?> GetUserProfileAsync(string userId);
+
+        Task<AuthResultDto> UpdateProfileAsync(string userId, UpdateProfileDto dto);
 
         Task<List<BankAccountDto>> GetBankAccountsAsync(string userId);
 
@@ -43,6 +34,8 @@ namespace ASPtestShop.Services.Interfaces.User
         Task<AuthResultDto> SetDefaultAddressAsync(string userId, int addressId);
 
         Task<AuthResultDto> EditAddressAsync(string userId, EditAddressViewModel model);
+
+        Task<AuthResultDto> DeleteAddressAsync(string userId, int addressId);
 
         Task<AuthResultDto> ChangePasswordAsync(string userId, ChangePasswordViewModel model);
 
