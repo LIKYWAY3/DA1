@@ -102,7 +102,7 @@ namespace ASPtestShop.Tests
             userManager.Setup(m => m.FindByEmailAsync("free@gmail.com"))
                 .ReturnsAsync((ApplicationUser?)null);
 
-            var controller = new AccountController(null!, userManager.Object, null!, null!);
+            var controller = new AccountController(null!, userManager.Object, null!, null!, null!, null!, null!, null!);
 
             // Act
             var result = await controller.CheckAvailability("taken_user", "free@gmail.com") as JsonResult;
