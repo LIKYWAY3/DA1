@@ -170,6 +170,17 @@ using System.Text.Json;
                 }
             }
 
+            private string GetGoogleRedirectUri()
+            {
+                var scheme = Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
+                if (string.IsNullOrEmpty(scheme))
+                {
+                    scheme = Request.IsHttps || !Request.Host.Host.Contains("localhost") ? "https" : "http";
+                }
+                return Url.Action("GoogleCallback", "Account", null, scheme)
+                    ?? $"{scheme}://{Request.Host}/account/google-callback";
+            }
+
             // 2.2. ĐĂNG NHẬP BẰNG GOOGLE (OAuth 2.0 / OpenID Connect - Phương án B)
             [HttpGet("google-login")]
             public IActionResult GoogleLogin(string? returnUrl = null)
@@ -181,7 +192,7 @@ using System.Text.Json;
                     return RedirectToAction("Login", new { returnUrl });
                 }
 
-                var redirectUri = Url.Action("GoogleCallback", "Account", null, Request.Scheme);
+                var redirectUri = GetGoogleRedirectUri();
                 var state = returnUrl ?? "/";
 
                 var googleAuthUrl = $"https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -209,7 +220,7 @@ using System.Text.Json;
 
                 var clientId = _configuration["Authentication:Google:ClientId"];
                 var clientSecret = _configuration["Authentication:Google:ClientSecret"];
-                var redirectUri = Url.Action("GoogleCallback", "Account", null, Request.Scheme);
+                var redirectUri = GetGoogleRedirectUri();
 
                 try
                 {

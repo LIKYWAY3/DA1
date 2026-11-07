@@ -175,12 +175,53 @@ namespace ASPtestShop.Controllers.Api
                 return Ok(new { isAuthenticated = true, valid = false, reason = "session_expired" });
             }
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var cookieStamp = User.FindFirstValue("security_stamp");
+            ClaimsPrincipal? principal = null;
+
+            try
+            {
+                var adminAuth = await HttpContext.AuthenticateAsync(ASPtestShop.Auth.AdminCookieAuth.Scheme);
+                if (adminAuth?.Succeeded == true && adminAuth.Principal != null)
+                {
+                    principal = adminAuth.Principal;
+                }
+            }
+            catch
+            {
+                // In case authentication handler is not configured or throws
+            }
+
+            if (principal == null)
+            {
+                try
+                {
+                    var userAuth = await HttpContext.AuthenticateAsync(ASPtestShop.Auth.UserCookieAuth.Scheme);
+                    if (userAuth?.Succeeded == true && userAuth.Principal != null)
+                    {
+                        principal = userAuth.Principal;
+                    }
+                }
+                catch
+                {
+                    // Fallback to User
+                }
+            }
+
+            if (principal == null && User.Identity?.IsAuthenticated == true)
+            {
+                principal = User;
+            }
+
+            if (principal == null || principal.Identity?.IsAuthenticated != true)
+            {
+                return Ok(new { isAuthenticated = false, valid = true, reason = "anonymous" });
+            }
+
+            var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cookieStamp = principal.FindFirstValue("security_stamp");
 
             if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(cookieStamp))
             {
-                return Ok(new { isAuthenticated = false, valid = false, reason = "anonymous" });
+                return Ok(new { isAuthenticated = false, valid = true, reason = "anonymous" });
             }
 
             var userManager = HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
@@ -190,7 +231,7 @@ namespace ASPtestShop.Controllers.Api
             {
                 await HttpContext.SignOutAsync(ASPtestShop.Auth.UserCookieAuth.Scheme);
                 await HttpContext.SignOutAsync(ASPtestShop.Auth.AdminCookieAuth.Scheme);
-                return Ok(new { isAuthenticated = false, valid = false, reason = "anonymous" });
+                return Ok(new { isAuthenticated = false, valid = true, reason = "anonymous" });
             }
 
             if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)

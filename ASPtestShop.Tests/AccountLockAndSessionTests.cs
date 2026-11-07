@@ -242,5 +242,68 @@ namespace ASPtestShop.Tests
             Assert.False(doc.RootElement.GetProperty("valid").GetBoolean());
             Assert.Equal("session_expired", doc.RootElement.GetProperty("reason").GetString());
         }
+
+        [Fact]
+        public async Task AuthApiController_CheckSession_WhenAdminCookieAuth_ReturnsValidTrue()
+        {
+            // Arrange
+            var userManager = MockUserManager();
+            var adminUser = new ApplicationUser
+            {
+                Id = "admin-1",
+                UserName = "adminuser",
+                SecurityStamp = "valid-admin-stamp",
+                LockoutEnd = null
+            };
+
+            userManager.Setup(m => m.FindByIdAsync("admin-1"))
+                .ReturnsAsync(adminUser);
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, "admin-1"),
+                new Claim(ClaimTypes.Role, "Admin"),
+                new Claim("security_stamp", "valid-admin-stamp")
+            };
+            var identity = new ClaimsIdentity(claims, AdminCookieAuth.Scheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            var authServiceMock = new Mock<IAuthenticationService>();
+            authServiceMock
+                .Setup(a => a.AuthenticateAsync(It.IsAny<HttpContext>(), AdminCookieAuth.Scheme))
+                .ReturnsAsync(AuthenticateResult.Success(new AuthenticationTicket(principal, AdminCookieAuth.Scheme)));
+            authServiceMock
+                .Setup(a => a.AuthenticateAsync(It.IsAny<HttpContext>(), UserCookieAuth.Scheme))
+                .ReturnsAsync(AuthenticateResult.NoResult());
+
+            var serviceProviderMock = new Mock<IServiceProvider>();
+            serviceProviderMock
+                .Setup(s => s.GetService(typeof(IAuthenticationService)))
+                .Returns(authServiceMock.Object);
+            serviceProviderMock
+                .Setup(s => s.GetService(typeof(UserManager<ApplicationUser>)))
+                .Returns(userManager.Object);
+
+            var httpContext = new DefaultHttpContext
+            {
+                RequestServices = serviceProviderMock.Object,
+                User = new ClaimsPrincipal(new ClaimsIdentity()) // Anonymous default user
+            };
+
+            var controller = new AuthApiController(null!)
+            {
+                ControllerContext = new ControllerContext { HttpContext = httpContext }
+            };
+
+            // Act
+            var actionResult = await controller.CheckSession();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(actionResult);
+            var json = JsonSerializer.Serialize(okResult.Value);
+            using var doc = JsonDocument.Parse(json);
+            Assert.True(doc.RootElement.GetProperty("isAuthenticated").GetBoolean());
+            Assert.True(doc.RootElement.GetProperty("valid").GetBoolean());
+        }
     }
 }

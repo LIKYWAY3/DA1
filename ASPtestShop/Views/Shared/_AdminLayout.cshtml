@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
@@ -152,7 +152,7 @@
                 let sessionTerminated = false;
                 let isChecking = false;
 
-                async function verifyActiveSession() {
+                                async function verifyActiveSession() {
                     if (sessionTerminated || isChecking) return;
                     isChecking = true;
 
@@ -165,12 +165,16 @@
 
                         if (res.ok) {
                             const data = await res.json();
-                            if (data && (!data.valid || data.reason === "session_expired" || data.reason === "account_locked")) {
-                                sessionTerminated = true;
+                            if (data) {
                                 if (data.reason === "account_locked") {
+                                    sessionTerminated = true;
                                     window.location.href = "/account/login?accountLocked=true";
-                                } else {
+                                } else if (data.reason === "session_expired") {
+                                    sessionTerminated = true;
                                     window.location.href = "/account/login?sessionExpired=true";
+                                } else if (!data.isAuthenticated) {
+                                    sessionTerminated = true;
+                                    window.location.href = "/account/login";
                                 }
                             }
                         } else if (res.status === 401) {
@@ -178,8 +182,10 @@
                             const reason = res.headers.get("X-Logout-Reason");
                             if (reason === "account_locked") {
                                 window.location.href = "/account/login?accountLocked=true";
-                            } else {
+                            } else if (reason === "session_expired") {
                                 window.location.href = "/account/login?sessionExpired=true";
+                            } else {
+                                window.location.href = "/account/login";
                             }
                         }
                     } catch (e) {

@@ -42,12 +42,22 @@ namespace ASPtestShop.Controllers.MVC.Admin
                 return RedirectToAction("Login", "Account", new { returnUrl = returnUrl ?? "/admin" });
             }
 
+            var userManager = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ASPtestShop.Data.ApplicationUser>>();
+            var appUser = await userManager.FindByIdAsync(result.UserId);
+            if (appUser != null)
+            {
+                await userManager.UpdateSecurityStampAsync(appUser);
+                appUser = await userManager.FindByIdAsync(result.UserId);
+            }
+            var stamp = appUser?.SecurityStamp ?? Guid.NewGuid().ToString();
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, result.UserId),
                 new Claim(ClaimTypes.Name, result.UserName),
                 new Claim(ClaimTypes.Email, result.Email),
-                new Claim(ClaimTypes.Role, "Admin")
+                new Claim(ClaimTypes.Role, "Admin"),
+                new Claim("security_stamp", stamp ?? "")
             };
 
             var identity = new ClaimsIdentity(claims, AdminCookieAuth.Scheme);
