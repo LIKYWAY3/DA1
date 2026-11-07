@@ -481,10 +481,60 @@ namespace ASPtestShop.Services.Implementations
             return order;
         }
 
-        public async Task<CancelOrderResultDto> CancelOrderAsync(
+        private async Task RestockOrderItemsAndCouponAsync(Order order)
+        {
+            if (order.OrderItems != null && order.OrderItems.Any())
+            {
+                foreach (var item in order.OrderItems)
+                {
+                    if (_context.Database.IsRelational())
+                    {
+                        await _context.Database.ExecuteSqlInterpolatedAsync(
+                            $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
+                        );
+                    }
+                    else
+                    {
+                        var product = await _context.Products.FindAsync(item.ProductId);
+                        if (product != null)
+                        {
+                            product.StockQuantity += item.Quantity;
+                        }
+                    }
+                }
+            }
+
+            if (order.CouponId.HasValue)
+            {
+                if (_context.Database.IsRelational())
+                {
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {order.CouponId.Value}"
+                    );
+                }
+                else
+                {
+                    var coupon = await _context.Coupons.FindAsync(order.CouponId.Value);
+                    if (coupon != null && coupon.UsedCount > 0)
+                    {
+                        coupon.UsedCount -= 1;
+                    }
+                }
+            }
+        }
+
+        public Task<CancelOrderResultDto> CancelOrderAsync(
             string userId,
             int orderId,
             string? cancelReason = null)
+        {
+            return CancelOrderAsync(userId, orderId, new CancelOrderRequestDto { Reason = cancelReason });
+        }
+
+        public async Task<CancelOrderResultDto> CancelOrderAsync(
+            string userId,
+            int orderId,
+            CancelOrderRequestDto dto)
         {
             var order = await _context.Orders
                 .Include(o => o.OrderItems)
@@ -508,59 +558,162 @@ namespace ASPtestShop.Services.Implementations
                 };
             }
 
-            var strategy = _context.Database.CreateExecutionStrategy();
-            return await strategy.ExecuteAsync(async () =>
+            var cancelReason = dto?.Reason;
+            var wasPaid = string.Equals(order.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase);
+
+            if (_context.Database.IsRelational())
             {
-                await using var transaction =
-                    await _context.Database.BeginTransactionAsync();
-
-                try
+                var strategy = _context.Database.CreateExecutionStrategy();
+                return await strategy.ExecuteAsync(async () =>
                 {
-                    // Hoàn lại số lượng tồn kho nguyên tử cho từng sản phẩm
-                    foreach (var item in order.OrderItems)
+                    await using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
                     {
-                        await _context.Database.ExecuteSqlInterpolatedAsync(
-                            $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
-                        );
+                        await RestockOrderItemsAndCouponAsync(order);
+
+                        order.OrderStatus = "Cancelled";
+                        if (!string.IsNullOrWhiteSpace(cancelReason))
+                        {
+                            order.Note = string.IsNullOrWhiteSpace(order.Note)
+                                ? $"Lý do hủy: {cancelReason}"
+                                : $"{order.Note} | Lý do hủy: {cancelReason}";
+                        }
+
+                        if (wasPaid)
+                        {
+                            order.PaymentStatus = "RefundPending";
+                            var refundRequest = new RefundRequest
+                            {
+                                OrderId = order.OrderId,
+                                UserId = userId,
+                                Amount = order.FinalAmount,
+                                Reason = string.IsNullOrWhiteSpace(cancelReason) ? "Khách hủy đơn đã thanh toán online" : cancelReason,
+                                Status = "Pending",
+                                BankName = dto?.BankName,
+                                AccountNumber = dto?.AccountNumber,
+                                AccountHolderName = dto?.AccountHolderName,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            _context.RefundRequests.Add(refundRequest);
+                        }
+
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        return new CancelOrderResultDto
+                        {
+                            Success = true,
+                            Message = wasPaid
+                                ? "Hủy đơn hàng thành công! Đơn hàng đã được chuyển sang trạng thái chờ hoàn tiền, quản trị viên sẽ xử lý sớm nhất."
+                                : "Hủy đơn hàng và hoàn lại số lượng tồn kho thành công!",
+                            OrderId = order.OrderId,
+                            OrderStatus = order.OrderStatus
+                        };
                     }
-
-                    // Hoàn lại lượt dùng Coupon nếu đơn hàng có áp dụng
-                    if (order.CouponId.HasValue)
+                    catch (Exception ex)
                     {
-                        await _context.Database.ExecuteSqlInterpolatedAsync(
-                            $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {order.CouponId.Value}"
-                        );
+                        await transaction.RollbackAsync();
+                        return new CancelOrderResultDto
+                        {
+                            Success = false,
+                            Message = "Đã xảy ra lỗi trong quá trình hủy đơn: " + ex.Message
+                        };
                     }
+                });
+            }
+            else
+            {
+                await RestockOrderItemsAndCouponAsync(order);
 
-                    order.OrderStatus = "Cancelled";
-                    if (!string.IsNullOrWhiteSpace(cancelReason))
+                order.OrderStatus = "Cancelled";
+                if (!string.IsNullOrWhiteSpace(cancelReason))
+                {
+                    order.Note = string.IsNullOrWhiteSpace(order.Note)
+                        ? $"Lý do hủy: {cancelReason}"
+                        : $"{order.Note} | Lý do hủy: {cancelReason}";
+                }
+
+                if (wasPaid)
+                {
+                    order.PaymentStatus = "RefundPending";
+                    var refundRequest = new RefundRequest
                     {
-                        order.Note = string.IsNullOrWhiteSpace(order.Note)
-                            ? $"Lý do hủy: {cancelReason}"
-                            : $"{order.Note} | Lý do hủy: {cancelReason}";
-                    }
-
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    return new CancelOrderResultDto
-                    {
-                        Success = true,
-                        Message = "Hủy đơn hàng và hoàn lại số lượng tồn kho thành công!",
                         OrderId = order.OrderId,
-                        OrderStatus = order.OrderStatus
+                        UserId = userId,
+                        Amount = order.FinalAmount,
+                        Reason = string.IsNullOrWhiteSpace(cancelReason) ? "Khách hủy đơn đã thanh toán online" : cancelReason,
+                        Status = "Pending",
+                        BankName = dto?.BankName,
+                        AccountNumber = dto?.AccountNumber,
+                        AccountHolderName = dto?.AccountHolderName,
+                        CreatedAt = DateTime.UtcNow
                     };
+                    _context.RefundRequests.Add(refundRequest);
                 }
-                catch (Exception ex)
+
+                await _context.SaveChangesAsync();
+
+                return new CancelOrderResultDto
                 {
-                    await transaction.RollbackAsync();
-                    return new CancelOrderResultDto
-                    {
-                        Success = false,
-                        Message = "Đã xảy ra lỗi trong quá trình hủy đơn: " + ex.Message
-                    };
-                }
-            });
+                    Success = true,
+                    Message = wasPaid
+                        ? "Hủy đơn hàng thành công! Đơn hàng đã được chuyển sang trạng thái chờ hoàn tiền, quản trị viên sẽ xử lý sớm nhất."
+                        : "Hủy đơn hàng và hoàn lại số lượng tồn kho thành công!",
+                    OrderId = order.OrderId,
+                    OrderStatus = order.OrderStatus
+                };
+            }
+        }
+
+        public async Task<CancelOrderResultDto> RequestCancelOrderAsync(
+            string userId,
+            int orderId,
+            string reason)
+        {
+            var order = await _context.Orders
+                .FirstOrDefaultAsync(o => o.OrderId == orderId && o.UserId == userId);
+
+            if (order == null)
+            {
+                return new CancelOrderResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đơn hàng cần gửi yêu cầu hủy!"
+                };
+            }
+
+            if (order.OrderStatus != "Confirmed")
+            {
+                return new CancelOrderResultDto
+                {
+                    Success = false,
+                    Message = $"Chỉ có thể gửi yêu cầu hủy cho đơn hàng đã được xác nhận (Confirmed). Trạng thái hiện tại: '{order.OrderStatus}'"
+                };
+            }
+
+            var requestTag = $"[Yêu cầu hủy]: {reason.Trim()}";
+            if (!string.IsNullOrWhiteSpace(order.Note) && order.Note.Contains("[Yêu cầu hủy]"))
+            {
+                return new CancelOrderResultDto
+                {
+                    Success = false,
+                    Message = "Đơn hàng này đã có yêu cầu hủy đang chờ xử lý từ trước!"
+                };
+            }
+
+            order.Note = string.IsNullOrWhiteSpace(order.Note)
+                ? requestTag
+                : $"{order.Note} | {requestTag}";
+
+            await _context.SaveChangesAsync();
+
+            return new CancelOrderResultDto
+            {
+                Success = true,
+                Message = "Gửi yêu cầu hủy đơn hàng thành công! Quản trị viên sẽ xem xét duyệt hủy cho bạn.",
+                OrderId = order.OrderId,
+                OrderStatus = order.OrderStatus
+            };
         }
 
         // =======================================================================
@@ -600,21 +753,7 @@ namespace ASPtestShop.Services.Implementations
                     await using var transaction = await _context.Database.BeginTransactionAsync();
                     try
                     {
-                        // Hoàn lại số lượng tồn kho nguyên tử
-                        foreach (var item in order.OrderItems)
-                        {
-                            await _context.Database.ExecuteSqlInterpolatedAsync(
-                                $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
-                            );
-                        }
-
-                        // Hoàn lại lượt dùng Coupon nếu có
-                        if (order.CouponId.HasValue)
-                        {
-                            await _context.Database.ExecuteSqlInterpolatedAsync(
-                                $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {order.CouponId.Value}"
-                            );
-                        }
+                        await RestockOrderItemsAndCouponAsync(order);
 
                         order.OrderStatus = "Cancelled";
                         var cancelNote = "Hệ thống tự động hủy do quá hạn thanh toán";

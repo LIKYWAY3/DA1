@@ -91,5 +91,33 @@ namespace ASPtestShop.Controllers.Api.Admin
             var result = await _adminOrderService.CleanupAllCancelledOrdersAsync();
             return Ok(result);
         }
+
+        // PUT: /api/admin/orders/5/approve-cancel
+        [HttpPut("{orderId:int}/approve-cancel")]
+        public async Task<IActionResult> ApproveCancel(int orderId, [FromBody] CancelOrderRequestDto? dto = null)
+        {
+            var result = await _adminOrderService.ApproveCancelOrderAsync(orderId, dto?.Reason);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        // PUT: /api/admin/orders/5/reject-cancel
+        [HttpPut("{orderId:int}/reject-cancel")]
+        public async Task<IActionResult> RejectCancel(int orderId, [FromBody] CancelOrderRequestDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto?.Reason))
+            {
+                return BadRequest(new { Message = "Vui lòng nhập lý do từ chối hủy đơn." });
+            }
+            var result = await _adminOrderService.RejectCancelOrderAsync(orderId, dto.Reason);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
     }
 }

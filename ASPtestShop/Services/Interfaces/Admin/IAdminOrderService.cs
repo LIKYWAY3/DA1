@@ -11,5 +11,7 @@ namespace ASPtestShop.Services.Interfaces.Admin
         Task<AdminOrderActionResultDto> UpdateOrderStatusAsync(int orderId, UpdateOrderStatusDto dto);
         Task<AdminOrderActionResultDto> DeleteCancelledOrderAsync(int orderId);
         Task<AdminOrderActionResultDto> CleanupAllCancelledOrdersAsync();
+        Task<AdminOrderActionResultDto> ApproveCancelOrderAsync(int orderId, string? adminNote = null);
+        Task<AdminOrderActionResultDto> RejectCancelOrderAsync(int orderId, string reason);
     }
 }

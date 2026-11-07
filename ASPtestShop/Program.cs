@@ -149,9 +149,17 @@ builder.Services.AddAuthentication(options =>
 
             if (user == null || user.SecurityStamp != cookieStamp || (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow))
             {
+                var isLocked = user != null && user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
                 context.RejectPrincipal();
                 await context.HttpContext.SignOutAsync(UserCookieAuth.Scheme);
-                context.HttpContext.Items["ForceLogout"] = true;
+                if (isLocked)
+                {
+                    context.HttpContext.Items["AccountLocked"] = true;
+                }
+                else
+                {
+                    context.HttpContext.Items["ForceLogout"] = true;
+                }
 
                 // Nếu là trang web thông thường (HTML navigation), redirect ngay về login kèm thông báo
                 var path = context.Request.Path.Value ?? "";
@@ -162,7 +170,7 @@ builder.Services.AddAuthentication(options =>
                     !path.StartsWith("/fonts", StringComparison.OrdinalIgnoreCase) &&
                     !path.StartsWith("/account/login", StringComparison.OrdinalIgnoreCase))
                 {
-                    context.Response.Redirect("/account/login?sessionExpired=true");
+                    context.Response.Redirect(isLocked ? "/account/login?accountLocked=true" : "/account/login?sessionExpired=true");
                 }
             }
         },
@@ -172,10 +180,22 @@ builder.Services.AddAuthentication(options =>
             if (context.Request.Path.StartsWithSegments("/api"))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                if (context.HttpContext.Items.ContainsKey("AccountLocked"))
+                {
+                    context.Response.Headers["X-Logout-Reason"] = "account_locked";
+                }
+                else if (context.HttpContext.Items.ContainsKey("ForceLogout"))
+                {
+                    context.Response.Headers["X-Logout-Reason"] = "session_expired";
+                }
                 return Task.CompletedTask;
             }
 
-            if (context.HttpContext.Items.ContainsKey("ForceLogout"))
+            if (context.HttpContext.Items.ContainsKey("AccountLocked"))
+            {
+                context.Response.Redirect("/account/login?accountLocked=true");
+            }
+            else if (context.HttpContext.Items.ContainsKey("ForceLogout"))
             {
                 context.Response.Redirect("/account/login?sessionExpired=true");
             }
@@ -200,8 +220,8 @@ builder.Services.AddAuthentication(options =>
 .AddCookie(AdminCookieAuth.Scheme, options =>
 {
     options.Cookie.Name = "HShop.Admin.Auth";
-    options.LoginPath = "/admin/login";
-    options.AccessDeniedPath = "/admin/access-denied";
+    options.LoginPath = "/account/login";
+    options.AccessDeniedPath = "/account/access-denied";
 
     options.ExpireTimeSpan = TimeSpan.FromHours(6);
     options.SlidingExpiration = true;
@@ -209,6 +229,94 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+    options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
+    {
+        OnValidatePrincipal = async context =>
+        {
+            var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var cookieStamp = context.Principal?.FindFirstValue("security_stamp");
+
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(cookieStamp))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(AdminCookieAuth.Scheme);
+                context.HttpContext.Items["ForceLogout"] = true;
+                return;
+            }
+
+            var userManager = context.HttpContext.RequestServices
+                .GetRequiredService<UserManager<ApplicationUser>>();
+
+            var user = await userManager.FindByIdAsync(userId);
+
+            if (user == null || user.SecurityStamp != cookieStamp || (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow))
+            {
+                var isLocked = user != null && user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow;
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(AdminCookieAuth.Scheme);
+                if (isLocked)
+                {
+                    context.HttpContext.Items["AccountLocked"] = true;
+                }
+                else
+                {
+                    context.HttpContext.Items["ForceLogout"] = true;
+                }
+
+                var path = context.Request.Path.Value ?? "";
+                if (!path.StartsWith("/api", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/css", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/js", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/images", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/fonts", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWith("/account/login", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.Redirect(isLocked ? "/account/login?accountLocked=true" : "/account/login?sessionExpired=true");
+                }
+            }
+        },
+        OnRedirectToLogin = context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                if (context.HttpContext.Items.ContainsKey("AccountLocked"))
+                {
+                    context.Response.Headers["X-Logout-Reason"] = "account_locked";
+                }
+                else if (context.HttpContext.Items.ContainsKey("ForceLogout"))
+                {
+                    context.Response.Headers["X-Logout-Reason"] = "session_expired";
+                }
+                return Task.CompletedTask;
+            }
+
+            if (context.HttpContext.Items.ContainsKey("AccountLocked"))
+            {
+                context.Response.Redirect("/account/login?accountLocked=true");
+            }
+            else if (context.HttpContext.Items.ContainsKey("ForceLogout"))
+            {
+                context.Response.Redirect("/account/login?sessionExpired=true");
+            }
+            else
+            {
+                context.Response.Redirect(context.RedirectUri);
+            }
+            return Task.CompletedTask;
+        },
+        OnRedirectToAccessDenied = context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Cache & Email Service

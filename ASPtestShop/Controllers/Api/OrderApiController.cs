@@ -135,24 +135,47 @@ namespace ASPtestShop.Controllers.Api
 
         //===============================CANCEL ORDER======================================
         [HttpPost("cancel/{orderId:int}")]
-        public async Task<IActionResult> CancelOrder(int orderId, [FromQuery] string? reason = null)
+        public async Task<IActionResult> CancelOrder(int orderId, [FromBody] CancelOrderRequestDto? dto = null, [FromQuery] string? reason = null)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(new
-                {
-                    Message = "Bạn chưa đăng nhập"
-                });
+                return Unauthorized(new { Message = "Bạn chưa đăng nhập" });
             }
 
-            var result = await _orderService.CancelOrderAsync(userId, orderId, reason);
+            var requestDto = dto ?? new CancelOrderRequestDto { Reason = reason };
+            if (string.IsNullOrWhiteSpace(requestDto.Reason) && !string.IsNullOrWhiteSpace(reason))
+            {
+                requestDto.Reason = reason;
+            }
+
+            var result = await _orderService.CancelOrderAsync(userId, orderId, requestDto);
             if (!result.Success)
             {
-                return BadRequest(new
-                {
-                    result.Message
-                });
+                return BadRequest(new { result.Message });
+            }
+
+            return Ok(result);
+        }
+
+        [HttpPost("request-cancel/{orderId:int}")]
+        public async Task<IActionResult> RequestCancelOrder(int orderId, [FromBody] CancelOrderRequestDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { Message = "Bạn chưa đăng nhập" });
+            }
+
+            if (string.IsNullOrWhiteSpace(dto?.Reason))
+            {
+                return BadRequest(new { Message = "Vui lòng nhập lý do yêu cầu hủy đơn." });
+            }
+
+            var result = await _orderService.RequestCancelOrderAsync(userId, orderId, dto.Reason);
+            if (!result.Success)
+            {
+                return BadRequest(new { result.Message });
             }
 
             return Ok(result);

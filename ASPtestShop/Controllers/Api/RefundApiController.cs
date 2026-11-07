@@ -98,6 +98,18 @@ namespace ASPtestShop.Controllers.Api
         }
 
         // =======================================================================
+        // GET: api/refunds/admin/pending-count
+        // Admin: Đếm số lượng yêu cầu hoàn tiền chờ duyệt
+        // =======================================================================
+        [HttpGet("admin/pending-count")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPendingRefundCount()
+        {
+            var count = await _refundService.GetPendingRefundCountAsync();
+            return Ok(new { count });
+        }
+
+        // =======================================================================
         // PUT: api/refunds/admin/{id}/process
         // Admin: Phê duyệt hoặc từ chối hoàn tiền
         // =======================================================================
@@ -113,6 +125,33 @@ namespace ASPtestShop.Controllers.Api
             var adminUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Admin";
             var result = await _refundService.ProcessRefundAsync(id, adminUserId, dto);
 
+            if (!result.Success)
+            {
+                return BadRequest(new { Message = result.Message });
+            }
+
+            return Ok(result);
+        }
+
+        // =======================================================================
+        // POST: api/refunds/resubmit
+        // Khách hàng gửi lại thông tin tài khoản khi yêu cầu bị từ chối
+        // =======================================================================
+        [HttpPost("resubmit")]
+        public async Task<IActionResult> ResubmitRefund([FromBody] ResubmitRefundRequestDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { Message = "Bạn chưa đăng nhập" });
+            }
+
+            var result = await _refundService.ResubmitRefundRequestAsync(userId, dto);
             if (!result.Success)
             {
                 return BadRequest(new { Message = result.Message });

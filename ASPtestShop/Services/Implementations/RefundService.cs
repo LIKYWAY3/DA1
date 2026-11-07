@@ -203,6 +203,15 @@ namespace ASPtestShop.Services.Implementations
         }
 
         // =======================================================================
+        // Admin: Đếm số lượng yêu cầu hoàn tiền đang chờ duyệt
+        // =======================================================================
+        public async Task<int> GetPendingRefundCountAsync()
+        {
+            return await _context.RefundRequests
+                .CountAsync(r => r.Status == "Pending");
+        }
+
+        // =======================================================================
         // Admin: Phê duyệt hoặc từ chối yêu cầu hoàn tiền
         // =======================================================================
         public async Task<RefundResultDto> ProcessRefundAsync(int refundRequestId, string adminUserId, ProcessRefundDto dto)
@@ -230,13 +239,34 @@ namespace ASPtestShop.Services.Implementations
                 };
             }
 
+            // Bắt buộc nhập lý do khi Từ chối hoàn tiền
+            if (dto.Status == "Rejected" && string.IsNullOrWhiteSpace(dto.AdminNote))
+            {
+                return new RefundResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng nhập lý do từ chối yêu cầu hoàn tiền để khách hàng nắm được thông tin."
+                };
+            }
+
             request.ProcessedAt = DateTime.UtcNow;
             request.ProcessedBy = adminUserId;
-            request.AdminNote   = dto.AdminNote;
             request.Status      = dto.Status;
 
             if (dto.Status == "Approved")
             {
+                // Nếu có mã giao dịch đối soát thì ghép vào AdminNote
+                if (!string.IsNullOrWhiteSpace(dto.TransactionCode))
+                {
+                    request.AdminNote = !string.IsNullOrWhiteSpace(dto.AdminNote)
+                        ? $"[Mã GD: {dto.TransactionCode.Trim()}] {dto.AdminNote.Trim()}"
+                        : $"[Mã GD: {dto.TransactionCode.Trim()}]";
+                }
+                else
+                {
+                    request.AdminNote = dto.AdminNote?.Trim();
+                }
+
                 // Cập nhật thanh toán của đơn thành Refunded
                 request.Order.PaymentStatus = "Refunded";
 
@@ -248,24 +278,43 @@ namespace ASPtestShop.Services.Implementations
                         ? "Đơn hàng đã được duyệt hoàn tiền và hủy"
                         : $"{request.Order.Note} | Đã duyệt hoàn tiền và hủy";
 
-                    foreach (var item in request.Order.OrderItems)
+                    if (request.Order.OrderItems != null && request.Order.OrderItems.Any())
                     {
-                        await _context.Database.ExecuteSqlInterpolatedAsync(
-                            $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
-                        );
+                        foreach (var item in request.Order.OrderItems)
+                        {
+                            if (_context.Database.IsRelational())
+                            {
+                                await _context.Database.ExecuteSqlInterpolatedAsync(
+                                    $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
+                                );
+                            }
+                            else
+                            {
+                                var prod = await _context.Products.FindAsync(item.ProductId);
+                                if (prod != null) prod.StockQuantity += item.Quantity;
+                            }
+                        }
                     }
 
-                    // Hoàn lại lượt dùng Coupon nếu đơn hàng có áp dụng
                     if (request.Order.CouponId.HasValue)
                     {
-                        await _context.Database.ExecuteSqlInterpolatedAsync(
-                            $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {request.Order.CouponId.Value}"
-                        );
+                        if (_context.Database.IsRelational())
+                        {
+                            await _context.Database.ExecuteSqlInterpolatedAsync(
+                                $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {request.Order.CouponId.Value}"
+                            );
+                        }
+                        else
+                        {
+                            var c = await _context.Coupons.FindAsync(request.Order.CouponId.Value);
+                            if (c != null && c.UsedCount > 0) c.UsedCount -= 1;
+                        }
                     }
                 }
             }
             else // Rejected
             {
+                request.AdminNote = dto.AdminNote?.Trim();
                 // Trả lại trạng thái Paid cho Order
                 request.Order.PaymentStatus = "Paid";
             }
@@ -278,6 +327,59 @@ namespace ASPtestShop.Services.Implementations
                 Message         = dto.Status == "Approved" ? "Đã phê duyệt hoàn tiền thành công!" : "Đã từ chối yêu cầu hoàn tiền.",
                 RefundRequestId = request.RefundRequestId,
                 Status          = request.Status
+            };
+        }
+
+        // =======================================================================
+        // Khách hàng: Gửi lại thông tin tài khoản khi yêu cầu bị từ chối
+        // =======================================================================
+        public async Task<RefundResultDto> ResubmitRefundRequestAsync(string userId, ResubmitRefundRequestDto dto)
+        {
+            var request = await _context.RefundRequests
+                .Include(r => r.Order)
+                .FirstOrDefaultAsync(r => r.OrderId == dto.OrderId && r.UserId == userId);
+
+            if (request == null)
+            {
+                return new RefundResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy yêu cầu hoàn tiền nào cho đơn hàng này."
+                };
+            }
+
+            if (request.Status != "Rejected")
+            {
+                return new RefundResultDto
+                {
+                    Success = false,
+                    Message = $"Chỉ có thể gửi lại thông tin khi yêu cầu hoàn tiền ở trạng thái 'Rejected'. Trạng thái hiện tại: '{request.Status}'."
+                };
+            }
+
+            request.BankName = dto.BankName.Trim();
+            request.AccountNumber = dto.AccountNumber.Trim();
+            request.AccountHolderName = dto.AccountHolderName.Trim();
+            if (!string.IsNullOrWhiteSpace(dto.Reason))
+            {
+                request.Reason = dto.Reason.Trim();
+            }
+            request.Status = "Pending";
+            request.CreatedAt = DateTime.UtcNow;
+            request.AdminNote = null;
+            request.ProcessedAt = null;
+            request.ProcessedBy = null;
+
+            request.Order.PaymentStatus = "RefundPending";
+
+            await _context.SaveChangesAsync();
+
+            return new RefundResultDto
+            {
+                Success = true,
+                Message = "Đã cập nhật và gửi lại thông tin hoàn tiền thành công! Yêu cầu của bạn đang chờ Ban quản trị xét duyệt lại.",
+                RefundRequestId = request.RefundRequestId,
+                Status = request.Status
             };
         }
     }

@@ -1,4 +1,4 @@
-﻿namespace ASPtestShop.Models.DTO.Order
+namespace ASPtestShop.Models.DTO.Order
 {
     public class AdminOrderListItemDto
     {
@@ -19,6 +19,10 @@
         public string ReceiverName { get; set; } = string.Empty;
 
         public string ReceiverPhone { get; set; } = string.Empty;
+
+        public string? Note { get; set; }
+
+        public bool HasCancelRequest { get; set; }
 
         public DateTime CreatedAt { get; set; }
     }

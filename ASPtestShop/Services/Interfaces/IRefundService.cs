@@ -19,7 +19,13 @@ namespace ASPtestShop.Services.Interfaces
         // Admin: Xem tất cả yêu cầu hoàn tiền
         Task<List<RefundRequestDto>> GetAllRefundRequestsAsync();
 
+        // Admin: Đếm số lượng yêu cầu hoàn tiền chờ duyệt
+        Task<int> GetPendingRefundCountAsync();
+
         // Admin: Phê duyệt hoặc từ chối hoàn tiền
         Task<RefundResultDto> ProcessRefundAsync(int refundRequestId, string adminUserId, ProcessRefundDto dto);
+
+        // Khách hàng: Gửi lại thông tin tài khoản khi yêu cầu bị từ chối
+        Task<RefundResultDto> ResubmitRefundRequestAsync(string userId, ResubmitRefundRequestDto dto);
     }
 }

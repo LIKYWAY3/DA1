@@ -13,6 +13,10 @@ namespace ASPtestShop.Services.Interfaces
 
         Task<CancelOrderResultDto> CancelOrderAsync(string userId, int orderId, string? cancelReason = null);
 
+        Task<CancelOrderResultDto> CancelOrderAsync(string userId, int orderId, CancelOrderRequestDto dto);
+
+        Task<CancelOrderResultDto> RequestCancelOrderAsync(string userId, int orderId, string reason);
+
         // UC-19: Tự động hủy đơn hàng quá hạn (SystemScheduler)
         Task<AutoCancelResultDto> AutoCancelExpiredOrdersAsync(int timeoutHours = 24, int onlineTimeoutMinutes = 30);
     }

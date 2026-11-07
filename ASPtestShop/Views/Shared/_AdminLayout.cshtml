@@ -144,5 +144,91 @@
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script>
+            (function() {
+                let sessionTerminated = false;
+                let isChecking = false;
+
+                async function verifyActiveSession() {
+                    if (sessionTerminated || isChecking) return;
+                    isChecking = true;
+
+                    try {
+                        const res = await fetch("/api/auth/check-session", {
+                            method: "GET",
+                            credentials: "include",
+                            headers: { "Accept": "application/json" }
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data && (!data.valid || data.reason === "session_expired" || data.reason === "account_locked")) {
+                                sessionTerminated = true;
+                                if (data.reason === "account_locked") {
+                                    window.location.href = "/account/login?accountLocked=true";
+                                } else {
+                                    window.location.href = "/account/login?sessionExpired=true";
+                                }
+                            }
+                        } else if (res.status === 401) {
+                            sessionTerminated = true;
+                            const reason = res.headers.get("X-Logout-Reason");
+                            if (reason === "account_locked") {
+                                window.location.href = "/account/login?accountLocked=true";
+                            } else {
+                                window.location.href = "/account/login?sessionExpired=true";
+                            }
+                        }
+                    } catch (e) {
+                    } finally {
+                        isChecking = false;
+                    }
+                }
+
+                try {
+                    const bc = new BroadcastChannel("fuu_auth_channel");
+                    bc.onmessage = function(e) {
+                        if (e.data === "account_locked") {
+                            sessionTerminated = true;
+                            window.location.href = "/account/login?accountLocked=true";
+                        } else if (e.data === "session_expired" || e.data === "new_login") {
+                            sessionTerminated = true;
+                            window.location.href = "/account/login?sessionExpired=true";
+                        }
+                    };
+                } catch(e) {}
+
+                setInterval(verifyActiveSession, 2000);
+                window.addEventListener("focus", verifyActiveSession);
+
+                async function updateRefundBadge() {
+                    try {
+                        const res = await fetch("/api/refunds/admin/pending-count", { credentials: "include" });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const badge = document.getElementById("menuRefundPendingBadge");
+                            if (badge) {
+                                if (data && data.count > 0) {
+                                    badge.textContent = data.count;
+                                    badge.classList.remove("d-none");
+                                } else {
+                                    badge.classList.add("d-none");
+                                }
+                            }
+                        }
+                    } catch(e) {}
+                }
+                updateRefundBadge();
+                document.addEventListener("visibilitychange", function() {
+                    if (document.visibilityState === "visible") {
+                        verifyActiveSession();
+                    }
+                });
+            })();
+        </script>
+    }
 </body>
 </html>

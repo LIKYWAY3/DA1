@@ -59,10 +59,21 @@ namespace ASPtestShop.Controllers.Api
                 return NotFound(new { message = "Không tìm thấy thông tin tài khoản." });
             }
 
+            var addresses = await _userAuthService.GetUserAddressesAsync(userId);
+            var defaultAddr = addresses.FirstOrDefault(a => a.IsDefault) ?? addresses.FirstOrDefault();
+
+            var effectiveFullName = !string.IsNullOrWhiteSpace(profile.FullName) 
+                ? profile.FullName 
+                : (defaultAddr?.FullName ?? profile.UserName);
+
+            var effectivePhone = !string.IsNullOrWhiteSpace(profile.PhoneNumber)
+                ? profile.PhoneNumber
+                : (defaultAddr?.PhoneNumber ?? string.Empty);
+
             return Ok(new
             {
-                fullName = profile.FullName,
-                phoneNumber = profile.PhoneNumber,
+                fullName = effectiveFullName,
+                phoneNumber = effectivePhone,
                 email = profile.Email
             });
         }

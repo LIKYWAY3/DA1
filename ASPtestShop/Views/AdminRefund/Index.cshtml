@@ -1,0 +1,538 @@
+@{
+    ViewData["Title"] = "Quản lý hoàn tiền";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container-fluid px-0">
+    <!-- TIÊU ĐỀ TRANG -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">Quản lý hoàn tiền</h3>
+            <p class="text-muted small mb-0">Theo dõi, xét duyệt và đối soát các yêu cầu hoàn tiền của khách hàng</p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="/admin/orders" class="btn btn-outline-dark">
+                <i class="fa fa-shopping-bag me-1"></i> Quản lý đơn hàng
+            </a>
+            <a href="/admin" class="btn btn-outline-secondary">
+                Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div id="refundAlertMessage"></div>
+
+    <!-- TABS LỌC TRẠNG THÁI -->
+    <ul class="nav nav-pills mb-3 gap-2" id="refundStatusTabs">
+        <li class="nav-item">
+            <button class="nav-link active rounded-pill px-3 py-1" onclick="filterRefunds('ALL', this)">
+                Tất cả (<span id="countAll">0</span>)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link rounded-pill px-3 py-1 text-warning fw-semibold" onclick="filterRefunds('Pending', this)">
+                <i class="fa fa-clock me-1"></i>Chờ duyệt (<span id="countPending">0</span>)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link rounded-pill px-3 py-1 text-success fw-semibold" onclick="filterRefunds('Approved', this)">
+                <i class="fa fa-check-circle me-1"></i>Đã duyệt (<span id="countApproved">0</span>)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link rounded-pill px-3 py-1 text-danger fw-semibold" onclick="filterRefunds('Rejected', this)">
+                <i class="fa fa-times-circle me-1"></i>Đã từ chối (<span id="countRejected">0</span>)
+            </button>
+        </li>
+    </ul>
+
+    <!-- BẢNG DANH SÁCH -->
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; background: #fff;">
+        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="fa fa-search text-secondary"></i></span>
+                        <input type="text" class="form-control border-start-0 bg-light" id="refundSearchInput" placeholder="Tìm theo mã đơn, người dùng, STK..." onkeyup="handleRefundSearch()">
+                    </div>
+                </div>
+                <div class="col-md-7 text-md-end text-muted small">
+                    Đang hiển thị: <span class="fw-bold text-dark" id="displayRefundCount">0</span> yêu cầu
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã YC</th>
+                            <th>Mã đơn</th>
+                            <th>Khách hàng</th>
+                            <th>Số tiền hoàn</th>
+                            <th>Thông tin ngân hàng</th>
+                            <th>Lý do hoàn tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày yêu cầu</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="refundTableBody">
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                Đang tải danh sách yêu cầu hoàn tiền...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL XỬ LÝ HOÀN TIỀN -->
+<div class="modal fade" id="processRefundModal" tabindex="-1" aria-labelledby="processRefundModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="processRefundModalLabel">
+                    <i class="fa fa-file-invoice-dollar me-2 text-primary"></i>Xử lý yêu cầu hoàn tiền
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="modalAlertMessage"></div>
+
+                <!-- Tóm tắt yêu cầu -->
+                <div class="p-3 mb-3 rounded bg-light border">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small">Mã đơn hàng:</span>
+                        <strong id="modalOrderCode" class="text-dark"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small">Khách hàng:</span>
+                        <strong id="modalCustomerName"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small">Số tiền yêu cầu hoàn:</span>
+                        <strong id="modalRefundAmount" class="text-danger fs-5"></strong>
+                    </div>
+                    <hr class="my-2" />
+                    <div class="mb-1">
+                        <span class="text-muted small">Ngân hàng:</span>
+                        <strong id="modalBankName" class="text-dark ms-1"></strong>
+                    </div>
+                    <div class="mb-1">
+                        <span class="text-muted small">Số tài khoản:</span>
+                        <strong id="modalAccountNumber" class="text-dark ms-1"></strong>
+                    </div>
+                    <div class="mb-1">
+                        <span class="text-muted small">Chủ tài khoản:</span>
+                        <strong id="modalAccountHolder" class="text-dark ms-1"></strong>
+                    </div>
+                    <div class="mt-2 text-muted small">
+                        <span>Lý do từ khách:</span>
+                        <div id="modalReason" class="text-dark fw-semibold mt-1"></div>
+                    </div>
+                </div>
+
+                <!-- Lựa chọn duyệt hoặc từ chối -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-dark">Hành động xử lý</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="refundAction" id="actionApprove" value="Approved" checked onchange="toggleRefundActionFields()">
+                            <label class="form-check-label fw-semibold text-success" for="actionApprove">
+                                <i class="fa fa-check me-1"></i>Duyệt hoàn tiền
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="refundAction" id="actionReject" value="Rejected" onchange="toggleRefundActionFields()">
+                            <label class="form-check-label fw-semibold text-danger" for="actionReject">
+                                <i class="fa fa-times me-1"></i>Từ chối hoàn tiền
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trường dành cho Duyệt hoàn tiền -->
+                <div id="fieldApproveSection">
+                    <div class="mb-3">
+                        <label for="modalTransactionCode" class="form-label small fw-semibold">Mã giao dịch ngân hàng / Ủy nhiệm chi (tùy chọn)</label>
+                        <input type="text" class="form-control" id="modalTransactionCode" placeholder="VD: VCB-9823472938 hoặc FT241009823" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalApproveNote" class="form-label small fw-semibold">Ghi chú đối soát</label>
+                        <textarea class="form-control" id="modalApproveNote" rows="2" placeholder="Ghi chú chuyển khoản hoặc đối soát kế toán..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Trường dành cho Từ chối hoàn tiền -->
+                <div id="fieldRejectSection" class="d-none">
+                    <div class="mb-3">
+                        <label for="modalRejectReason" class="form-label small fw-semibold text-danger">Lý do từ chối (bắt buộc) <span class="text-danger">*</span></label>
+                        <textarea class="form-control border-danger" id="modalRejectReason" rows="3" placeholder="Nhập rõ lý do từ chối để thông báo cho khách hàng (VD: Sai số tài khoản, sản phẩm không đủ điều kiện...)"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-dark btn-sm fw-bold px-4" id="btnSubmitProcessRefund" onclick="submitProcessRefund()">
+                    Xác nhận xử lý
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL XEM CHI TIẾT ĐÃ XỬ LÝ -->
+<div class="modal fade" id="viewRefundDetailModal" tabindex="-1" aria-labelledby="viewRefundDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="viewRefundDetailModalLabel">
+                    <i class="fa fa-info-circle me-2 text-secondary"></i>Chi tiết yêu cầu hoàn tiền
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="viewRefundDetailBody">
+                <!-- Nội dung render qua JS -->
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let allRefunds = [];
+        let currentStatusFilter = "ALL";
+        let activeProcessingRefundId = 0;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            loadRefundRequests();
+        });
+
+        function showRefundAlert(msg, type = "success") {
+            const container = document.getElementById("refundAlertMessage");
+            container.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${msg}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            setTimeout(() => { container.innerHTML = ""; }, 4500);
+        }
+
+        async function loadRefundRequests() {
+            const tbody = document.getElementById("refundTableBody");
+            try {
+                const response = await fetch("/api/refunds/admin/all", {
+                    method: "GET",
+                    credentials: "include"
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = "/account/login?returnUrl=/admin/refunds";
+                    return;
+                }
+
+                if (!response.ok) {
+                    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Không thể tải danh sách yêu cầu hoàn tiền.</td></tr>`;
+                    return;
+                }
+
+                allRefunds = await response.json();
+                updateRefundCounts();
+                applyRefundFilter();
+
+            } catch (err) {
+                console.error("Lỗi tải yêu cầu hoàn tiền:", err);
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Lỗi kết nối máy chủ.</td></tr>`;
+            }
+        }
+
+        function updateRefundCounts() {
+            const countAll = allRefunds.length;
+            const countPending = allRefunds.filter(r => r.status === "Pending").length;
+            const countApproved = allRefunds.filter(r => r.status === "Approved").length;
+            const countRejected = allRefunds.filter(r => r.status === "Rejected").length;
+
+            document.getElementById("countAll").textContent = countAll;
+            document.getElementById("countPending").textContent = countPending;
+            document.getElementById("countApproved").textContent = countApproved;
+            document.getElementById("countRejected").textContent = countRejected;
+        }
+
+        function filterRefunds(status, btn) {
+            currentStatusFilter = status;
+            document.querySelectorAll("#refundStatusTabs .nav-link").forEach(el => el.classList.remove("active"));
+            if (btn) btn.classList.add("active");
+            applyRefundFilter();
+        }
+
+        function handleRefundSearch() {
+            applyRefundFilter();
+        }
+
+        function applyRefundFilter() {
+            const searchKeyword = (document.getElementById("refundSearchInput")?.value || "").toLowerCase().trim();
+
+            let filtered = allRefunds;
+
+            if (currentStatusFilter !== "ALL") {
+                filtered = filtered.filter(r => r.status === currentStatusFilter);
+            }
+
+            if (searchKeyword) {
+                filtered = filtered.filter(r =>
+                    (r.orderCode && r.orderCode.toLowerCase().includes(searchKeyword)) ||
+                    (r.userName && r.userName.toLowerCase().includes(searchKeyword)) ||
+                    (r.accountNumber && r.accountNumber.toLowerCase().includes(searchKeyword)) ||
+                    (r.accountHolderName && r.accountHolderName.toLowerCase().includes(searchKeyword)) ||
+                    (r.bankName && r.bankName.toLowerCase().includes(searchKeyword)) ||
+                    (r.reason && r.reason.toLowerCase().includes(searchKeyword))
+                );
+            }
+
+            document.getElementById("displayRefundCount").textContent = filtered.length;
+            renderRefundTable(filtered);
+        }
+
+        function renderRefundTable(refunds) {
+            const tbody = document.getElementById("refundTableBody");
+
+            if (!Array.isArray(refunds) || refunds.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-5">
+                            Không có yêu cầu hoàn tiền nào phù hợp với bộ lọc.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = refunds.map(r => {
+                const isPending = r.status === "Pending";
+                const isApproved = r.status === "Approved";
+
+                let statusBadge = '<span class="badge bg-secondary">Không rõ</span>';
+                if (isPending) statusBadge = '<span class="badge bg-warning text-dark"><i class="fa fa-clock me-1"></i>Chờ duyệt</span>';
+                if (isApproved) statusBadge = '<span class="badge bg-success"><i class="fa fa-check me-1"></i>Đã hoàn tiền</span>';
+                if (r.status === "Rejected") statusBadge = '<span class="badge bg-danger"><i class="fa fa-times me-1"></i>Đã từ chối</span>';
+
+                const actionHtml = isPending
+                    ? `<button type="button" class="btn btn-sm btn-dark fw-bold" onclick="openProcessRefundModal(${r.refundRequestId})">
+                           <i class="fa fa-gavel me-1"></i>Xử lý
+                       </button>`
+                    : `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="openViewRefundDetailModal(${r.refundRequestId})">
+                           <i class="fa fa-info-circle me-1"></i>Chi tiết
+                       </button>`;
+
+                return `
+                    <tr>
+                        <td><strong>#RF-${r.refundRequestId}</strong></td>
+                        <td>
+                            <a href="/admin/orders/detail/${r.orderId}" class="text-decoration-none fw-semibold text-primary">
+                                ${escapeHtml(r.orderCode || ("#" + r.orderId))}
+                            </a>
+                        </td>
+                        <td>
+                            <div><strong>${escapeHtml(r.userName || "N/A")}</strong></div>
+                        </td>
+                        <td><strong class="text-danger">${formatCurrency(r.amount)}</strong></td>
+                        <td>
+                            <div class="small">
+                                <span class="fw-semibold">${escapeHtml(r.bankName || "Chưa có")}</span><br />
+                                <code>${escapeHtml(r.accountNumber || "")}</code> - ${escapeHtml(r.accountHolderName || "")}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small text-truncate" style="max-width: 200px;" title="${escapeHtml(r.reason || "")}">
+                                ${escapeHtml(r.reason || "")}
+                            </div>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td class="small text-muted">${formatDate(r.createdAt)}</td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a href="/admin/orders/detail/${r.orderId}" class="btn btn-sm btn-outline-dark" title="Xem đơn hàng">
+                                    <i class="fa fa-eye"></i>
+                                </a>
+                                ${actionHtml}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleRefundActionFields() {
+            const isApprove = document.getElementById("actionApprove").checked;
+            const approveSection = document.getElementById("fieldApproveSection");
+            const rejectSection = document.getElementById("fieldRejectSection");
+
+            if (isApprove) {
+                approveSection.classList.remove("d-none");
+                rejectSection.classList.add("d-none");
+            } else {
+                approveSection.classList.add("d-none");
+                rejectSection.classList.remove("d-none");
+            }
+        }
+
+        function openProcessRefundModal(refundId) {
+            const r = allRefunds.find(item => item.refundRequestId === refundId);
+            if (!r) return;
+
+            activeProcessingRefundId = refundId;
+            document.getElementById("modalAlertMessage").innerHTML = "";
+            document.getElementById("modalOrderCode").textContent = r.orderCode || ("#" + r.orderId);
+            document.getElementById("modalCustomerName").textContent = r.userName || "N/A";
+            document.getElementById("modalRefundAmount").textContent = formatCurrency(r.amount);
+            document.getElementById("modalBankName").textContent = r.bankName || "Chưa cung cấp";
+            document.getElementById("modalAccountNumber").textContent = r.accountNumber || "Chưa cung cấp";
+            document.getElementById("modalAccountHolder").textContent = r.accountHolderName || "Chưa cung cấp";
+            document.getElementById("modalReason").textContent = r.reason || "Không có lý do";
+
+            document.getElementById("actionApprove").checked = true;
+            document.getElementById("modalTransactionCode").value = "";
+            document.getElementById("modalApproveNote").value = "";
+            document.getElementById("modalRejectReason").value = "";
+            toggleRefundActionFields();
+
+            const modal = new bootstrap.Modal(document.getElementById("processRefundModal"));
+            modal.show();
+        }
+
+        async function submitProcessRefund() {
+            if (!activeProcessingRefundId) return;
+
+            const isApprove = document.getElementById("actionApprove").checked;
+            const status = isApprove ? "Approved" : "Rejected";
+            const modalAlert = document.getElementById("modalAlertMessage");
+            const btnSubmit = document.getElementById("btnSubmitProcessRefund");
+
+            let transactionCode = "";
+            let adminNote = "";
+
+            if (isApprove) {
+                transactionCode = document.getElementById("modalTransactionCode").value.trim();
+                adminNote = document.getElementById("modalApproveNote").value.trim();
+            } else {
+                adminNote = document.getElementById("modalRejectReason").value.trim();
+                if (!adminNote) {
+                    modalAlert.innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng nhập lý do từ chối để thông báo cho khách hàng!</div>`;
+                    document.getElementById("modalRejectReason").focus();
+                    return;
+                }
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = `<i class="fa fa-spinner fa-spin me-1"></i> Đang xử lý...`;
+
+            try {
+                const response = await fetch(`/api/refunds/admin/${activeProcessingRefundId}/process`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        status: status,
+                        transactionCode: transactionCode,
+                        adminNote: adminNote
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    modalAlert.innerHTML = `<div class="alert alert-danger py-2 small">${data.message || "Xử lý thất bại"}</div>`;
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = `Xác nhận xử lý`;
+                    return;
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById("processRefundModal"))?.hide();
+                showRefundAlert(data.message, "success");
+                await loadRefundRequests();
+
+            } catch (err) {
+                console.error("Lỗi xử lý hoàn tiền:", err);
+                modalAlert.innerHTML = `<div class="alert alert-danger py-2 small">Có lỗi kết nối xảy ra.</div>`;
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = `Xác nhận xử lý`;
+            }
+        }
+
+        function openViewRefundDetailModal(refundId) {
+            const r = allRefunds.find(item => item.refundRequestId === refundId);
+            if (!r) return;
+
+            const body = document.getElementById("viewRefundDetailBody");
+            const isApproved = r.status === "Approved";
+            const badgeClass = isApproved ? "bg-success" : "bg-danger";
+            const statusText = isApproved ? "Đã duyệt hoàn tiền" : "Đã từ chối";
+
+            body.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <span class="fw-bold">Yêu cầu #RF-${r.refundRequestId}</span>
+                    <span class="badge ${badgeClass}">${statusText}</span>
+                </div>
+                <div class="row g-2 mb-3 small">
+                    <div class="col-6"><span class="text-muted">Mã đơn hàng:</span> <strong>${escapeHtml(r.orderCode || "")}</strong></div>
+                    <div class="col-6"><span class="text-muted">Số tiền hoàn:</span> <strong class="text-danger">${formatCurrency(r.amount)}</strong></div>
+                    <div class="col-6"><span class="text-muted">Khách hàng:</span> <strong>${escapeHtml(r.userName || "")}</strong></div>
+                    <div class="col-6"><span class="text-muted">Ngày yêu cầu:</span> <strong>${formatDate(r.createdAt)}</strong></div>
+                </div>
+                <div class="p-2 mb-3 rounded bg-light border small">
+                    <div class="fw-bold mb-1"><i class="fa fa-university me-1"></i>Thông tin tài khoản nhận:</div>
+                    <div>Ngân hàng: <strong>${escapeHtml(r.bankName || "Chưa có")}</strong></div>
+                    <div>Số tài khoản: <code>${escapeHtml(r.accountNumber || "")}</code></div>
+                    <div>Chủ tài khoản: <strong>${escapeHtml(r.accountHolderName || "")}</strong></div>
+                </div>
+                <div class="mb-3 small">
+                    <span class="text-muted">Lý do yêu cầu của khách:</span>
+                    <div class="p-2 bg-light rounded mt-1 border">${escapeHtml(r.reason || "Không có")}</div>
+                </div>
+                <div class="mb-2 small">
+                    <span class="text-muted">Phản hồi / Ghi chú từ Ban quản trị:</span>
+                    <div class="p-2 ${isApproved ? 'bg-success bg-opacity-10 border-success' : 'bg-danger bg-opacity-10 border-danger'} rounded mt-1 border fw-semibold">
+                        ${escapeHtml(r.adminNote || "Không có ghi chú")}
+                    </div>
+                </div>
+                <div class="small text-muted text-end mt-3">
+                    Xử lý ngày: ${formatDate(r.processedAt)}
+                </div>
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById("viewRefundDetailModal"));
+            modal.show();
+        }
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val || 0);
+        }
+
+        function formatDate(val) {
+            if (!val) return "";
+            const d = new Date(val);
+            return d.toLocaleDateString("vi-VN") + " " + d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return "";
+            return str.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+}

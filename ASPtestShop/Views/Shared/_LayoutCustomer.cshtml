@@ -53,14 +53,22 @@
 
 						if (res.ok) {
 							const data = await res.json();
-							if (data && (!data.valid || data.reason === "session_expired")) {
+							if (data && (!data.valid || data.reason === "session_expired" || data.reason === "account_locked")) {
 								sessionTerminated = true;
-								alert("Tài khoản của bạn đã được đăng nhập từ một thiết bị khác!\nPhiên làm việc trên thiết bị này sẽ được tự động đăng xuất để bảo mật.");
-								window.location.href = "/account/login?sessionExpired=true";
+								if (data.reason === "account_locked") {
+									window.location.href = "/account/login?accountLocked=true";
+								} else {
+									window.location.href = "/account/login?sessionExpired=true";
+								}
 							}
 						} else if (res.status === 401) {
 							sessionTerminated = true;
-							window.location.href = "/account/login?sessionExpired=true";
+							const reason = res.headers.get("X-Logout-Reason");
+							if (reason === "account_locked") {
+								window.location.href = "/account/login?accountLocked=true";
+							} else {
+								window.location.href = "/account/login?sessionExpired=true";
+							}
 						}
 					} catch (e) {
 						// Bỏ qua lỗi mạng chập chờn
@@ -69,8 +77,21 @@
 					}
 				}
 
-				// Kiểm tra định kỳ mỗi 5 giây
-				setInterval(verifyActiveSession, 5000);
+				try {
+					const bc = new BroadcastChannel("fuu_auth_channel");
+					bc.onmessage = function(e) {
+						if (e.data === "account_locked") {
+							sessionTerminated = true;
+							window.location.href = "/account/login?accountLocked=true";
+						} else if (e.data === "session_expired" || e.data === "new_login") {
+							sessionTerminated = true;
+							window.location.href = "/account/login?sessionExpired=true";
+						}
+					};
+				} catch(e) {}
+
+				// Kiểm tra định kỳ mỗi 2 giây để phản hồi nhanh nhất
+				setInterval(verifyActiveSession, 2000);
 
 				// Kiểm tra tức thì khi chuyển tab hoặc focus trình duyệt
 				window.addEventListener("focus", verifyActiveSession);

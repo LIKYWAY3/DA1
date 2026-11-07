@@ -47,13 +47,17 @@ using System.Text.Json;
 
             // GET: /account/login
             [HttpGet("login")]
-            public IActionResult Login(string? returnUrl = null, bool sessionExpired = false)
+            public IActionResult Login(string? returnUrl = null, bool sessionExpired = false, bool accountLocked = false)
             {
                 ViewBag.ReturnUrl = returnUrl;
                 var siteKey = _configuration["Captcha:SiteKey"];
                 if (string.IsNullOrWhiteSpace(siteKey) || siteKey.StartsWith("YOUR_")) { siteKey = "1x00000000000000000000AA"; }
                 ViewBag.TurnstileSiteKey = siteKey;
-                if (sessionExpired)
+                if (accountLocked)
+                {
+                    ViewBag.AccountLockedMessage = "Tài khoản của bạn đã bị khóa bởi quản trị viên. Vui lòng liên hệ quản trị viên để được hỗ trợ.";
+                }
+                else if (sessionExpired)
                 {
                     ViewBag.SessionExpiredMessage = "Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác. Phiên làm việc trên thiết bị này đã được tự động đăng xuất để bảo mật.";
                 }
@@ -300,8 +304,7 @@ using System.Text.Json;
                     {
                         if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
                         {
-                            TempData["ErrorMessage"] = "Tài khoản của bạn đang bị khóa. Vui lòng liên hệ quản trị viên.";
-                            return RedirectToAction("Login", new { returnUrl });
+                            return RedirectToAction("Login", new { returnUrl, accountLocked = true });
                         }
 
                         if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(picture))
@@ -381,6 +384,7 @@ using System.Text.Json;
             public async Task<IActionResult> Logout()
             {
                 await HttpContext.SignOutAsync(UserCookieAuth.Scheme);
+                await HttpContext.SignOutAsync(AdminCookieAuth.Scheme);
                 return RedirectToAction("Index", "Home");
             }
 
@@ -389,6 +393,7 @@ using System.Text.Json;
             public async Task<IActionResult> LogoutGet()
             {
                 await HttpContext.SignOutAsync(UserCookieAuth.Scheme);
+                await HttpContext.SignOutAsync(AdminCookieAuth.Scheme);
                 return RedirectToAction("Index", "Home");
             }
 

@@ -54,6 +54,16 @@
                 Đã hủy (<span id="countCancelled">0</span>)
             </button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link rounded-pill px-3 py-1 text-danger fw-semibold" onclick="filterByCancelRequest(this)">
+                <i class="fa fa-exclamation-circle me-1"></i>Yêu cầu hủy (<span id="countCancelRequests">0</span>)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link rounded-pill px-3 py-1 text-warning fw-semibold" onclick="filterByRefundPending(this)">
+                <i class="fa fa-undo-alt me-1"></i>Chờ hoàn tiền (<span id="countRefundPending">0</span>)
+            </button>
+        </li>
     </ul>
 
     <div class="card border-0 shadow-sm" style="border-radius: 12px; background: #fff;">
@@ -132,7 +142,7 @@
                 });
 
                 if (response.status === 401 || response.status === 403) {
-                    window.location.href = "/admin/login";
+                    window.location.href = "/account/login?returnUrl=/admin/orders";
                     return;
                 }
 
@@ -177,6 +187,14 @@
             document.getElementById("countCancelled").textContent = counts.Cancelled;
             document.getElementById("cancelledCountBadge").textContent = counts.Cancelled;
 
+            const cancelReqCount = allOrders.filter(o => o.hasCancelRequest).length;
+            const reqBadge = document.getElementById("countCancelRequests");
+            if (reqBadge) reqBadge.textContent = cancelReqCount;
+
+            const refundPendingCount = allOrders.filter(o => o.paymentStatus === "RefundPending").length;
+            const refundBadge = document.getElementById("countRefundPending");
+            if (refundBadge) refundBadge.textContent = refundPendingCount;
+
             // Nút cleanup hiển thị khi ở tab Cancelled hoặc có đơn hủy
             const cleanupBtn = document.getElementById("btnCleanupCancelled");
             if (counts.Cancelled > 0 && currentStatusFilter === "Cancelled") {
@@ -184,6 +202,28 @@
             } else {
                 cleanupBtn.classList.add("d-none");
             }
+        }
+
+        function filterByCancelRequest(tabBtn) {
+            currentStatusFilter = "CancelRequest";
+            document.querySelectorAll("#orderStatusTabs .nav-link").forEach(btn => btn.classList.remove("active"));
+            if (tabBtn) tabBtn.classList.add("active");
+
+            const cleanupBtn = document.getElementById("btnCleanupCancelled");
+            if (cleanupBtn) cleanupBtn.classList.add("d-none");
+
+            applyFilterAndRender();
+        }
+
+        function filterByRefundPending(tabBtn) {
+            currentStatusFilter = "RefundPending";
+            document.querySelectorAll("#orderStatusTabs .nav-link").forEach(btn => btn.classList.remove("active"));
+            if (tabBtn) tabBtn.classList.add("active");
+
+            const cleanupBtn = document.getElementById("btnCleanupCancelled");
+            if (cleanupBtn) cleanupBtn.classList.add("d-none");
+
+            applyFilterAndRender();
         }
 
         function filterByStatus(status, tabBtn) {
@@ -213,7 +253,11 @@
             let filtered = allOrders;
 
             // Lọc trạng thái
-            if (currentStatusFilter !== "ALL") {
+            if (currentStatusFilter === "CancelRequest") {
+                filtered = filtered.filter(o => o.hasCancelRequest);
+            } else if (currentStatusFilter === "RefundPending") {
+                filtered = filtered.filter(o => o.paymentStatus === "RefundPending");
+            } else if (currentStatusFilter !== "ALL") {
                 if (currentStatusFilter === "Completed") {
                     filtered = filtered.filter(o => o.orderStatus === "Completed" || o.orderStatus === "Delivered");
                 } else {
@@ -257,7 +301,11 @@
 
                 return `
                     <tr>
-                        <td><strong>${order.orderCode || ""}</strong></td>
+                        <td>
+                            <strong>${order.orderCode || ""}</strong>
+                            ${order.hasCancelRequest ? '<span class="badge bg-danger ms-1" title="Khách yêu cầu hủy"><i class="fa fa-exclamation-circle me-1"></i>Yêu cầu hủy</span>' : ''}
+                            ${order.paymentStatus === 'RefundPending' ? '<span class="badge bg-warning text-dark ms-1" title="Đang chờ duyệt hoàn tiền"><i class="fa fa-undo-alt me-1"></i>Chờ hoàn tiền</span>' : ''}
+                        </td>
                         <td>${escapeHtml(order.receiverName || "")}</td>
                         <td>${escapeHtml(order.receiverPhone || "")}</td>
                         <td><strong class="text-dark">${formatCurrency(order.finalAmount)}</strong></td>

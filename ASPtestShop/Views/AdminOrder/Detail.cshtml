@@ -46,7 +46,7 @@
             });
 
             if (response.status === 401 || response.status === 403) {
-                window.location.href = "/admin/login";
+                window.location.href = "/account/login?returnUrl=/admin/orders";
                 return;
             }
 
@@ -153,6 +153,7 @@
                     </div>
 
                     <div class="col-lg-5">
+                        <div id="cancelRequestSection">${renderCancelRequestNotice(order)}</div>
                         <div id="refundSection"></div>
 
                         <div class="admin-card mb-4">
@@ -404,7 +405,7 @@
             }
 
             const isPending = refund.status === "Pending";
-            let statusBadge = `<span class="badge ${isPending ? 'bg-warning text-dark' : (refund.status === 'Approved' ? 'bg-success' : 'bg-danger')}">${refund.status}</span>`;
+            let statusBadge = `<span class="badge ${isPending ? 'bg-warning text-dark' : (refund.status === 'Approved' ? 'bg-success' : 'bg-danger')}">${refund.status === 'Approved' ? 'Đã hoàn tiền' : (refund.status === 'Rejected' ? 'Đã từ chối' : 'Chờ duyệt')}</span>`;
 
             container.innerHTML = `
                 <div class="admin-card mb-4 border border-warning shadow-sm">
@@ -422,9 +423,14 @@
                         
                         ${isPending ? `
                             <div class="mt-3 pt-3 border-top">
+                                <div id="adminRefundActionMsg"></div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Mã giao dịch đối soát (khi duyệt hoàn tiền)</label>
+                                    <input type="text" id="adminRefundTxCode" class="form-control form-control-sm" placeholder="VD: VCB-123456 hoặc FT241009823..." />
+                                </div>
                                 <div class="mb-2">
                                     <label class="form-label small fw-semibold">Ghi chú xét duyệt (tùy chọn)</label>
-                                    <input type="text" id="adminRefundNote" class="form-control form-control-sm" placeholder="Nhập lý do duyệt hoặc từ chối..." />
+                                    <input type="text" id="adminRefundNote" class="form-control form-control-sm" placeholder="Nhập ghi chú đối soát / lý do từ chối..." />
                                 </div>
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-success btn-sm flex-fill fw-bold" onclick="processRefund(${refund.refundRequestId}, 'Approved')">
@@ -449,12 +455,17 @@
         if (!confirm(`Bạn có chắc chắn muốn ${actionText} cho yêu cầu này không?`)) return;
 
         const note = document.getElementById("adminRefundNote")?.value?.trim() || "";
+        if (status === 'Rejected' && !note) {
+            alert("Vui lòng nhập lý do từ chối vào ô ghi chú xét duyệt!");
+            document.getElementById("adminRefundNote")?.focus();
+            return;
+        }
         try {
             const res = await fetch(`/api/refunds/admin/${refundId}/process`, {
                 method: "PUT",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: status, adminNote: note })
+                body: JSON.stringify({ status: status, transactionCode: document.getElementById("adminRefundTxCode")?.value?.trim() || "", adminNote: note })
             });
 
             const result = await res.json();
@@ -486,6 +497,84 @@
             hour: "2-digit",
             minute: "2-digit"
         });
+    }
+
+    function renderCancelRequestNotice(order) {
+        if (order.note && order.note.includes("[Yêu cầu hủy]") && order.orderStatus !== "Cancelled") {
+            return `
+                <div class="admin-card mb-4 border border-danger shadow-sm">
+                    <div class="admin-section-header bg-danger bg-opacity-10 d-flex justify-content-between align-items-center py-2 px-3">
+                        <h6 class="mb-0 text-danger fw-bold"><i class="fa fa-exclamation-circle me-1"></i> Khách hàng yêu cầu hủy đơn này</h6>
+                        <span class="badge bg-danger">Chờ duyệt hủy</span>
+                    </div>
+                    <div class="admin-section-body p-3">
+                        <div class="small text-muted mb-2">Ghi chú từ khách hàng:</div>
+                        <div class="p-2 bg-light rounded border mb-3 fw-semibold text-danger">
+                            ${escapeHtml(order.note)}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-danger btn-sm fw-bold flex-fill" onclick="approveCancelOrder(${order.orderId})">
+                                <i class="fa fa-check me-1"></i> Đồng ý duyệt hủy đơn & hoàn kho
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="rejectCancelOrder(${order.orderId})">
+                                <i class="fa fa-times me-1"></i> Từ chối yêu cầu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        return "";
+    }
+
+    async function approveCancelOrder(orderId) {
+        if (!confirm("Bạn có chắc chắn muốn ĐỒNG Ý HỦY đơn hàng này không? Số lượng sản phẩm sẽ được tự động hoàn lại vào kho.")) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/admin/orders/${orderId}/approve-cancel`, {
+                method: "PUT",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" }
+            });
+
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+                alert(result.message || "Duyệt hủy đơn thất bại.");
+                return;
+            }
+
+            alert(result.message);
+            loadOrderDetail();
+        } catch (e) {
+            alert("Lỗi: " + e.message);
+        }
+    }
+
+    async function rejectCancelOrder(orderId) {
+        const reason = prompt("Nhập lý do từ chối yêu cầu hủy đơn:", "Đơn hàng đã đóng gói và đang được chuyển đi");
+        if (!reason) return;
+
+        try {
+            const res = await fetch(`/api/admin/orders/${orderId}/reject-cancel`, {
+                method: "PUT",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: reason })
+            });
+
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+                alert(result.message || "Từ chối yêu cầu hủy thất bại.");
+                return;
+            }
+
+            alert(result.message);
+            loadOrderDetail();
+        } catch (e) {
+            alert("Lỗi: " + e.message);
+        }
     }
 
     // BẢO MẬT: Hàm mã hóa HTML để phòng chống lỗ hổng Cross-Site Scripting (XSS)

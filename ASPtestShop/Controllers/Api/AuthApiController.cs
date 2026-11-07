@@ -165,6 +165,11 @@ namespace ASPtestShop.Controllers.Api
         [HttpGet("check-session")]
         public async Task<IActionResult> CheckSession()
         {
+            if (HttpContext.Items.ContainsKey("AccountLocked"))
+            {
+                return Ok(new { isAuthenticated = true, valid = false, reason = "account_locked" });
+            }
+
             if (HttpContext.Items.ContainsKey("ForceLogout"))
             {
                 return Ok(new { isAuthenticated = true, valid = false, reason = "session_expired" });
@@ -181,9 +186,24 @@ namespace ASPtestShop.Controllers.Api
             var userManager = HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
             var user = await userManager.FindByIdAsync(userId);
 
-            if (user == null || user.SecurityStamp != cookieStamp || (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow))
+            if (user == null)
             {
                 await HttpContext.SignOutAsync(ASPtestShop.Auth.UserCookieAuth.Scheme);
+                await HttpContext.SignOutAsync(ASPtestShop.Auth.AdminCookieAuth.Scheme);
+                return Ok(new { isAuthenticated = false, valid = false, reason = "anonymous" });
+            }
+
+            if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
+            {
+                await HttpContext.SignOutAsync(ASPtestShop.Auth.UserCookieAuth.Scheme);
+                await HttpContext.SignOutAsync(ASPtestShop.Auth.AdminCookieAuth.Scheme);
+                return Ok(new { isAuthenticated = true, valid = false, reason = "account_locked" });
+            }
+
+            if (user.SecurityStamp != cookieStamp)
+            {
+                await HttpContext.SignOutAsync(ASPtestShop.Auth.UserCookieAuth.Scheme);
+                await HttpContext.SignOutAsync(ASPtestShop.Auth.AdminCookieAuth.Scheme);
                 return Ok(new { isAuthenticated = true, valid = false, reason = "session_expired" });
             }
 

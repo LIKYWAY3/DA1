@@ -1,4 +1,5 @@
 using ASPtestShop.Data;
+using ASPtestShop.Data.Entities;
 using ASPtestShop.Models.DTO.Order;
 using ASPtestShop.Services.Interfaces.Admin;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +49,8 @@ namespace ASPtestShop.Services.Implementations.Admin
                     PaymentMethod = o.PaymentMethod,
                     ReceiverName = o.ReceiverName,
                     ReceiverPhone = o.ReceiverPhone,
+                    Note = o.Note,
+                    HasCancelRequest = o.Note != null && o.Note.Contains("[Yêu cầu hủy]") && o.OrderStatus != "Cancelled",
                     CreatedAt = o.CreatedAt
                 })
                 .ToListAsync();
@@ -148,19 +151,7 @@ namespace ASPtestShop.Services.Implementations.Admin
             // Nếu đơn hàng chuyển sang Cancelled từ trạng thái khác -> Hoàn lại tồn kho & lượt dùng Coupon
             if (dto.OrderStatus == "Cancelled" && order.OrderStatus != "Cancelled")
             {
-                foreach (var item in order.OrderItems)
-                {
-                    await _context.Database.ExecuteSqlInterpolatedAsync(
-                        $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
-                    );
-                }
-
-                if (order.CouponId.HasValue)
-                {
-                    await _context.Database.ExecuteSqlInterpolatedAsync(
-                        $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {order.CouponId.Value}"
-                    );
-                }
+                await RestockOrderItemsAndCouponAsync(order);
             }
 
             order.OrderStatus = dto.OrderStatus;
@@ -236,6 +227,124 @@ namespace ASPtestShop.Services.Implementations.Admin
                     Message = $"Đã dọn dẹp thành công {count} đơn hàng đã hủy!"
                 };
             });
+        }
+        public async Task<AdminOrderActionResultDto> ApproveCancelOrderAsync(int orderId, string? adminNote = null)
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
+            if (order == null)
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đơn hàng cần duyệt hủy."
+                };
+            }
+
+            if (order.OrderStatus == "Cancelled")
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Đơn hàng này đã ở trạng thái Đã hủy trước đó."
+                };
+            }
+
+            if (order.OrderStatus == "Completed")
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Đơn hàng đã hoàn tất không thể hủy."
+                };
+            }
+
+            await RestockOrderItemsAndCouponAsync(order);
+
+            order.OrderStatus = "Cancelled";
+            var note = string.IsNullOrWhiteSpace(adminNote) ? "Admin đã phê duyệt hủy đơn" : $"Admin đã phê duyệt hủy đơn: {adminNote}";
+            order.Note = string.IsNullOrWhiteSpace(order.Note) ? note : $"{order.Note} | {note}";
+
+            if (string.Equals(order.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase))
+            {
+                order.PaymentStatus = "RefundPending";
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new AdminOrderActionResultDto
+            {
+                Success = true,
+                Message = "Đã phê duyệt hủy đơn hàng và hoàn lại số lượng tồn kho thành công."
+            };
+        }
+
+        public async Task<AdminOrderActionResultDto> RejectCancelOrderAsync(int orderId, string reason)
+        {
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+            if (order == null)
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đơn hàng."
+                };
+            }
+
+            var rejectNote = $"[Từ chối hủy: {reason.Trim()}]";
+            order.Note = string.IsNullOrWhiteSpace(order.Note) ? rejectNote : $"{order.Note} | {rejectNote}";
+
+            await _context.SaveChangesAsync();
+
+            return new AdminOrderActionResultDto
+            {
+                Success = true,
+                Message = "Đã từ chối yêu cầu hủy đơn hàng."
+            };
+        }
+
+        private async Task RestockOrderItemsAndCouponAsync(Order order)
+        {
+            if (order.OrderItems != null && order.OrderItems.Any())
+            {
+                foreach (var item in order.OrderItems)
+                {
+                    if (_context.Database.IsRelational())
+                    {
+                        await _context.Database.ExecuteSqlInterpolatedAsync(
+                            $"UPDATE Products SET StockQuantity = StockQuantity + {item.Quantity} WHERE ProductId = {item.ProductId}"
+                        );
+                    }
+                    else
+                    {
+                        var product = await _context.Products.FindAsync(item.ProductId);
+                        if (product != null)
+                        {
+                            product.StockQuantity += item.Quantity;
+                        }
+                    }
+                }
+            }
+
+            if (order.CouponId.HasValue)
+            {
+                if (_context.Database.IsRelational())
+                {
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"UPDATE Coupons SET UsedCount = CASE WHEN UsedCount > 0 THEN UsedCount - 1 ELSE 0 END WHERE CouponId = {order.CouponId.Value}"
+                    );
+                }
+                else
+                {
+                    var coupon = await _context.Coupons.FindAsync(order.CouponId.Value);
+                    if (coupon != null && coupon.UsedCount > 0)
+                    {
+                        coupon.UsedCount -= 1;
+                    }
+                }
+            }
         }
     }
 }

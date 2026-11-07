@@ -148,9 +148,16 @@
                     </td>
 
                     <td class="text-end">
-                        <a href="/orders/detail/${order.orderId}" class="btn btn-sm btn-dark">
-                            Xem chi tiết
-                        </a>
+                        <div class="d-inline-flex gap-1">
+                            <a href="/orders/detail/${order.orderId}" class="btn btn-sm btn-dark">
+                                Chi tiêt
+                            </a>
+                            ${order.orderStatus === "Pending" ? `
+                                <a href="/orders/detail/${order.orderId}" class="btn btn-sm btn-outline-danger" title="Hủy đơn hàng">
+                                    Hủy đơn
+                                </a>
+                            ` : ''}
+                        </div>
                     </td>
                 </tr>
             `;

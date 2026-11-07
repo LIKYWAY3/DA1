@@ -74,6 +74,15 @@ namespace ASPtestShop.Services.Implementations.User
                     Message = "Tài khoản hoặc mật khẩu không đúng"
                 };
             }
+            if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
+            {
+                return new UserLoginResultDto
+                {
+                    Success = false,
+                    Message = "Tài khoản của bạn đã bị khóa bởi quản trị viên. Vui lòng liên hệ hỗ trợ."
+                };
+            }
+
             var userRoles = await _userManager.GetRolesAsync(user);
             var isAdmin = userRoles.Contains("Admin");
 

@@ -52,6 +52,17 @@
         </li>
 
         <li>
+            <a class="admin-menu-link @(currentPath.StartsWith("/admin/refunds") ? "active" : "") d-flex align-items-center justify-content-between"
+               href="/admin/refunds">
+                <div class="d-inline-flex align-items-center">
+                    <span class="admin-menu-icon"><i class="fa fa-undo-alt"></i></span>
+                    Quản lý hoàn tiền
+                </div>
+                <span id="menuRefundPendingBadge" class="badge bg-danger rounded-pill d-none" style="font-size: 0.72rem; padding: 3px 7px;">0</span>
+            </a>
+        </li>
+
+        <li>
             <a class="admin-menu-link @(currentPath.StartsWith("/admin/coupons") ? "active" : "")"
                href="/admin/coupons">
                 <span class="admin-menu-icon"><i class="fa fa-ticket-alt"></i></span>

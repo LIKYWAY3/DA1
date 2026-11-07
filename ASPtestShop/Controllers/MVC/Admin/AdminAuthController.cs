@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using ASPtestShop.Auth;
 using ASPtestShop.Models.ViewModels.Auth;
 using ASPtestShop.Services.Interfaces.Admin;
@@ -20,8 +20,7 @@ namespace ASPtestShop.Controllers.MVC.Admin
         [HttpGet("login")]
         public IActionResult Login(string? returnUrl = null)
         {
-            ViewBag.ReturnUrl = returnUrl;
-            return View();
+            return RedirectToAction("Login", "Account", new { returnUrl = returnUrl ?? "/admin" });
         }
 
         [HttpPost("login")]
@@ -32,15 +31,15 @@ namespace ASPtestShop.Controllers.MVC.Admin
 
             if (!ModelState.IsValid)
             {
-                return View(model);
+                return RedirectToAction("Login", "Account", new { returnUrl = returnUrl ?? "/admin" });
             }
 
             var result = await _adminAuthService.LoginAsync(model);
 
             if (!result.Success)
             {
-                ModelState.AddModelError("", result.Message);
-                return View(model);
+                TempData["ErrorMessage"] = result.Message;
+                return RedirectToAction("Login", "Account", new { returnUrl = returnUrl ?? "/admin" });
             }
 
             var claims = new List<Claim>
@@ -80,20 +79,22 @@ namespace ASPtestShop.Controllers.MVC.Admin
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(AdminCookieAuth.Scheme);
-            return Redirect("/admin/login");
+            await HttpContext.SignOutAsync(UserCookieAuth.Scheme);
+            return Redirect("/");
         }
 
         [HttpGet("logout")]
         public async Task<IActionResult> LogoutGet()
         {
             await HttpContext.SignOutAsync(AdminCookieAuth.Scheme);
-            return Redirect("/admin/login");
+            await HttpContext.SignOutAsync(UserCookieAuth.Scheme);
+            return Redirect("/");
         }
 
         [HttpGet("access-denied")]
         public IActionResult AccessDenied()
         {
-            return View();
+            return RedirectToAction("AccessDenied", "Account");
         }
     }
 }
