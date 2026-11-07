@@ -60,6 +60,7 @@
                 </div>
             </div>
         </div>
+    </div>
     <!-- Modal Hủy đơn hàng trực tiếp (Pending) -->
     <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -71,15 +72,17 @@
                 <div class="modal-body p-4">
                     <div id="cancelOrderModalMessage"></div>
                     <div class="mb-3">
-                        <label for="cancelReasonSelect" class="form-label fw-semibold">Lý do hủy đơn <span class="text-danger">*</span></label>
-                        <select id="cancelReasonSelect" class="form-select mb-2" onchange="toggleCustomCancelReason(this)">
+                        <label for="cancelReasonSelect" class="form-label fw-semibold">Lý do hủy / hoàn hàng <span class="text-danger">*</span></label>
+                        <select id="cancelReasonSelect" class="form-select mb-2" style="border: 1px solid #2f2f2f; background-color: #ffffff; color: #121617;">
                             <option value="Đổi ý không muốn mua nữa">Đổi ý không muốn mua nữa</option>
-                            <option value="Muốn thay đổi địa chỉ giao hàng">Muốn thay đổi địa chỉ giao hàng</option>
-                            <option value="Muốn đổi sang sản phẩm khác">Muốn đổi sang sản phẩm khác</option>
-                            <option value="Thời gian giao hàng quá lâu">Thời gian giao hàng quá lâu</option>
+                            <option value="Muốn thay đổi địa chỉ giao hàng / số điện thoại">Muốn thay đổi địa chỉ giao hàng / số điện thoại</option>
+                            <option value="Đặt nhầm sản phẩm hoặc số lượng">Đặt nhầm sản phẩm hoặc số lượng</option>
+                            <option value="Thời gian giao hàng dự kiến quá lâu">Thời gian giao hàng dự kiến quá lâu</option>
+                            <option value="Tìm thấy giá tốt hơn ở nơi khác">Tìm thấy giá tốt hơn ở nơi khác</option>
                             <option value="Lý do khác">Lý do khác...</option>
                         </select>
-                        <textarea id="customCancelReason" class="form-control d-none" rows="2" placeholder="Nhập lý do cụ thể của bạn..." maxlength="300"></textarea>
+                        <label for="customCancelReason" class="form-label small text-muted mb-1">Ghi chú chi tiết lý do (tùy chọn hoặc chi tiết lý do khác):</label>
+                        <textarea id="customCancelReason" class="form-control" rows="3" placeholder="Nhập lý do cụ thể hoặc ghi chú thêm cho người bán / cửa hàng..." maxlength="400" style="border: 1px solid #2f2f2f; background-color: #ffffff; color: #121617;"></textarea>
                     </div>
 
                     <div id="cancelRefundFields" class="d-none border-top pt-3 mt-3">
@@ -137,6 +140,7 @@
                 </div>
             </div>
         </div>
+    </div>
     <!-- Modal Gửi lại thông tin tài khoản hoàn tiền khi bị từ chối -->
     <div class="modal fade" id="resubmitRefundModal" tabindex="-1" aria-labelledby="resubmitRefundModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -219,10 +223,24 @@
                 return;
             }
 
-            const order = await response.json();
+            const result = await response.json();
+            const order = result.orderDetails || result.OrderDetails || result.data || result;
+
+            if (!order || !order.orderId) {
+                orderDetailContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            ${result.message || "Không tìm thấy chi tiết đơn hàng."}
+                        </div>
+                    `;
+                return;
+            }
 
             renderOrderDetail(order);
             await loadCustomerRefundStatus(order.orderId);
+
+            if (window.location.hash === "#cancel" && order.orderStatus === "Pending") {
+                openCancelModal(order.orderId, order.paymentStatus);
+            }
 
         } catch (error) {
             console.error(error);
@@ -380,7 +398,12 @@
         return items.map(item => `
                 <tr>
                     <td>
-                        <strong>${item.productNameSnapshot || ""}</strong>
+                        <div class="d-flex align-items-center gap-3">
+                            ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${escapeHtml(item.productNameSnapshot)}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />` : `<div style="width: 48px; height: 48px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><i class="fa fa-box text-muted"></i></div>`}
+                            <div>
+                                <span class="fw-bold">${escapeHtml(item.productNameSnapshot || "")}</span>
+                            </div>
+                        </div>
                     </td>
 
                     <td class="text-center">
@@ -530,8 +553,19 @@
     async function submitCancelOrder() {
         const select = document.getElementById("cancelReasonSelect");
         const custom = document.getElementById("customCancelReason");
-        let reason = select.value === "Lý do khác" ? custom.value.trim() : select.value;
-        if (!reason) reason = "Đổi ý không muốn mua nữa";
+        let reason = select.value;
+        const customText = custom.value.trim();
+
+        if (select.value === "Lý do khác") {
+            if (!customText) {
+                document.getElementById("cancelOrderModalMessage").innerHTML = `<div class="alert alert-danger py-2">Vui lòng nhập chi tiết lý do hủy đơn.</div>`;
+                custom.focus();
+                return;
+            }
+            reason = customText;
+        } else if (customText) {
+            reason = `${select.value} (${customText})`;
+        }
 
         const msgDiv = document.getElementById("cancelOrderModalMessage");
         const btn = document.getElementById("btnSubmitCancel");

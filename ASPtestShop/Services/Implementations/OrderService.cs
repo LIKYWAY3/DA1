@@ -418,7 +418,11 @@ namespace ASPtestShop.Services.Implementations
                                     oi.Quantity,
 
                                 LineTotal =
-                                    oi.LineTotal
+                                    oi.LineTotal,
+
+                                ImageUrl = oi.Product != null && oi.Product.ProductImages.Any()
+                                    ? oi.Product.ProductImages.OrderByDescending(pi => pi.IsPrimary).Select(pi => pi.ImageUrl).FirstOrDefault()
+                                    : null
                             })
                         .ToList()
                 })

@@ -1,4 +1,4 @@
-﻿namespace ASPtestShop.Models.DTO.Order
+namespace ASPtestShop.Models.DTO.Order
 {
     public class OrderHistoryItemDto
     {
@@ -13,5 +13,7 @@
         public int Quantity { get; set; }
 
         public decimal LineTotal { get; set; }
+
+        public string? ImageUrl { get; set; }
     }
 }
