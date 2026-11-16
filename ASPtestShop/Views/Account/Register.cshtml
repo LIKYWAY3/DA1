@@ -1,113 +1,336 @@
 @model ASPtestShop.Models.ViewModels.Auth.RegisterViewModel
 
 @{
-    ViewData["Title"] = "Đăng ký tài khoản";
+    ViewData["Title"] = "Đăng ký thành viên FuuFishing";
     var siteKey = ViewBag.TurnstileSiteKey as string ?? "1x00000000000000000000AA";
 }
 
-<div class="container mt-5 register-container" style="max-width: 720px;">
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-header text-center bg-primary text-white py-3 rounded-top-3">
-            <h4 class="mb-0 fw-bold"><i class="fa fa-user-plus me-2"></i>Đăng ký tài khoản mới</h4>
+<style>
+    .auth-register-card {
+        max-width: 680px;
+        margin: 40px auto;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 36px 36px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+    }
+
+    .auth-title {
+        color: #253f36;
+        font-size: 1.85rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .auth-section-title {
+        color: #121617;
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .custom-auth-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .custom-auth-input {
+        width: 100%;
+        border: 1px solid #2f2f2f;
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 11px 14px;
+        font-size: 0.95rem;
+        color: #121617;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .custom-auth-input:focus {
+        border-color: #253f36;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(37, 63, 54, 0.18);
+        background-color: #ffffff;
+    }
+
+    .custom-auth-input::placeholder {
+        color: #9ca3af;
+        font-size: 0.9rem;
+    }
+
+    .google-social-btn {
+        width: 100%;
+        max-width: 380px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 12px 18px;
+        background-color: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #1f2937;
+        font-weight: 600;
+        font-size: 0.95rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .google-social-btn:hover {
+        border-color: #253f36;
+        background-color: #fbfdfc;
+        color: #121617;
+        box-shadow: 0 4px 12px rgba(37, 63, 54, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .google-social-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .divider-container {
+        display: flex;
+        align-items: center;
+        margin: 24px 0 28px 0;
+    }
+
+    .divider-line {
+        flex-grow: 1;
+        height: 1px;
+        background-color: #e5e7eb;
+    }
+
+    .divider-text {
+        padding: 0 14px;
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .btn-auth-submit {
+        background-color: #253f36;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .btn-auth-submit:hover {
+        background-color: #192b25;
+        color: #ffffff;
+    }
+
+    .btn-auth-submit:active {
+        transform: translateY(1px);
+    }
+
+    .btn-back-login {
+        background-color: #ffffff;
+        color: #121617;
+        border: 1px solid #2f2f2f;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn-back-login:hover {
+        background-color: #f3f4f6;
+        color: #121617;
+        border-color: #121617;
+    }
+
+    .terms-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        line-height: 1.5;
+        text-align: center;
+        margin: 24px 0 20px 0;
+    }
+
+    .terms-text a {
+        color: #253f36;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .terms-text a:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<div class="container">
+    <div class="auth-register-card">
+        <h2 class="auth-title">Đăng ký trở thành thành viên FuuFishing</h2>
+
+        <!-- Khối đăng ký bằng mạng xã hội -->
+        <div class="text-center text-secondary small fw-medium mb-3">
+            Đăng ký bằng tài khoản mạng xã hội
         </div>
 
-        <div class="card-body p-4">
-            <form asp-action="Register" asp-controller="Account" method="post" id="registerForm">
-                @Html.AntiForgeryToken()
+        <div class="d-flex justify-content-center mb-3">
+            <a href="/account/google-login?returnUrl=/" class="google-social-btn" title="Đăng ký nhanh bằng tài khoản Google">
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    <path fill="none" d="M0 0h48v48H0z"/>
+                </svg>
+                <span>Google</span>
+            </a>
+        </div>
 
-                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small mb-4 font-weight-bold"></div>
+        <!-- Phân cách: Hoặc điền thông tin sau -->
+        <div class="divider-container">
+            <div class="divider-line"></div>
+            <span class="divider-text">Hoặc điền thông tin sau</span>
+            <div class="divider-line"></div>
+        </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="UserName" class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
-                        <input asp-for="UserName" class="form-control" id="regUserName" placeholder="Ví dụ: canthuvip01" autocomplete="username" />
-                        <span asp-validation-for="UserName" class="text-danger small d-block mt-1"></span>
-                        <span id="userNameAvailability" class="small mt-1 d-block"></span>
-                    </div>
+        <form asp-action="Register" asp-controller="Account" method="post" id="registerForm">
+            @Html.AntiForgeryToken()
 
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="FullName" class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
-                        <input asp-for="FullName" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" autocomplete="name" />
-                        <span asp-validation-for="FullName" class="text-danger small d-block mt-1"></span>
-                    </div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 px-3 mb-4 small" style="border-radius: 8px;"></div>
+
+            <!-- PHẦN 1: THÔNG TIN CÁ NHÂN -->
+            <div class="auth-section-title">
+                <i class="fa fa-user-circle text-dark"></i>
+                <span>Thông tin cá nhân</span>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-6">
+                    <label asp-for="FullName" class="custom-auth-label">Họ và tên <span class="text-danger">*</span></label>
+                    <input asp-for="FullName" class="custom-auth-input" placeholder="Nhập họ và tên" autocomplete="name" />
+                    <span asp-validation-for="FullName" class="text-danger small mt-1 d-block"></span>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="Email" class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                        <input asp-for="Email" class="form-control" id="regEmail" placeholder="name@example.com" autocomplete="email" />
-                        <span asp-validation-for="Email" class="text-danger small d-block mt-1"></span>
-                        <span id="emailAvailability" class="small mt-1 d-block"></span>
-                    </div>
+                <div class="col-12 col-md-6">
+                    <label asp-for="UserName" class="custom-auth-label">Tên đăng nhập (Username) <span class="text-danger">*</span></label>
+                    <input asp-for="UserName" class="custom-auth-input" id="regUserName" placeholder="Ví dụ: canthuvip01" autocomplete="username" />
+                    <span asp-validation-for="UserName" class="text-danger small mt-1 d-block"></span>
+                    <span id="userNameAvailability" class="small mt-1 d-block"></span>
+                </div>
+            </div>
 
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="PhoneNumber" class="form-label fw-semibold">Số điện thoại <span class="text-muted fw-normal">(để nhận hàng)</span></label>
-                        <input asp-for="PhoneNumber" class="form-control" placeholder="Ví dụ: 0912345678" maxlength="11" autocomplete="tel" />
-                        <span asp-validation-for="PhoneNumber" class="text-danger small d-block mt-1"></span>
-                    </div>
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-6">
+                    <label asp-for="PhoneNumber" class="custom-auth-label">Số điện thoại</label>
+                    <input asp-for="PhoneNumber" class="custom-auth-input" placeholder="Nhập số điện thoại" maxlength="11" autocomplete="tel" />
+                    <span asp-validation-for="PhoneNumber" class="text-danger small mt-1 d-block"></span>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-8 mb-3">
-                        <label asp-for="Address" class="form-label fw-semibold">Địa chỉ giao hàng</label>
-                        <input asp-for="Address" class="form-control" placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/tp..." autocomplete="street-address" />
-                        <span asp-validation-for="Address" class="text-danger small d-block mt-1"></span>
+                <div class="col-12 col-md-6">
+                    <label asp-for="Email" class="custom-auth-label">Email <span class="text-danger">*</span></label>
+                    <input asp-for="Email" class="custom-auth-input" id="regEmail" placeholder="Nhập email của bạn" autocomplete="email" />
+                    <span asp-validation-for="Email" class="text-danger small mt-1 d-block"></span>
+                    <span id="emailAvailability" class="small mt-1 d-block"></span>
+                    <div class="small text-muted mt-1" style="font-size: 0.8rem;">
+                        <i class="fa fa-check text-success me-1"></i>Hóa đơn điện tử và thông báo sẽ được gửi qua email này
                     </div>
+                </div>
+            </div>
 
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Giới tính</label>
-                        <div class="d-flex align-items-center gap-4 pt-2">
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" asp-for="Gender" value="Nam" id="regGenderMale" checked>
-                                <label class="form-check-label" for="regGenderMale">Nam</label>
-                            </div>
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" asp-for="Gender" value="Nữ" id="regGenderFemale">
-                                <label class="form-check-label" for="regGenderFemale">Nữ</label>
-                            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-md-8">
+                    <label asp-for="Address" class="custom-auth-label">Địa chỉ nhận hàng</label>
+                    <input asp-for="Address" class="custom-auth-input" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." autocomplete="street-address" />
+                    <span asp-validation-for="Address" class="text-danger small mt-1 d-block"></span>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="custom-auth-label">Giới tính</label>
+                    <div class="d-flex align-items-center gap-4 pt-2">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" asp-for="Gender" value="Nam" id="regGenderMale" checked>
+                            <label class="form-check-label text-dark" for="regGenderMale">Nam</label>
+                        </div>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" asp-for="Gender" value="Nữ" id="regGenderFemale">
+                            <label class="form-check-label text-dark" for="regGenderFemale">Nữ</label>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="Password" class="form-label fw-semibold">Mật khẩu <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input asp-for="Password" type="password" class="form-control" id="regPassword" placeholder="Nhập mật khẩu" autocomplete="new-password" />
-                            <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility('regPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
-                                <i class="fa fa-eye"></i>
-                            </button>
-                        </div>
-                        <span asp-validation-for="Password" class="text-danger small d-block mt-1"></span>
-                    </div>
+            <!-- PHẦN 2: TẠO MẬT KHẨU -->
+            <div class="auth-section-title mt-4">
+                <i class="fa fa-shield-alt text-dark"></i>
+                <span>Tạo mật khẩu</span>
+            </div>
 
-                    <div class="col-md-6 mb-4">
-                        <label asp-for="ConfirmPassword" class="form-label fw-semibold">Nhập lại mật khẩu <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input asp-for="ConfirmPassword" type="password" class="form-control" id="regConfirmPassword" placeholder="Nhập lại mật khẩu" autocomplete="new-password" />
-                            <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility('regConfirmPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
-                                <i class="fa fa-eye"></i>
-                            </button>
-                        </div>
-                        <span asp-validation-for="ConfirmPassword" class="text-danger small d-block mt-1"></span>
+            <div class="row g-3 mb-2">
+                <div class="col-12 col-md-6">
+                    <label asp-for="Password" class="custom-auth-label">Mật khẩu <span class="text-danger">*</span></label>
+                    <div class="position-relative">
+                        <input asp-for="Password" type="password" class="custom-auth-input pe-5" id="regPassword" placeholder="Nhập mật khẩu của bạn" autocomplete="new-password" />
+                        <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted text-decoration-none pe-3 border-0 bg-transparent" onclick="togglePasswordVisibility('regPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
+                            <i class="fa fa-eye text-secondary"></i>
+                        </button>
                     </div>
+                    <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
                 </div>
 
-                <!-- Cloudflare Turnstile CAPTCHA -->
-                <div class="mb-4 d-flex justify-content-center">
-                    <div class="cf-turnstile" data-sitekey="@siteKey" data-theme="light"></div>
+                <div class="col-12 col-md-6">
+                    <label asp-for="ConfirmPassword" class="custom-auth-label">Nhập lại mật khẩu <span class="text-danger">*</span></label>
+                    <div class="position-relative">
+                        <input asp-for="ConfirmPassword" type="password" class="custom-auth-input pe-5" id="regConfirmPassword" placeholder="Nhập lại mật khẩu của bạn" autocomplete="new-password" />
+                        <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted text-decoration-none pe-3 border-0 bg-transparent" onclick="togglePasswordVisibility('regConfirmPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
+                            <i class="fa fa-eye text-secondary"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small mt-1 d-block"></span>
                 </div>
+            </div>
 
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
-                    <i class="fa fa-user-plus me-1"></i> Hoàn tất đăng ký
+            <div class="small text-muted mb-3" style="font-size: 0.825rem;">
+                <i class="fa fa-info-circle me-1"></i>Mật khẩu tối thiểu 6 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.
+            </div>
+
+            <!-- ĐIỀU KHOẢN VÀ CHÍNH SÁCH BẢO MẬT FUUFISHING -->
+            <p class="terms-text">
+                Bằng việc Đăng ký, bạn đã đọc và đồng ý với 
+                <a href="/terms">Điều khoản sử dụng</a> và 
+                <a href="/privacy">Chính sách bảo mật của FuuFishing</a>.
+            </p>
+
+            <!-- Cloudflare Turnstile CAPTCHA -->
+            <div class="mb-4 d-flex justify-content-center">
+                <div class="cf-turnstile" data-sitekey="@siteKey" data-theme="light"></div>
+            </div>
+
+            <!-- HÀNG NÚT BẤM (Quay lại đăng nhập & Hoàn tất đăng ký) -->
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <a href="/account/login" class="btn-back-login">
+                    <i class="fa fa-chevron-left me-2"></i>Quay lại đăng nhập
+                </a>
+                <button type="submit" class="btn-auth-submit flex-grow-1">
+                    Hoàn tất đăng ký
                 </button>
-
-                <div class="text-center mt-3 login-links">
-                    <span class="text-muted small">Đã có tài khoản?</span>
-                    <a href="/account/login" class="text-primary fw-semibold ms-1">Đăng nhập</a>
-                </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -123,12 +346,12 @@
             if (input.type === "password") {
                 input.type = "text";
                 if (icon) {
-                    icon.className = "fa fa-eye-slash";
+                    icon.className = "fa fa-eye-slash text-secondary";
                 }
             } else {
                 input.type = "password";
                 if (icon) {
-                    icon.className = "fa fa-eye";
+                    icon.className = "fa fa-eye text-secondary";
                 }
             }
         }
