@@ -263,17 +263,17 @@ namespace ASPtestShop.Tests
             var result = await service.BatchDeleteOrdersAsync(new List<int> { 601, 602, 603 });
 
             Assert.True(result.Success);
-            Assert.Equal(2, result.SuccessCount); // Xóa 601 và 602
-            Assert.Equal(1, result.FailedCount);  // Bỏ qua 603 vì đã Completed
+            Assert.Equal(3, result.SuccessCount); // Xóa tự do cả 3 đơn được chọn
+            Assert.Equal(0, result.FailedCount);
 
             var db601 = await context.Orders.FindAsync(601);
             var db602 = await context.Orders.FindAsync(602);
             var db603 = await context.Orders.FindAsync(603);
             Assert.Null(db601);
             Assert.Null(db602);
-            Assert.NotNull(db603); // 603 vẫn được bảo vệ
+            Assert.Null(db603);
 
-            // Tồn kho sản phẩm được hoàn lại: 10 + 3 = 13
+            // Tồn kho sản phẩm của đơn Pending được hoàn lại: 10 + 3 = 13
             var updatedProduct = await context.Products.FindAsync(101);
             Assert.Equal(13, updatedProduct?.StockQuantity);
         }

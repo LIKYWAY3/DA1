@@ -435,53 +435,34 @@ namespace ASPtestShop.Services.Implementations.Admin
                 };
             }
 
-            // Không cho phép xóa đơn hàng đang giao (Shipped) hoặc đã hoàn tất (Completed) để bảo vệ số liệu
-            var deletableOrders = orders.Where(o => o.OrderStatus != "Shipped" && o.OrderStatus != "Completed").ToList();
-
-            if (!deletableOrders.Any())
-            {
-                return new BatchOrderActionResultDto
-                {
-                    Success = false,
-                    Message = "Các đơn hàng đang giao (Shipped) hoặc đã hoàn tất (Completed) không thể xóa để bảo toàn số liệu thống kê."
-                };
-            }
-
             var deletedCodes = new List<string>();
 
-            // Với các đơn Pending chưa hủy mà bị xóa: Hoàn lại tồn kho và coupon trước khi xóa
-            foreach (var order in deletableOrders)
+            // Với các đơn chưa hủy mà bị xóa: Hoàn lại tồn kho và coupon nếu còn giữ kho
+            foreach (var order in orders)
             {
-                if (order.OrderStatus != "Cancelled")
+                if (order.OrderStatus != "Cancelled" && order.OrderStatus != "Completed" && order.OrderStatus != "Shipped")
                 {
                     await RestockOrderItemsAndCouponAsync(order);
                 }
                 deletedCodes.Add(order.OrderCode);
             }
 
-            var orderIdsToDelete = deletableOrders.Select(o => o.OrderId).ToList();
+            var orderIdsToDelete = orders.Select(o => o.OrderId).ToList();
             var payments = await _context.Payments.Where(p => orderIdsToDelete.Contains(p.OrderId)).ToListAsync();
             if (payments.Any())
             {
                 _context.Payments.RemoveRange(payments);
             }
 
-            _context.Orders.RemoveRange(deletableOrders);
+            _context.Orders.RemoveRange(orders);
             await _context.SaveChangesAsync();
-
-            var skippedCount = distinctIds.Count - deletableOrders.Count;
-            var msg = $"Đã xóa thành công {deletableOrders.Count} đơn hàng.";
-            if (skippedCount > 0)
-            {
-                msg += $" (Đã bỏ qua {skippedCount} đơn do đang giao hoặc đã hoàn tất).";
-            }
 
             return new BatchOrderActionResultDto
             {
                 Success = true,
-                Message = msg,
-                SuccessCount = deletableOrders.Count,
-                FailedCount = skippedCount,
+                Message = $"Đã xóa thành công {orders.Count} đơn hàng.",
+                SuccessCount = orders.Count,
+                FailedCount = distinctIds.Count - orders.Count,
                 ConfirmedOrderCodes = deletedCodes
             };
         }

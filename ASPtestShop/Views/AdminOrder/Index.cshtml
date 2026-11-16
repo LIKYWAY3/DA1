@@ -88,17 +88,13 @@
                 <div>
                     <i class="fa fa-check-square me-2"></i>
                     <span>Đã chọn <strong id="selectedOrderCount" class="text-warning">0</strong> đơn hàng</span>
-                    <span id="selectedPendingCountText" class="text-muted small ms-2"></span>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <button type="button" id="btnBatchConfirm" class="btn btn-sm btn-light fw-bold" onclick="batchConfirmSelectedOrders()">
-                        <i class="fa fa-check me-1"></i> Xác nhận hàng loạt
+                    <button type="button" id="btnBatchConfirm" class="btn btn-sm btn-light fw-bold px-3 py-2" onclick="batchConfirmSelectedOrders()">
+                        <i class="fa fa-check me-1"></i> Xác nhận đơn hàng
                     </button>
-                    <button type="button" id="btnBatchDelete" class="btn btn-sm btn-danger fw-bold" onclick="batchDeleteSelectedOrders()">
-                        <i class="fa fa-trash me-1"></i> Xóa đơn đã chọn
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-light" onclick="clearSelectedOrders()">
-                        Bỏ chọn
+                    <button type="button" id="btnBatchDelete" class="btn btn-sm btn-danger fw-bold px-3 py-2" onclick="batchDeleteSelectedOrders()">
+                        <i class="fa fa-trash me-1"></i> Xóa
                     </button>
                 </div>
             </div>
@@ -315,20 +311,7 @@
             }
 
             orderTableBody.innerHTML = orders.map(order => {
-                const isCancelled = order.orderStatus === "Cancelled";
-                const isPending = order.orderStatus === "Pending";
-                const isFailedPayment = order.paymentStatus === "Failed";
-                const isProtected = order.orderStatus === "Shipped" || order.orderStatus === "Completed";
-
-                const checkboxHtml = !isProtected
-                    ? `<td class="text-center"><input type="checkbox" class="form-check-input order-select-checkbox" value="${order.orderId}" data-status="${order.orderStatus}" data-payment="${order.paymentStatus}" onchange="handleOrderRowSelect()" /></td>`
-                    : `<td class="text-center"><input type="checkbox" class="form-check-input" disabled title="Đơn hàng đang giao hoặc đã hoàn tất không thể thao tác hàng loạt" style="opacity: 0.25;" /></td>`;
-
-                const deleteBtnHtml = (isCancelled || isFailedPayment)
-                    ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Xóa đơn hàng" onclick="deleteCancelledOrder(${order.orderId}, '${order.orderCode}')">
-                            <i class="fa fa-trash"></i>
-                       </button>`
-                    : '';
+                const checkboxHtml = `<td class="text-center"><input type="checkbox" class="form-check-input order-select-checkbox" value="${order.orderId}" data-status="${order.orderStatus}" data-payment="${order.paymentStatus}" onchange="handleOrderRowSelect()" /></td>`;
 
                 return `
                     <tr>
@@ -346,12 +329,9 @@
                         <td>${order.paymentMethod || "COD"}</td>
                         <td class="small text-muted">${formatDate(order.createdAt)}</td>
                         <td class="text-end">
-                            <div class="d-inline-flex gap-1">
-                                <a href="/admin/orders/detail/${order.orderId}" class="btn btn-sm btn-dark">
-                                    Chi tiết
-                                </a>
-                                ${deleteBtnHtml}
-                            </div>
+                            <a href="/admin/orders/detail/${order.orderId}" class="btn btn-sm btn-dark">
+                                Chi tiết
+                            </a>
                         </td>
                     </tr>
                 `;
@@ -376,31 +356,6 @@
 
             const countEl = document.getElementById("selectedOrderCount");
             if (countEl) countEl.textContent = count;
-
-            // Đếm số đơn Pending hợp lệ (không bị Failed thanh toán)
-            let validPendingCount = 0;
-            checkedBoxes.forEach(cb => {
-                const status = cb.getAttribute("data-status");
-                const payment = cb.getAttribute("data-payment");
-                if (status === "Pending" && payment !== "Failed") {
-                    validPendingCount++;
-                }
-            });
-
-            const pendingText = document.getElementById("selectedPendingCountText");
-            if (pendingText) {
-                if (validPendingCount > 0) {
-                    pendingText.textContent = `(${validPendingCount} đơn chờ duyệt)`;
-                } else {
-                    pendingText.textContent = "";
-                }
-            }
-
-            const btnConfirm = document.getElementById("btnBatchConfirm");
-            if (btnConfirm) {
-                btnConfirm.disabled = validPendingCount === 0;
-                btnConfirm.title = validPendingCount === 0 ? "Không có đơn hàng chờ xử lý hợp lệ để duyệt" : `Xác nhận ${validPendingCount} đơn hàng`;
-            }
 
             const bar = document.getElementById("batchActionBar");
             if (bar) {
@@ -460,7 +415,7 @@
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = `<i class="fa fa-trash me-1"></i> Xóa đơn đã chọn`;
+                    btn.innerHTML = `<i class="fa fa-trash me-1"></i> Xóa`;
                 }
             }
         }
@@ -518,7 +473,7 @@
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = `<i class="fa fa-check me-1"></i> Xác nhận hàng loạt`;
+                    btn.innerHTML = `<i class="fa fa-check me-1"></i> Xác nhận đơn hàng`;
                 }
             }
         }
