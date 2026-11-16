@@ -1,118 +1,267 @@
 @model ASPtestShop.Models.ViewModels.Auth.LoginViewModel
 
 @{
-    ViewData["Title"] = "Đăng nhập";
+    ViewData["Title"] = "Đăng nhập FuuFishing";
     var siteKey = ViewBag.TurnstileSiteKey as string ?? "1x00000000000000000000AA";
 }
 
-<div class="container mt-5 login-container" style="max-width: 480px;">
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-header text-center bg-primary text-white py-3 rounded-top-3">
-            <h4 class="mb-0 fw-bold"><i class="fa fa-sign-in-alt me-2"></i>Đăng nhập tài khoản</h4>
+<style>
+    .auth-card {
+        max-width: 440px;
+        margin: 40px auto;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 36px 32px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+    }
+
+    .auth-title {
+        color: #253f36;
+        font-size: 1.85rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        text-align: center;
+        margin-bottom: 28px;
+    }
+
+    .custom-auth-label {
+        font-size: 0.925rem;
+        font-weight: 600;
+        color: #121617;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .custom-auth-input {
+        width: 100%;
+        border: 1px solid #2f2f2f;
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 0.95rem;
+        color: #121617;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .custom-auth-input:focus {
+        border-color: #253f36;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(37, 63, 54, 0.18);
+        background-color: #ffffff;
+    }
+
+    .custom-auth-input::placeholder {
+        color: #9ca3af;
+        font-size: 0.9rem;
+    }
+
+    .btn-auth-submit {
+        width: 100%;
+        background-color: #253f36;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        padding: 13px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .btn-auth-submit:hover {
+        background-color: #192b25;
+        color: #ffffff;
+    }
+
+    .btn-auth-submit:active {
+        transform: translateY(1px);
+    }
+
+    .forgot-password-link {
+        color: #253f36;
+        font-weight: 600;
+        font-size: 0.925rem;
+        text-decoration: none;
+        transition: color 0.15s ease;
+    }
+
+    .forgot-password-link:hover {
+        color: #121617;
+        text-decoration: underline;
+    }
+
+    .divider-container {
+        display: flex;
+        align-items: center;
+        margin: 24px 0;
+    }
+
+    .divider-line {
+        flex-grow: 1;
+        height: 1px;
+        background-color: #e5e7eb;
+    }
+
+    .divider-text {
+        padding: 0 14px;
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .google-login-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background-color: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #1f2937;
+        font-weight: 600;
+        font-size: 0.95rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .google-login-btn:hover {
+        border-color: #253f36;
+        background-color: #fbfdfc;
+        color: #121617;
+        box-shadow: 0 4px 12px rgba(37, 63, 54, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .google-login-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 0.925rem;
+        color: #4b5563;
+    }
+
+    .auth-footer a {
+        color: #253f36;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<div class="container">
+    <div class="auth-card">
+        <h2 class="auth-title">Đăng nhập FuuFishing</h2>
+
+        @if (ViewBag.AccountLockedMessage != null)
+        {
+            <div class="alert alert-danger d-flex align-items-center mb-3 py-2 px-3" style="border-radius: 8px; border: 1px solid #f87171;">
+                <i class="fa fa-lock me-2 text-danger fs-5"></i>
+                <div class="small">@ViewBag.AccountLockedMessage</div>
+            </div>
+        }
+
+        @if (ViewBag.SessionExpiredMessage != null)
+        {
+            <div class="alert alert-warning d-flex align-items-center mb-3 py-2 px-3" style="border-radius: 8px; border: 1px solid #fbbf24;">
+                <i class="fa fa-exclamation-triangle me-2 text-warning fs-5"></i>
+                <div class="small">@ViewBag.SessionExpiredMessage</div>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger d-flex align-items-center mb-3 py-2 px-3" style="border-radius: 8px; border: 1px solid #f87171;">
+                <i class="fa fa-exclamation-circle me-2 text-danger fs-5"></i>
+                <div class="small">@TempData["ErrorMessage"]</div>
+            </div>
+        }
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success d-flex align-items-center mb-3 py-2 px-3" style="border-radius: 8px; border: 1px solid #34d399;">
+                <i class="fa fa-check-circle me-2 text-success fs-5"></i>
+                <div class="small">@TempData["SuccessMessage"]</div>
+            </div>
+        }
+
+        <form asp-action="Login" asp-controller="Account" method="post" id="loginForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 mb-3 small" style="border-radius: 8px;"></div>
+
+            <!-- Trường Số điện thoại / Email -->
+            <div class="mb-3">
+                <label asp-for="EmailOrUserName" class="custom-auth-label">Số điện thoại hoặc Email</label>
+                <input asp-for="EmailOrUserName" class="custom-auth-input" placeholder="Nhập số điện thoại hoặc email của bạn" autocomplete="username" />
+                <span asp-validation-for="EmailOrUserName" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <!-- Trường Mật khẩu -->
+            <div class="mb-3">
+                <label asp-for="Password" class="custom-auth-label">Mật khẩu</label>
+                <div class="position-relative">
+                    <input asp-for="Password" type="password" class="custom-auth-input pe-5" id="loginPassword" placeholder="Nhập mật khẩu của bạn" autocomplete="current-password" />
+                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-muted text-decoration-none pe-3 border-0 bg-transparent" onclick="togglePasswordVisibility('loginPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
+                        <i class="fa fa-eye text-secondary"></i>
+                    </button>
+                </div>
+                <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <!-- Cloudflare Turnstile CAPTCHA -->
+            <div class="mb-3 d-flex justify-content-center">
+                <div class="cf-turnstile" data-sitekey="@siteKey" data-theme="light"></div>
+            </div>
+
+            <!-- Nút Đăng nhập -->
+            <button type="submit" class="btn-auth-submit mt-1">
+                Đăng nhập
+            </button>
+
+            <!-- Link Quên mật khẩu -->
+            <div class="text-center mt-3">
+                <a href="/account/forgot-password" class="forgot-password-link">
+                    Quên mật khẩu?
+                </a>
+            </div>
+        </form>
+
+        <!-- Phân cách: Hoặc đăng nhập bằng -->
+        <div class="divider-container">
+            <div class="divider-line"></div>
+            <span class="divider-text">Hoặc đăng nhập bằng</span>
+            <div class="divider-line"></div>
         </div>
 
-        <div class="card-body p-4">
-            @if (ViewBag.AccountLockedMessage != null)
-            {
-                <div class="alert alert-danger d-flex align-items-center mb-3">
-                    <i class="fa fa-lock me-2 text-danger fs-5"></i>
-                    <div>@ViewBag.AccountLockedMessage</div>
-                </div>
-            }
+        <!-- Nút Đăng nhập Google (Có hiệu ứng Hover đầy đủ) -->
+        <a href="/account/google-login?returnUrl=@ViewBag.ReturnUrl" class="google-login-btn" title="Đăng nhập với tài khoản Google">
+            <svg width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                <path fill="none" d="M0 0h48v48H0z"/>
+            </svg>
+            <span>Google</span>
+        </a>
 
-            @if (ViewBag.SessionExpiredMessage != null)
-            {
-                <div class="alert alert-warning d-flex align-items-center mb-3">
-                    <i class="fa fa-exclamation-triangle me-2 text-warning fs-5"></i>
-                    <div>@ViewBag.SessionExpiredMessage</div>
-                </div>
-            }
-
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="alert alert-danger d-flex align-items-center mb-3">
-                    <i class="fa fa-exclamation-circle me-2 text-danger fs-5"></i>
-                    <div>@TempData["ErrorMessage"]</div>
-                </div>
-            }
-
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success d-flex align-items-center mb-3">
-                    <i class="fa fa-check-circle me-2 text-success fs-5"></i>
-                    <div>@TempData["SuccessMessage"]</div>
-                </div>
-            }
-
-            <form asp-action="Login" asp-controller="Account" method="post" id="loginForm">
-                @Html.AntiForgeryToken()
-
-                <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
-
-                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 mb-3" style="font-size: 0.9rem;"></div>
-
-                <div class="mb-3">
-                    <label asp-for="EmailOrUserName" class="form-label fw-semibold">Email hoặc Tên đăng nhập</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light"><i class="fa fa-user text-muted"></i></span>
-                        <input asp-for="EmailOrUserName" class="form-control" placeholder="Nhập email hoặc username" autocomplete="username" />
-                    </div>
-                    <span asp-validation-for="EmailOrUserName" class="text-danger small"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="Password" class="form-label fw-semibold">Mật khẩu</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light"><i class="fa fa-lock text-muted"></i></span>
-                        <input asp-for="Password" type="password" class="form-control" id="loginPassword" placeholder="Nhập mật khẩu" autocomplete="current-password" />
-                        <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility('loginPassword', this)" title="Ẩn/hiện mật khẩu" tabindex="-1">
-                            <i class="fa fa-eye"></i>
-                        </button>
-                    </div>
-                    <span asp-validation-for="Password" class="text-danger small"></span>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="form-check">
-                        <input asp-for="RememberMe" class="form-check-input" id="rememberMeCheck" />
-                        <label asp-for="RememberMe" class="form-check-label text-muted small" for="rememberMeCheck">
-                            Ghi nhớ đăng nhập
-                        </label>
-                    </div>
-                    <a href="/account/forgot-password" class="text-decoration-none small text-primary">Quên mật khẩu?</a>
-                </div>
-
-                <!-- 2.1. CAPTCHA Cloudflare Turnstile -->
-                <div class="mb-3 d-flex justify-content-center">
-                    <div class="cf-turnstile" data-sitekey="@siteKey" data-theme="light"></div>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
-                    <i class="fa fa-sign-in-alt me-1"></i> Đăng nhập
-                </button>
-            </form>
-
-            <div class="position-relative my-4 text-center">
-                <hr class="text-muted" />
-                <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small fw-semibold">HOẶC</span>
-            </div>
-
-            <!-- 2.2. ĐĂNG NHẬP BẰNG GOOGLE -->
-            <a href="/account/google-login?returnUrl=@ViewBag.ReturnUrl" class="btn btn-outline-danger w-100 py-2 d-flex align-items-center justify-content-center gap-2 fw-semibold shadow-sm">
-                <svg width="18" height="18" viewBox="0 0 48 48">
-                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                    <path fill="none" d="M0 0h48v48H0z"/>
-                </svg>
-                <span>Đăng nhập bằng tài khoản Google</span>
-            </a>
-
-            <div class="text-center mt-4">
-                <span class="text-muted small">Chưa có tài khoản?</span>
-                <a href="/account/register" class="fw-semibold text-decoration-none text-primary ms-1">Đăng ký ngay</a>
-            </div>
+        <!-- Chân trang: Chưa có tài khoản? Đăng ký ngay -->
+        <div class="auth-footer">
+            <span>Bạn chưa có tài khoản?</span>
+            <a href="/account/register">Đăng ký ngay</a>
         </div>
     </div>
 </div>
@@ -129,12 +278,12 @@
             if (input.type === "password") {
                 input.type = "text";
                 if (icon) {
-                    icon.className = "fa fa-eye-slash";
+                    icon.className = "fa fa-eye-slash text-secondary";
                 }
             } else {
                 input.type = "password";
                 if (icon) {
-                    icon.className = "fa fa-eye";
+                    icon.className = "fa fa-eye text-secondary";
                 }
             }
         }
