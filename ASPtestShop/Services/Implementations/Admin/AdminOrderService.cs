@@ -148,6 +148,16 @@ namespace ASPtestShop.Services.Implementations.Admin
                 };
             }
 
+            // RÀNG BUỘC: Đơn hàng thanh toán thất bại (Failed) không thể duyệt xác nhận
+            if (dto.OrderStatus == "Confirmed" && (order.PaymentStatus == "Failed" || dto.PaymentStatus == "Failed"))
+            {
+                return new AdminOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Đơn hàng có trạng thái thanh toán thất bại (Failed) không thể duyệt xác nhận. Chỉ được phép duyệt các đơn có trạng thái thanh toán là Pending hoặc Paid."
+                };
+            }
+
             // Nếu đơn hàng chuyển sang Cancelled từ trạng thái khác -> Hoàn lại tồn kho & lượt dùng Coupon
             if (dto.OrderStatus == "Cancelled" && order.OrderStatus != "Cancelled")
             {
@@ -362,7 +372,7 @@ namespace ASPtestShop.Services.Implementations.Admin
             var distinctIds = orderIds.Distinct().ToList();
 
             var pendingOrders = await _context.Orders
-                .Where(o => distinctIds.Contains(o.OrderId) && o.OrderStatus == "Pending")
+                .Where(o => distinctIds.Contains(o.OrderId) && o.OrderStatus == "Pending" && o.PaymentStatus != "Failed")
                 .ToListAsync();
 
             if (!pendingOrders.Any())
@@ -370,7 +380,7 @@ namespace ASPtestShop.Services.Implementations.Admin
                 return new BatchOrderActionResultDto
                 {
                     Success = false,
-                    Message = "Không có đơn hàng nào ở trạng thái Chờ xử lý cần xác nhận trong danh sách đã chọn."
+                    Message = "Không có đơn hàng nào hợp lệ ở trạng thái Chờ xử lý cần xác nhận (các đơn thanh toán thất bại không thể duyệt)."
                 };
             }
 
@@ -398,5 +408,83 @@ namespace ASPtestShop.Services.Implementations.Admin
                 ConfirmedOrderCodes = confirmedCodes
             };
         }
+        public async Task<BatchOrderActionResultDto> BatchDeleteOrdersAsync(List<int> orderIds)
+        {
+            if (orderIds == null || !orderIds.Any())
+            {
+                return new BatchOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một đơn hàng để xóa."
+                };
+            }
+
+            var distinctIds = orderIds.Distinct().ToList();
+
+            var orders = await _context.Orders
+                .Include(o => o.OrderItems)
+                .Where(o => distinctIds.Contains(o.OrderId))
+                .ToListAsync();
+
+            if (!orders.Any())
+            {
+                return new BatchOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đơn hàng nào trong danh sách đã chọn."
+                };
+            }
+
+            // Không cho phép xóa đơn hàng đang giao (Shipped) hoặc đã hoàn tất (Completed) để bảo vệ số liệu
+            var deletableOrders = orders.Where(o => o.OrderStatus != "Shipped" && o.OrderStatus != "Completed").ToList();
+
+            if (!deletableOrders.Any())
+            {
+                return new BatchOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Các đơn hàng đang giao (Shipped) hoặc đã hoàn tất (Completed) không thể xóa để bảo toàn số liệu thống kê."
+                };
+            }
+
+            var deletedCodes = new List<string>();
+
+            // Với các đơn Pending chưa hủy mà bị xóa: Hoàn lại tồn kho và coupon trước khi xóa
+            foreach (var order in deletableOrders)
+            {
+                if (order.OrderStatus != "Cancelled")
+                {
+                    await RestockOrderItemsAndCouponAsync(order);
+                }
+                deletedCodes.Add(order.OrderCode);
+            }
+
+            var orderIdsToDelete = deletableOrders.Select(o => o.OrderId).ToList();
+            var payments = await _context.Payments.Where(p => orderIdsToDelete.Contains(p.OrderId)).ToListAsync();
+            if (payments.Any())
+            {
+                _context.Payments.RemoveRange(payments);
+            }
+
+            _context.Orders.RemoveRange(deletableOrders);
+            await _context.SaveChangesAsync();
+
+            var skippedCount = distinctIds.Count - deletableOrders.Count;
+            var msg = $"Đã xóa thành công {deletableOrders.Count} đơn hàng.";
+            if (skippedCount > 0)
+            {
+                msg += $" (Đã bỏ qua {skippedCount} đơn do đang giao hoặc đã hoàn tất).";
+            }
+
+            return new BatchOrderActionResultDto
+            {
+                Success = true,
+                Message = msg,
+                SuccessCount = deletableOrders.Count,
+                FailedCount = skippedCount,
+                ConfirmedOrderCodes = deletedCodes
+            };
+        }
+
     }
 }

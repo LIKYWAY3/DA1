@@ -162,5 +162,120 @@ namespace ASPtestShop.Tests
             Assert.False(result.Success);
             Assert.Contains("Không có đơn hàng nào", result.Message);
         }
+        [Fact]
+        public async Task UpdateOrderStatus_ShouldRejectConfirmation_WhenPaymentStatusIsFailed()
+        {
+            using var context = CreateInMemoryDbContext();
+            var order = new Order
+            {
+                OrderId = 501,
+                OrderCode = "OD_FAILED_501",
+                OrderStatus = "Pending",
+                PaymentStatus = "Failed",
+                OrderItems = new List<OrderItem>()
+            };
+            context.Orders.Add(order);
+            await context.SaveChangesAsync();
+
+            var service = new AdminOrderService(context);
+            var result = await service.UpdateOrderStatusAsync(501, new UpdateOrderStatusDto
+            {
+                OrderStatus = "Confirmed",
+                PaymentStatus = "Failed"
+            });
+
+            Assert.False(result.Success);
+            Assert.Contains("thất bại", result.Message);
+        }
+
+        [Fact]
+        public async Task BatchConfirmOrders_ShouldSkipOrders_WhenPaymentStatusIsFailed()
+        {
+            using var context = CreateInMemoryDbContext();
+            context.Orders.AddRange(
+                new Order { OrderId = 502, OrderCode = "OD_502_PAID", OrderStatus = "Pending", PaymentStatus = "Paid" },
+                new Order { OrderId = 503, OrderCode = "OD_503_FAILED", OrderStatus = "Pending", PaymentStatus = "Failed" }
+            );
+            await context.SaveChangesAsync();
+
+            var service = new AdminOrderService(context);
+            var result = await service.BatchConfirmOrdersAsync(new List<int> { 502, 503 });
+
+            Assert.True(result.Success);
+            Assert.Equal(1, result.SuccessCount);
+            Assert.Equal(1, result.FailedCount);
+
+            var o502 = await context.Orders.FindAsync(502);
+            var o503 = await context.Orders.FindAsync(503);
+            Assert.Equal("Confirmed", o502?.OrderStatus);
+            Assert.Equal("Pending", o503?.OrderStatus); // Vẫn giữ Pending, không bị duyệt
+        }
+
+        [Fact]
+        public async Task BatchDeleteOrders_ShouldDeleteCancelledAndPendingOrders_AndRestockIfPending()
+        {
+            using var context = CreateInMemoryDbContext();
+
+            var product = new Product
+            {
+                ProductId = 101,
+                ProductName = "Cần câu cao cấp",
+                Slug = "can-cau-cao-cap",
+                Price = 500000,
+                StockQuantity = 10
+            };
+            context.Products.Add(product);
+
+            var pendingOrder = new Order
+            {
+                OrderId = 601,
+                OrderCode = "OD_601_PENDING",
+                OrderStatus = "Pending",
+                PaymentStatus = "Unpaid",
+                OrderItems = new List<OrderItem>
+                {
+                    new OrderItem { OrderItemId = 1, ProductId = 101, Quantity = 3, UnitPrice = 500000, LineTotal = 1500000 }
+                }
+            };
+
+            var cancelledOrder = new Order
+            {
+                OrderId = 602,
+                OrderCode = "OD_602_CANCELLED",
+                OrderStatus = "Cancelled",
+                PaymentStatus = "Unpaid",
+                OrderItems = new List<OrderItem>()
+            };
+
+            var completedOrder = new Order
+            {
+                OrderId = 603,
+                OrderCode = "OD_603_COMPLETED",
+                OrderStatus = "Completed",
+                PaymentStatus = "Paid",
+                OrderItems = new List<OrderItem>()
+            };
+
+            context.Orders.AddRange(pendingOrder, cancelledOrder, completedOrder);
+            await context.SaveChangesAsync();
+
+            var service = new AdminOrderService(context);
+            var result = await service.BatchDeleteOrdersAsync(new List<int> { 601, 602, 603 });
+
+            Assert.True(result.Success);
+            Assert.Equal(2, result.SuccessCount); // Xóa 601 và 602
+            Assert.Equal(1, result.FailedCount);  // Bỏ qua 603 vì đã Completed
+
+            var db601 = await context.Orders.FindAsync(601);
+            var db602 = await context.Orders.FindAsync(602);
+            var db603 = await context.Orders.FindAsync(603);
+            Assert.Null(db601);
+            Assert.Null(db602);
+            Assert.NotNull(db603); // 603 vẫn được bảo vệ
+
+            // Tồn kho sản phẩm được hoàn lại: 10 + 3 = 13
+            var updatedProduct = await context.Products.FindAsync(101);
+            Assert.Equal(13, updatedProduct?.StockQuantity);
+        }
     }
 }

@@ -84,14 +84,18 @@
 
         <div class="card-body p-4">
             <!-- THANH TÁC VỤ HÀNG LOẠT -->
-            <div id="batchActionBar" class="d-none bg-dark text-white p-3 rounded mb-3 d-flex justify-content-between align-items-center shadow-sm">
+            <div id="batchActionBar" class="d-none bg-dark text-white p-3 rounded mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2 shadow-sm">
                 <div>
                     <i class="fa fa-check-square me-2"></i>
-                    <span>Đã chọn <strong id="selectedOrderCount" class="text-warning">0</strong> đơn hàng chờ xử lý</span>
+                    <span>Đã chọn <strong id="selectedOrderCount" class="text-warning">0</strong> đơn hàng</span>
+                    <span id="selectedPendingCountText" class="text-muted small ms-2"></span>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex flex-wrap gap-2">
                     <button type="button" id="btnBatchConfirm" class="btn btn-sm btn-light fw-bold" onclick="batchConfirmSelectedOrders()">
                         <i class="fa fa-check me-1"></i> Xác nhận hàng loạt
+                    </button>
+                    <button type="button" id="btnBatchDelete" class="btn btn-sm btn-danger fw-bold" onclick="batchDeleteSelectedOrders()">
+                        <i class="fa fa-trash me-1"></i> Xóa đơn đã chọn
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-light" onclick="clearSelectedOrders()">
                         Bỏ chọn
@@ -313,13 +317,15 @@
             orderTableBody.innerHTML = orders.map(order => {
                 const isCancelled = order.orderStatus === "Cancelled";
                 const isPending = order.orderStatus === "Pending";
+                const isFailedPayment = order.paymentStatus === "Failed";
+                const isProtected = order.orderStatus === "Shipped" || order.orderStatus === "Completed";
 
-                const checkboxHtml = isPending
-                    ? `<td class="text-center"><input type="checkbox" class="form-check-input order-select-checkbox" value="${order.orderId}" onchange="handleOrderRowSelect()" /></td>`
-                    : `<td class="text-center"><input type="checkbox" class="form-check-input" disabled style="opacity: 0.25;" /></td>`;
+                const checkboxHtml = !isProtected
+                    ? `<td class="text-center"><input type="checkbox" class="form-check-input order-select-checkbox" value="${order.orderId}" data-status="${order.orderStatus}" data-payment="${order.paymentStatus}" onchange="handleOrderRowSelect()" /></td>`
+                    : `<td class="text-center"><input type="checkbox" class="form-check-input" disabled title="Đơn hàng đang giao hoặc đã hoàn tất không thể thao tác hàng loạt" style="opacity: 0.25;" /></td>`;
 
-                const deleteBtnHtml = isCancelled
-                    ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Xóa đơn hàng đã hủy" onclick="deleteCancelledOrder(${order.orderId}, '${order.orderCode}')">
+                const deleteBtnHtml = (isCancelled || isFailedPayment)
+                    ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Xóa đơn hàng" onclick="deleteCancelledOrder(${order.orderId}, '${order.orderCode}')">
                             <i class="fa fa-trash"></i>
                        </button>`
                     : '';
@@ -371,6 +377,31 @@
             const countEl = document.getElementById("selectedOrderCount");
             if (countEl) countEl.textContent = count;
 
+            // Đếm số đơn Pending hợp lệ (không bị Failed thanh toán)
+            let validPendingCount = 0;
+            checkedBoxes.forEach(cb => {
+                const status = cb.getAttribute("data-status");
+                const payment = cb.getAttribute("data-payment");
+                if (status === "Pending" && payment !== "Failed") {
+                    validPendingCount++;
+                }
+            });
+
+            const pendingText = document.getElementById("selectedPendingCountText");
+            if (pendingText) {
+                if (validPendingCount > 0) {
+                    pendingText.textContent = `(${validPendingCount} đơn chờ duyệt)`;
+                } else {
+                    pendingText.textContent = "";
+                }
+            }
+
+            const btnConfirm = document.getElementById("btnBatchConfirm");
+            if (btnConfirm) {
+                btnConfirm.disabled = validPendingCount === 0;
+                btnConfirm.title = validPendingCount === 0 ? "Không có đơn hàng chờ xử lý hợp lệ để duyệt" : `Xác nhận ${validPendingCount} đơn hàng`;
+            }
+
             const bar = document.getElementById("batchActionBar");
             if (bar) {
                 if (count > 0) bar.classList.remove("d-none");
@@ -380,6 +411,57 @@
             const master = document.getElementById("selectAllOrders");
             if (master) {
                 master.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+            }
+        }
+
+        async function batchDeleteSelectedOrders() {
+            const checkedBoxes = document.querySelectorAll(".order-select-checkbox:checked");
+            const ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value)).filter(id => !isNaN(id) && id > 0);
+
+            if (ids.length === 0) {
+                showMessage("Vui lòng chọn ít nhất một đơn hàng để xóa.", "warning");
+                return;
+            }
+
+            if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${ids.length} đơn hàng đã chọn? Hệ thống sẽ tự động hoàn lại tồn kho cho các đơn chờ xử lý và thao tác này không thể hoàn tác.`)) {
+                return;
+            }
+
+            const btn = document.getElementById("btnBatchDelete");
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang xóa...`;
+            }
+
+            try {
+                const res = await fetch("/api/admin/orders/batch-delete", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({ orderIds: ids })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    showMessage(data.message || "Xóa hàng loạt thất bại.", "danger");
+                    return;
+                }
+
+                showMessage(data.message || `Đã xóa thành công ${data.successCount} đơn hàng.`, "success");
+                clearSelectedOrders();
+                await loadAdminOrders();
+
+            } catch (err) {
+                console.error("Lỗi xóa hàng loạt:", err);
+                showMessage("Lỗi kết nối khi xóa đơn hàng hàng loạt.", "danger");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa fa-trash me-1"></i> Xóa đơn đã chọn`;
+                }
             }
         }
 
