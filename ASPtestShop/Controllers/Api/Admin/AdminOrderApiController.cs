@@ -119,5 +119,27 @@ namespace ASPtestShop.Controllers.Api.Admin
             }
             return Ok(result);
         }
+
+        // POST: /api/admin/orders/batch-confirm
+        [HttpPost("batch-confirm")]
+        public async Task<IActionResult> BatchConfirmOrders([FromBody] BatchConfirmOrderRequestDto dto)
+        {
+            if (dto?.OrderIds == null || !dto.OrderIds.Any())
+            {
+                return BadRequest(new BatchOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một đơn hàng để xác nhận."
+                });
+            }
+
+            var result = await _adminOrderService.BatchConfirmOrdersAsync(dto.OrderIds);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
     }
-}
+}

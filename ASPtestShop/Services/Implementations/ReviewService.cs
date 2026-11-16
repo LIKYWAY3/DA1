@@ -79,54 +79,47 @@ namespace ASPtestShop.Services.Implementations
                 return (false, "Không tìm thấy thông tin tài khoản người dùng!", null);
             }
 
-            // BẢO MẬT & NGHIỆP VỤ: Chỉ người dùng đã mua sản phẩm và đơn hàng đã Completed mới được đánh giá
-            var matchingOrderItem = await _context.OrderItems
+            // BẢO MẬT & NGHIỆP VỤ: Đếm số lần mua hoàn tất và số đánh giá đã tạo (1 lần mua hoàn tất = 1 lần đánh giá)
+            var completedOrderItems = await _context.OrderItems
                 .Include(oi => oi.Order)
                 .Where(oi => oi.ProductId == dto.ProductId &&
                              oi.Order.UserId == userId &&
                              oi.Order.OrderStatus == "Completed")
-                .OrderByDescending(oi => oi.Order.CreatedAt)
-                .FirstOrDefaultAsync();
+                .OrderBy(oi => oi.Order.CreatedAt)
+                .ToListAsync();
 
-            if (matchingOrderItem == null)
+            if (!completedOrderItems.Any())
             {
                 return (false, "Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua và đơn hàng hoàn tất!", null);
             }
 
-            // Kiểm tra xem người dùng đã từng đánh giá sản phẩm này chưa
-            var existingReview = await _context.Reviews
-                .FirstOrDefaultAsync(r => r.ProductId == dto.ProductId && r.UserId == userId);
+            var userReviews = await _context.Reviews
+                .Where(r => r.ProductId == dto.ProductId && r.UserId == userId)
+                .OrderBy(r => r.CreatedAt)
+                .ToListAsync();
 
-            if (existingReview != null)
+            // Nếu số đánh giá đã bằng hoặc vượt quá số lần mua
+            if (userReviews.Count >= completedOrderItems.Count)
             {
-                // Cập nhật đánh giá cũ
-                existingReview.OrderItemId = matchingOrderItem.OrderItemId;
-                existingReview.Rating = dto.Rating;
-                existingReview.Comment = dto.Comment?.Trim();
-                existingReview.IsApproved = true; // Duyệt tự động, admin có thể ẩn nếu vi phạm
-                existingReview.UpdatedAt = DateTime.UtcNow;
-
-                await _context.SaveChangesAsync();
-
-                return (true, "Đã cập nhật đánh giá của bạn thành công!", new ProductReviewItemDto
-                {
-                    ReviewId = existingReview.ReviewId,
-                    UserId = user.Id,
-                    UserName = user.UserName ?? "Khách hàng",
-                    FullName = user.FullName ?? user.UserName ?? "Khách hàng",
-                    AvatarUrl = user.AvatarUrl,
-                    Rating = existingReview.Rating,
-                    Comment = existingReview.Comment,
-                    CreatedAt = existingReview.UpdatedAt ?? existingReview.CreatedAt
-                });
+                return (false, "Bạn đã đánh giá cho lần mua sản phẩm này rồi. Mỗi lần mua hàng hoàn tất chỉ được đánh giá 1 lần!", null);
             }
 
-            // Tạo đánh giá mới
+            // Gắn review với OrderItem của lần mua chưa được đánh giá
+            var reviewedOrderItemIds = userReviews
+                .Where(r => r.OrderItemId.HasValue)
+                .Select(r => r.OrderItemId.Value)
+                .ToHashSet();
+
+            var unreviewedOrderItem = completedOrderItems
+                .FirstOrDefault(oi => !reviewedOrderItemIds.Contains(oi.OrderItemId))
+                ?? completedOrderItems.Last();
+
+            // Tạo đánh giá mới cho lần mua này
             var review = new Review
             {
                 ProductId = dto.ProductId,
                 UserId = userId,
-                OrderItemId = matchingOrderItem.OrderItemId,
+                OrderItemId = unreviewedOrderItem.OrderItemId,
                 Rating = dto.Rating,
                 Comment = dto.Comment?.Trim(),
                 IsApproved = true, // Tự động duyệt để khách hàng thấy ngay, admin vẫn có quyền duyệt/ẩn ở trang Admin
@@ -174,14 +167,15 @@ namespace ASPtestShop.Services.Implementations
                 };
             }
 
-            var hasCompletedOrder = await _context.OrderItems
+            var completedOrderItems = await _context.OrderItems
                 .Include(oi => oi.Order)
-                .AnyAsync(oi =>
-                    oi.ProductId == productId &&
-                    oi.Order.UserId == userId &&
-                    oi.Order.OrderStatus == "Completed");
+                .Where(oi => oi.ProductId == productId &&
+                             oi.Order.UserId == userId &&
+                             oi.Order.OrderStatus == "Completed")
+                .ToListAsync();
 
-            if (!hasCompletedOrder)
+            var purchaseCount = completedOrderItems.Count;
+            if (purchaseCount == 0)
             {
                 return new ReviewEligibilityDto
                 {
@@ -192,38 +186,45 @@ namespace ASPtestShop.Services.Implementations
                 };
             }
 
-            var existingReview = await _context.Reviews
-                .Include(r => r.User)
-                .FirstOrDefaultAsync(r => r.ProductId == productId && r.UserId == userId);
+            var userReviews = await _context.Reviews
+                .Where(r => r.ProductId == productId && r.UserId == userId)
+                .OrderBy(r => r.CreatedAt)
+                .ToListAsync();
 
-            if (existingReview != null)
+            var reviewCount = userReviews.Count;
+
+            if (reviewCount >= purchaseCount)
             {
+                var lastReview = userReviews.LastOrDefault();
                 return new ReviewEligibilityDto
                 {
                     IsAuthenticated = true,
-                    CanReview = true,
+                    CanReview = false,
                     HasReviewed = true,
-                    Message = "Bạn đã đánh giá sản phẩm này. Bạn có thể cập nhật đánh giá của mình.",
-                    ExistingReview = new ProductReviewItemDto
+                    Message = "Bạn đã đánh giá đủ cho tất cả các lần mua sản phẩm này. Hãy mua thêm để tiếp tục đánh giá!",
+                    ExistingReview = lastReview != null ? new ProductReviewItemDto
                     {
-                        ReviewId = existingReview.ReviewId,
-                        UserId = existingReview.UserId,
+                        ReviewId = lastReview.ReviewId,
+                        UserId = lastReview.UserId,
                         UserName = user.UserName ?? "Khách hàng",
                         FullName = user.FullName ?? user.UserName ?? "Khách hàng",
                         AvatarUrl = user.AvatarUrl,
-                        Rating = existingReview.Rating,
-                        Comment = existingReview.Comment,
-                        CreatedAt = existingReview.CreatedAt
-                    }
+                        Rating = lastReview.Rating,
+                        Comment = lastReview.Comment,
+                        CreatedAt = lastReview.CreatedAt
+                    } : null
                 };
             }
 
+            var remaining = purchaseCount - reviewCount;
             return new ReviewEligibilityDto
             {
                 IsAuthenticated = true,
                 CanReview = true,
-                HasReviewed = false,
-                Message = "Hãy chia sẻ trải nghiệm của bạn về sản phẩm này!"
+                HasReviewed = reviewCount > 0,
+                Message = reviewCount > 0
+                    ? $"Bạn còn {remaining} lượt đánh giá cho các lần mua sản phẩm này."
+                    : "Hãy chia sẻ trải nghiệm của bạn về sản phẩm này!"
             };
         }
 }

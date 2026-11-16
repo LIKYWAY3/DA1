@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using ASPtestShop.Models.DTO.Payment;
@@ -70,7 +71,11 @@ namespace ASPtestShop.Services.Implementations.PaymentProviders
                 { "vnp_Locale",     locale },
                 { "vnp_OrderInfo",  $"Thanh toan don hang {request.OrderCode}" },
                 { "vnp_OrderType",  "other" },
-                { "vnp_ReturnUrl",  request.ReturnUrl.StartsWith("http") ? request.ReturnUrl : $"{{BaseUrl}}{request.ReturnUrl}" },
+                { "vnp_ReturnUrl",  request.ReturnUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                    ? request.ReturnUrl
+                    : (_config["VnPay:ReturnUrl"]?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true
+                        ? _config["VnPay:ReturnUrl"]!
+                        : $"https://localhost:7198{request.ReturnUrl}") },
                 { "vnp_TxnRef",     txnRef }
             };
 
@@ -128,9 +133,9 @@ namespace ASPtestShop.Services.Implementations.PaymentProviders
                 if (!string.IsNullOrEmpty(kv.Value))
                 {
                     if (sb.Length > 0) sb.Append('&');
-                    sb.Append(Uri.EscapeDataString(kv.Key));
+                    sb.Append(WebUtility.UrlEncode(kv.Key));
                     sb.Append('=');
-                    sb.Append(Uri.EscapeDataString(kv.Value));
+                    sb.Append(WebUtility.UrlEncode(kv.Value));
                 }
             }
             return sb.ToString();

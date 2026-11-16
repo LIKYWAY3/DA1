@@ -97,5 +97,76 @@ namespace ASPtestShop.Tests
 
             Assert.True(isValid);
         }
+        [Fact]
+        public async Task VietQrPaymentProvider_ShouldGenerateValidPaymentUrl()
+        {
+            var inMemorySettings = new Dictionary<string, string>
+            {
+                { "VietQR:BankId", "MB" },
+                { "VietQR:AccountNo", "0987654321" },
+                { "VietQR:AccountName", "FUU FISHING STORE" },
+                { "VietQR:Template", "compact2" }
+            };
+
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(inMemorySettings!)
+                .Build();
+
+            var provider = new VietQrPaymentProvider(config);
+
+            var request = new ASPtestShop.Models.DTO.Payment.CreatePaymentRequestDto
+            {
+                OrderId = 10,
+                OrderCode = "FUU12345678",
+                Amount = 350000,
+                PaymentMethod = "VIETQR"
+            };
+
+            var result = await provider.CreatePaymentAsync(request);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal("VIETQR", result.PaymentMethod);
+            Assert.Equal("Unpaid", result.PaymentStatus);
+            Assert.False(result.RequiresRedirect);
+            Assert.NotNull(result.PaymentUrl);
+            Assert.Contains("img.vietqr.io/image/MB-0987654321-compact2.png", result.PaymentUrl);
+            Assert.Contains("amount=350000", result.PaymentUrl);
+            Assert.Contains("addInfo=FUU12345678", result.PaymentUrl);
+        }
+
+        [Fact]
+        public async Task VnPayPaymentProvider_ShouldNotContainLiteralBaseUrlInReturnUrl()
+        {
+            var inMemorySettings = new Dictionary<string, string>
+            {
+                { "VnPay:TmnCode", "TESTTMN" },
+                { "VnPay:HashSecret", "TESTSECRET1234567890" },
+                { "VnPay:BaseUrl", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html" },
+                { "VnPay:ReturnUrl", "/checkout/vnpay-return" }
+            };
+
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(inMemorySettings!)
+                .Build();
+
+            var provider = new VnPayPaymentProvider(config);
+
+            var request = new ASPtestShop.Models.DTO.Payment.CreatePaymentRequestDto
+            {
+                OrderId = 1,
+                OrderCode = "TESTORDER01",
+                Amount = 100000,
+                PaymentMethod = "VNPAY",
+                ReturnUrl = "/checkout/vnpay-return",
+                IpAddress = "127.0.0.1"
+            };
+
+            var result = await provider.CreatePaymentAsync(request);
+
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(result.PaymentUrl);
+            Assert.DoesNotContain("{BaseUrl}", result.PaymentUrl);
+            Assert.Contains("vnp_ReturnUrl=", result.PaymentUrl);
+        }
     }
 }

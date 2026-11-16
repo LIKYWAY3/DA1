@@ -843,12 +843,17 @@
                     formEl.classList.remove("d-none");
                     badgeEl.classList.remove("d-none");
 
-                    if (data.hasReviewed && data.existingReview) {
-                        badgeEl.textContent = "Đã đánh giá";
-                        badgeEl.className = "badge bg-info small";
-                        document.getElementById("reviewCommentInput").value = data.existingReview.comment || "";
-                        setStarRating(data.existingReview.rating || 5);
-                        document.getElementById("btnSubmitReview").innerHTML = '<i class="fa fa-sync-alt me-1"></i> Cập nhật đánh giá của bạn';
+                    if (data.message) {
+                        badgeEl.textContent = data.message;
+                        badgeEl.className = "badge bg-success small";
+                    } else {
+                        badgeEl.textContent = "Đã mua hàng - Có thể đánh giá";
+                        badgeEl.className = "badge bg-success small";
+                    }
+
+                    const submitBtn = document.getElementById("btnSubmitReview");
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fa fa-paper-plane me-1"></i> Gửi đánh giá cho lần mua này';
                     }
                 }
             } catch (err) {

@@ -352,6 +352,7 @@ builder.Services.AddScoped<IPaymentProvider, CodPaymentProvider>();
 builder.Services.AddScoped<IPaymentProvider, VnPayPaymentProvider>();
 builder.Services.AddScoped<IPaymentProvider, MomoPaymentProvider>();
 builder.Services.AddScoped<IPaymentProvider, ZaloPayPaymentProvider>();
+builder.Services.AddScoped<IPaymentProvider, VietQrPaymentProvider>();
 builder.Services.AddScoped<IPaymentProviderFactory, PaymentProviderFactory>();
 builder.Services.AddHttpClient();
 

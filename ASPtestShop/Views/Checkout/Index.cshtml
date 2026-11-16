@@ -178,6 +178,18 @@
                                     </div>
                                 </label>
 
+                                <!-- VIETQR -->
+                                <label class="selection-card payment-method-card p-3 d-flex align-items-center gap-3" id="paymentMethodCard-VIETQR" onclick="selectPaymentMethod('VIETQR')">
+                                    <input type="radio" name="paymentMethodRadio" value="VIETQR" onchange="selectPaymentMethod('VIETQR')">
+                                    <div class="icon-box">
+                                        <i class="fa fa-qrcode"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold text-dark">Chuyển khoản Ngân hàng (VietQR)</div>
+                                        <div class="text-secondary small">Quét mã QR NAPAS 24/7 chuyển khoản tức thì qua mọi ứng dụng ngân hàng và ví điện tử.</div>
+                                    </div>
+                                </label>
+
                                 <!-- VNPAY -->
                                 <label class="selection-card payment-method-card p-3 d-flex align-items-center gap-3" id="paymentMethodCard-VNPAY" onclick="selectPaymentMethod('VNPAY')">
                                     <input type="radio" name="paymentMethodRadio" value="VNPAY" onchange="selectPaymentMethod('VNPAY')">
@@ -818,7 +830,7 @@
             const radio = document.querySelector(`input[name="paymentMethodRadio"][value="${method}"]`);
             if (radio) radio.checked = true;
 
-            ['COD', 'VNPAY', 'MOMO', 'ZALOPAY'].forEach(m => {
+            ['COD', 'VIETQR', 'VNPAY', 'MOMO', 'ZALOPAY'].forEach(m => {
                 const card = document.getElementById(`paymentMethodCard-${m}`);
                 if (card) {
                     if (m === method) card.classList.add('active');

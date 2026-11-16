@@ -83,10 +83,29 @@
         </div>
 
         <div class="card-body p-4">
+            <!-- THANH TÁC VỤ HÀNG LOẠT -->
+            <div id="batchActionBar" class="d-none bg-dark text-white p-3 rounded mb-3 d-flex justify-content-between align-items-center shadow-sm">
+                <div>
+                    <i class="fa fa-check-square me-2"></i>
+                    <span>Đã chọn <strong id="selectedOrderCount" class="text-warning">0</strong> đơn hàng chờ xử lý</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" id="btnBatchConfirm" class="btn btn-sm btn-light fw-bold" onclick="batchConfirmSelectedOrders()">
+                        <i class="fa fa-check me-1"></i> Xác nhận hàng loạt
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light" onclick="clearSelectedOrders()">
+                        Bỏ chọn
+                    </button>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th style="width: 40px;" class="text-center">
+                                <input type="checkbox" id="selectAllOrders" class="form-check-input" onchange="toggleSelectAllOrders(this)" title="Chọn tất cả đơn chờ xử lý">
+                            </th>
                             <th>Mã đơn</th>
                             <th>Người nhận</th>
                             <th>SĐT</th>
@@ -101,7 +120,7 @@
 
                     <tbody id="orderTableBody">
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 Đang tải danh sách đơn hàng...
                             </td>
                         </tr>
@@ -282,16 +301,22 @@
             if (!Array.isArray(orders) || orders.length === 0) {
                 orderTableBody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
+                        <td colspan="10" class="text-center text-muted py-4">
                             Không tìm thấy đơn hàng nào.
                         </td>
                     </tr>
                 `;
+                clearSelectedOrders();
                 return;
             }
 
             orderTableBody.innerHTML = orders.map(order => {
                 const isCancelled = order.orderStatus === "Cancelled";
+                const isPending = order.orderStatus === "Pending";
+
+                const checkboxHtml = isPending
+                    ? `<td class="text-center"><input type="checkbox" class="form-check-input order-select-checkbox" value="${order.orderId}" onchange="handleOrderRowSelect()" /></td>`
+                    : `<td class="text-center"><input type="checkbox" class="form-check-input" disabled style="opacity: 0.25;" /></td>`;
 
                 const deleteBtnHtml = isCancelled
                     ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Xóa đơn hàng đã hủy" onclick="deleteCancelledOrder(${order.orderId}, '${order.orderCode}')">
@@ -301,6 +326,7 @@
 
                 return `
                     <tr>
+                        ${checkboxHtml}
                         <td>
                             <strong>${order.orderCode || ""}</strong>
                             ${order.hasCancelRequest ? '<span class="badge bg-danger ms-1" title="Khách yêu cầu hủy"><i class="fa fa-exclamation-circle me-1"></i>Yêu cầu hủy</span>' : ''}
@@ -324,6 +350,95 @@
                     </tr>
                 `;
             }).join('');
+
+            clearSelectedOrders();
+        }
+
+        // ==========================================
+        // QUẢN LÝ CHỌN & XÁC NHẬN HÀNG LOẠT
+        // ==========================================
+        function toggleSelectAllOrders(master) {
+            const checkboxes = document.querySelectorAll(".order-select-checkbox");
+            checkboxes.forEach(cb => cb.checked = master.checked);
+            handleOrderRowSelect();
+        }
+
+        function handleOrderRowSelect() {
+            const checkedBoxes = document.querySelectorAll(".order-select-checkbox:checked");
+            const allBoxes = document.querySelectorAll(".order-select-checkbox");
+            const count = checkedBoxes.length;
+
+            const countEl = document.getElementById("selectedOrderCount");
+            if (countEl) countEl.textContent = count;
+
+            const bar = document.getElementById("batchActionBar");
+            if (bar) {
+                if (count > 0) bar.classList.remove("d-none");
+                else bar.classList.add("d-none");
+            }
+
+            const master = document.getElementById("selectAllOrders");
+            if (master) {
+                master.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+            }
+        }
+
+        function clearSelectedOrders() {
+            const master = document.getElementById("selectAllOrders");
+            if (master) master.checked = false;
+            document.querySelectorAll(".order-select-checkbox").forEach(cb => cb.checked = false);
+            handleOrderRowSelect();
+        }
+
+        async function batchConfirmSelectedOrders() {
+            const checkedBoxes = document.querySelectorAll(".order-select-checkbox:checked");
+            const ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value)).filter(id => !isNaN(id) && id > 0);
+
+            if (ids.length === 0) {
+                showMessage("Vui lòng chọn ít nhất một đơn hàng chờ xử lý.", "warning");
+                return;
+            }
+
+            if (!confirm(`Bạn có chắc chắn muốn xác nhận ${ids.length} đơn hàng đã chọn sang trạng thái ĐÃ XÁC NHẬN?`)) {
+                return;
+            }
+
+            const btn = document.getElementById("btnBatchConfirm");
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...`;
+            }
+
+            try {
+                const res = await fetch("/api/admin/orders/batch-confirm", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({ orderIds: ids })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    showMessage(data.message || "Xác nhận hàng loạt thất bại.", "danger");
+                    return;
+                }
+
+                showMessage(data.message || `Đã xác nhận thành công ${data.successCount} đơn hàng.`, "success");
+                clearSelectedOrders();
+                await loadAdminOrders();
+
+            } catch (err) {
+                console.error("Lỗi xác nhận hàng loạt:", err);
+                showMessage("Lỗi kết nối khi xác nhận đơn hàng hàng loạt.", "danger");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa fa-check me-1"></i> Xác nhận hàng loạt`;
+                }
+            }
         }
 
         async function deleteCancelledOrder(orderId, orderCode) {

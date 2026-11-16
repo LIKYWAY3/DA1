@@ -227,7 +227,8 @@ namespace ASPtestShop.Services.Implementations.Admin
                     Message = $"Đã dọn dẹp thành công {count} đơn hàng đã hủy!"
                 };
             });
-        }
+        }
+
         public async Task<AdminOrderActionResultDto> ApproveCancelOrderAsync(int orderId, string? adminNote = null)
         {
             var order = await _context.Orders
@@ -345,6 +346,57 @@ namespace ASPtestShop.Services.Implementations.Admin
                     }
                 }
             }
+        }
+
+        public async Task<BatchOrderActionResultDto> BatchConfirmOrdersAsync(List<int> orderIds)
+        {
+            if (orderIds == null || !orderIds.Any())
+            {
+                return new BatchOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một đơn hàng để xác nhận."
+                };
+            }
+
+            var distinctIds = orderIds.Distinct().ToList();
+
+            var pendingOrders = await _context.Orders
+                .Where(o => distinctIds.Contains(o.OrderId) && o.OrderStatus == "Pending")
+                .ToListAsync();
+
+            if (!pendingOrders.Any())
+            {
+                return new BatchOrderActionResultDto
+                {
+                    Success = false,
+                    Message = "Không có đơn hàng nào ở trạng thái Chờ xử lý cần xác nhận trong danh sách đã chọn."
+                };
+            }
+
+            var confirmedCodes = new List<string>();
+            var now = DateTime.UtcNow;
+
+            foreach (var order in pendingOrders)
+            {
+                order.OrderStatus = "Confirmed";
+                order.UpdatedAt = now;
+                order.Note = string.IsNullOrWhiteSpace(order.Note)
+                    ? "[Admin duyệt hàng loạt]"
+                    : $"{order.Note} | [Admin duyệt hàng loạt]";
+                confirmedCodes.Add(order.OrderCode);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new BatchOrderActionResultDto
+            {
+                Success = true,
+                Message = $"Đã xác nhận thành công {pendingOrders.Count} đơn hàng.",
+                SuccessCount = pendingOrders.Count,
+                FailedCount = distinctIds.Count - pendingOrders.Count,
+                ConfirmedOrderCodes = confirmedCodes
+            };
         }
     }
 }

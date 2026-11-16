@@ -59,9 +59,32 @@ namespace ASPtestShop.Controllers.MVC.User
 
         // GET: /checkout/success
         [HttpGet("success")]
-        public IActionResult Success(string? orderCode = null)
+        public async Task<IActionResult> Success(string? orderCode = null)
         {
             ViewBag.OrderCode = orderCode;
+            if (!string.IsNullOrWhiteSpace(orderCode))
+            {
+                var order = await _context.Orders
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(o => o.OrderCode == orderCode);
+                ViewBag.Order = order;
+
+                if (order != null && order.PaymentMethod == "VIETQR")
+                {
+                    var bankId = _config["VietQR:BankId"] ?? "MB";
+                    var bankName = _config["VietQR:BankName"] ?? "Ngân hàng TMCP Quân Đội (MBBank)";
+                    var accountNo = _config["VietQR:AccountNo"] ?? "0987654321";
+                    var accountName = _config["VietQR:AccountName"] ?? "FUU FISHING STORE";
+                    var template = _config["VietQR:Template"] ?? "compact2";
+                    var amount = (long)Math.Round(order.FinalAmount);
+
+                    ViewBag.VietQrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png?amount={amount}&addInfo={Uri.EscapeDataString(order.OrderCode)}&accountName={Uri.EscapeDataString(accountName)}";
+                    ViewBag.BankName = bankName;
+                    ViewBag.AccountNo = accountNo;
+                    ViewBag.AccountName = accountName;
+                    ViewBag.Amount = amount;
+                }
+            }
             return View();
         }
 
