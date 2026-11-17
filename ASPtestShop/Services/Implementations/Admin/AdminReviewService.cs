@@ -78,5 +78,118 @@ namespace ASPtestShop.Services.Implementations.Admin
             await _context.SaveChangesAsync();
             return (true, "Đã xóa đánh giá thành công!");
         }
+
+        public async Task<BatchReviewActionResultDto> BatchApproveReviewsAsync(List<int> reviewIds)
+        {
+            if (reviewIds == null || !reviewIds.Any())
+            {
+                return new BatchReviewActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một đánh giá để duyệt."
+                };
+            }
+
+            var distinctIds = reviewIds.Distinct().ToList();
+            var reviews = await _context.Reviews.Where(r => distinctIds.Contains(r.ReviewId)).ToListAsync();
+
+            if (!reviews.Any())
+            {
+                return new BatchReviewActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đánh giá nào trong danh sách đã chọn."
+                };
+            }
+
+            foreach (var r in reviews)
+            {
+                r.IsApproved = true;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new BatchReviewActionResultDto
+            {
+                Success = true,
+                Message = $"Đã duyệt thành công {reviews.Count} đánh giá.",
+                SuccessCount = reviews.Count,
+                FailedCount = distinctIds.Count - reviews.Count
+            };
+        }
+
+        public async Task<BatchReviewActionResultDto> BatchRejectReviewsAsync(List<int> reviewIds)
+        {
+            if (reviewIds == null || !reviewIds.Any())
+            {
+                return new BatchReviewActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một đánh giá để ẩn."
+                };
+            }
+
+            var distinctIds = reviewIds.Distinct().ToList();
+            var reviews = await _context.Reviews.Where(r => distinctIds.Contains(r.ReviewId)).ToListAsync();
+
+            if (!reviews.Any())
+            {
+                return new BatchReviewActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đánh giá nào trong danh sách đã chọn."
+                };
+            }
+
+            foreach (var r in reviews)
+            {
+                r.IsApproved = false;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new BatchReviewActionResultDto
+            {
+                Success = true,
+                Message = $"Đã ẩn thành công {reviews.Count} đánh giá khỏi website.",
+                SuccessCount = reviews.Count,
+                FailedCount = distinctIds.Count - reviews.Count
+            };
+        }
+
+        public async Task<BatchReviewActionResultDto> BatchDeleteReviewsAsync(List<int> reviewIds)
+        {
+            if (reviewIds == null || !reviewIds.Any())
+            {
+                return new BatchReviewActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một đánh giá để xóa."
+                };
+            }
+
+            var distinctIds = reviewIds.Distinct().ToList();
+            var reviews = await _context.Reviews.Where(r => distinctIds.Contains(r.ReviewId)).ToListAsync();
+
+            if (!reviews.Any())
+            {
+                return new BatchReviewActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy đánh giá nào trong danh sách đã chọn."
+                };
+            }
+
+            _context.Reviews.RemoveRange(reviews);
+            await _context.SaveChangesAsync();
+
+            return new BatchReviewActionResultDto
+            {
+                Success = true,
+                Message = $"Đã xóa thành công {reviews.Count} đánh giá.",
+                SuccessCount = reviews.Count,
+                FailedCount = distinctIds.Count - reviews.Count
+            };
+        }
     }
 }

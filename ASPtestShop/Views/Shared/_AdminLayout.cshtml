@@ -24,12 +24,37 @@
                         @ViewData["Title"]
                     </h1>
                     <p class="admin-page-subtitle">
-                        Quản lý dữ liệu hệ thống Fuu Fishing
+                        Hệ thống quản trị Fuu Fishing
                     </p>
                 </div>
 
-                <div class="admin-topbar-badge">
-                    Fuu Fishing Admin
+                <!-- Cụm tìm kiếm trung tâm (Dabang style) -->
+                <div class="admin-search-wrapper d-none d-lg-flex align-items-center">
+                    <i class="fa-solid fa-magnifying-glass admin-search-icon"></i>
+                    <input type="text" class="admin-search-input" placeholder="Tìm kiếm nhanh mã đơn, sản phẩm..." id="adminGlobalSearch" />
+                </div>
+
+                <!-- Cụm tiện ích bên phải: Về Shop + Chuông thông báo + Profile -->
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/" target="_blank" class="btn-topbar-shop" title="Xem trang chủ Shop Fuu Fishing">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <span class="d-none d-sm-inline">Xem Shop</span>
+                    </a>
+
+                    <div class="admin-topbar-notify" title="Thông báo đơn hàng real-time" onclick="window.location.href='/admin/orders'">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notify-ping-dot"></span>
+                    </div>
+
+                    <div class="admin-profile-pill d-flex align-items-center gap-2">
+                        <div class="admin-avatar">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <div class="d-none d-sm-block text-start">
+                            <div class="admin-name">Admin FuuFishing</div>
+                            <div class="admin-role">Quản trị viên</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

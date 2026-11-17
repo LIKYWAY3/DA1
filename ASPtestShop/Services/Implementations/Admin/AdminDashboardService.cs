@@ -42,6 +42,7 @@ namespace ASPtestShop.Services.Implementations.Admin
             var totalOrders = await _context.Orders.CountAsync();
             var pendingOrders = await _context.Orders.CountAsync(o => o.OrderStatus == "Pending");
             var completedOrders = await _context.Orders.CountAsync(o => o.OrderStatus == "Completed" || o.OrderStatus == "Delivered");
+            var pendingRefunds = await _context.RefundRequests.CountAsync(r => r.Status == "Pending");
             var totalProducts = await _context.Products.CountAsync(p => p.IsActive);
             var totalCustomers = await _userManager.Users.CountAsync();
 
@@ -88,6 +89,7 @@ namespace ASPtestShop.Services.Implementations.Admin
                 TotalOrders = totalOrders,
                 PendingOrders = pendingOrders,
                 CompletedOrders = completedOrders,
+                PendingRefunds = pendingRefunds,
                 TotalProducts = totalProducts,
                 TotalCustomers = totalCustomers,
                 RecentOrders = recentOrders,

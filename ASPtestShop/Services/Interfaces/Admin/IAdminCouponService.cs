@@ -10,5 +10,7 @@ namespace ASPtestShop.Services.Interfaces.Admin
         Task<(bool Success, string Message)> UpdateCouponAsync(int id, UpdateCouponDto dto);
         Task<(bool Success, string Message, bool NewStatus)> ToggleActiveAsync(int id);
         Task<(bool Success, string Message)> DeleteCouponAsync(int id);
+        Task<BatchCouponActionResultDto> BatchToggleActiveAsync(List<int> ids, bool isActive);
+        Task<BatchCouponActionResultDto> BatchDeleteCouponsAsync(List<int> ids);
     }
 }

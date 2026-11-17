@@ -11,10 +11,10 @@
         </div>
 
         <div class="d-flex gap-2">
-            <button type="button" id="btnCleanupCancelled" class="btn btn-outline-danger d-none" onclick="cleanupAllCancelledOrders()">
+            <button type="button" id="btnCleanupCancelled" class="fuu-btn-action fuu-btn-delete py-2 px-3 d-none" style="height: auto;" onclick="cleanupAllCancelledOrders()">
                 <i class="fa fa-broom me-1"></i> Dọn dẹp tất cả đơn đã hủy (<span id="cancelledCountBadge">0</span>)
             </button>
-            <a href="/admin" class="btn btn-outline-dark">
+            <a href="/admin" class="fuu-btn-action fuu-btn-view py-2 px-3" style="height: auto;">
                 Quay lại Admin
             </a>
         </div>
@@ -84,17 +84,20 @@
 
         <div class="card-body p-4">
             <!-- THANH TÁC VỤ HÀNG LOẠT -->
-            <div id="batchActionBar" class="d-none bg-dark text-white p-3 rounded mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2 shadow-sm">
-                <div>
-                    <i class="fa fa-check-square me-2"></i>
-                    <span>Đã chọn <strong id="selectedOrderCount" class="text-warning">0</strong> đơn hàng</span>
+            <div id="batchActionBar" class="d-none fuu-batch-bar">
+                <div class="d-flex align-items-center">
+                    <i class="fa fa-check-square me-2 text-warning"></i>
+                    <span>Đã chọn <strong id="selectedOrderCount" class="badge-count">0</strong> đơn hàng</span>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button type="button" id="btnBatchConfirm" class="btn btn-sm btn-light fw-bold px-3 py-2" onclick="batchConfirmSelectedOrders()">
                         <i class="fa fa-check me-1"></i> Xác nhận đơn hàng
                     </button>
                     <button type="button" id="btnBatchDelete" class="btn btn-sm btn-danger fw-bold px-3 py-2" onclick="batchDeleteSelectedOrders()">
-                        <i class="fa fa-trash me-1"></i> Xóa
+                        <i class="fa fa-trash-alt me-1"></i> Xóa đã chọn
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light" onclick="clearSelectedOrders()">
+                        Bỏ chọn
                     </button>
                 </div>
             </div>
@@ -104,7 +107,7 @@
                     <thead class="table-light">
                         <tr>
                             <th style="width: 40px;" class="text-center">
-                                <input type="checkbox" id="selectAllOrders" class="form-check-input" onchange="toggleSelectAllOrders(this)" title="Chọn tất cả đơn chờ xử lý">
+                                <input type="checkbox" id="selectAllOrders" class="fuu-checkbox" onchange="toggleSelectAllOrders(this)" title="Chọn tất cả đơn">
                             </th>
                             <th>Mã đơn</th>
                             <th>Người nhận</th>
@@ -311,7 +314,7 @@
             }
 
             orderTableBody.innerHTML = orders.map(order => {
-                const checkboxHtml = `<td class="text-center"><input type="checkbox" class="form-check-input order-select-checkbox" value="${order.orderId}" data-status="${order.orderStatus}" data-payment="${order.paymentStatus}" onchange="handleOrderRowSelect()" /></td>`;
+                const checkboxHtml = `<td class="text-center"><input type="checkbox" class="fuu-checkbox order-select-checkbox" value="${order.orderId}" data-status="${order.orderStatus}" data-payment="${order.paymentStatus}" onchange="handleOrderRowSelect()" /></td>`;
 
                 return `
                     <tr>
@@ -329,9 +332,11 @@
                         <td>${order.paymentMethod || "COD"}</td>
                         <td class="small text-muted">${formatDate(order.createdAt)}</td>
                         <td class="text-end">
-                            <a href="/admin/orders/detail/${order.orderId}" class="btn btn-sm btn-dark">
-                                Chi tiết
-                            </a>
+                            <div class="fuu-action-group justify-content-end">
+                                <a href="/admin/orders/detail/${order.orderId}" class="fuu-btn-action fuu-btn-view" title="Xem chi tiết đơn">
+                                    <i class="fa fa-eye"></i> <span>Chi tiết</span>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 `;

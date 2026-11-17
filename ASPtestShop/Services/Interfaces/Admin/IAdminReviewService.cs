@@ -8,5 +8,8 @@ namespace ASPtestShop.Services.Interfaces.Admin
         Task<(bool Success, string Message)> ApproveReviewAsync(int reviewId);
         Task<(bool Success, string Message)> RejectReviewAsync(int reviewId);
         Task<(bool Success, string Message)> DeleteReviewAsync(int reviewId);
+        Task<BatchReviewActionResultDto> BatchApproveReviewsAsync(List<int> reviewIds);
+        Task<BatchReviewActionResultDto> BatchRejectReviewsAsync(List<int> reviewIds);
+        Task<BatchReviewActionResultDto> BatchDeleteReviewsAsync(List<int> reviewIds);
     }
 }

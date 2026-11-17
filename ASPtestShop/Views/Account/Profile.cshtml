@@ -1,197 +1,1349 @@
-﻿@model ASPtestShop.Models.ViewModels.Profile.UserProfileViewModel
+@model ASPtestShop.Models.ViewModels.Profile.UserProfileViewModel
 
 @{
-    ViewData["Title"] = "Hồ Sơ Của Tôi";
+    ViewData["Title"] = "Thông Tin Tài Khoản - FuuFishing";
+    Layout = "~/Views/Shared/_LayoutCustomer.cshtml";
+    var defaultAddress = Model.DefaultAddress ?? Model.Addresses?.FirstOrDefault();
 }
 
-<div class="untree_co-section profile-page-container">
+<div class="profile-container py-4">
     <div class="container">
-        <div class="row">
-            
-            <div class="col-md-3">
-                <div class="sidebar-user-info d-flex align-items-center mb-4">
-                    @if (string.IsNullOrEmpty(Model.AvatarUrl))
+
+        <!-- =============================================================== -->
+        <!-- 1. THANH TỔNG QUAN TÀI KHOẢN (TOP SUMMARY BAR - CELLPHONES)      -->
+        <!-- =============================================================== -->
+        <div class="user-summary-card mb-4 bg-white border rounded-3 p-3 p-md-4 shadow-sm">
+            <div class="row align-items-center g-3">
+                
+                <!-- Cột 1: Thông tin Avatar + Tên + SĐT (ĐÃ BỎ BADGE FUUFISHING MEMBER THEO YÊU CẦU) -->
+                <div class="col-12 col-md-5 col-lg-4 border-end-md">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="user-avatar-wrap position-relative">
+                            @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                            {
+                                <img src="@Model.AvatarUrl" alt="Avatar" class="user-top-avatar rounded-circle border" onerror="this.src='/images/user-avatar-default.png'" />
+                            }
+                            else
+                            {
+                                <div class="user-top-avatar-fallback rounded-circle d-flex align-items-center justify-content-center fw-bold text-white">
+                                    @((!string.IsNullOrEmpty(Model.FullName) ? Model.FullName.Substring(0, 1) : (!string.IsNullOrEmpty(Model.UserName) ? Model.UserName.Substring(0, 1) : "F")).ToUpper())
+                                </div>
+                            }
+                            <button type="button" 
+                                    class="avatar-quick-edit-btn" 
+                                    data-bs-toggle="offcanvas" 
+                                    data-bs-target="#offcanvasEditProfile" 
+                                    title="Đổi ảnh đại diện">
+                                <i class="fa-solid fa-camera"></i>
+                            </button>
+                        </div>
+                        <div class="user-meta-info">
+                            <h5 class="fw-bold text-dark mb-1">
+                                @(string.IsNullOrEmpty(Model.FullName) ? Model.UserName : Model.FullName)
+                            </h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-secondary small font-monospace" id="displayPhone">@Model.MaskedPhoneNumber</span>
+                                @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                                {
+                                    <button type="button" 
+                                            class="btn-toggle-mask-phone" 
+                                            onclick="togglePhoneMask('@Model.PhoneNumber', '@Model.MaskedPhoneNumber')" 
+                                            title="Hiện/Ẩn số điện thoại">
+                                        <i class="fa-regular fa-eye" id="eyePhoneIcon"></i>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cột 2: Thống kê số đơn hàng đã mua -->
+                <div class="col-6 col-md-3 col-lg-3 border-end-md">
+                    <div class="stat-summary-block d-flex align-items-center gap-3">
+                        <div class="stat-icon-wrap bg-danger-subtle text-danger rounded-3 d-flex align-items-center justify-content-center">
+                            <i class="fa-solid fa-bag-shopping fa-lg"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value fw-bold text-dark fs-5">@Model.TotalOrders</div>
+                            <div class="stat-label text-muted small">Tổng số đơn hàng đã mua</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cột 3: Tổng tiền tích lũy mua sắm -->
+                <div class="col-6 col-md-4 col-lg-3 border-end-lg">
+                    <div class="stat-summary-block d-flex align-items-center gap-3">
+                        <div class="stat-icon-wrap bg-danger-subtle text-danger rounded-3 d-flex align-items-center justify-content-center">
+                            <i class="fa-solid fa-wallet fa-lg"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value fw-bold text-danger fs-5">@Model.TotalSpent.ToString("N0")₫</div>
+                            <div class="stat-label text-muted small">Tổng tiền tích lũy</div>
+                            <div class="stat-sub text-secondary x-small">Khách hàng thân thiết</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cột 4: Kênh thành viên & Trạng thái tài khoản -->
+                <div class="col-12 col-lg-2 text-lg-end d-none d-lg-block">
+                    <div class="account-verified-status">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill small">
+                            <i class="fa-solid fa-circle-check me-1"></i>Đã xác thực
+                        </span>
+                        <div class="small text-muted mt-1">fuufishing.vn</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- 2. BỐ CỤC CHÍNH 2 CỘT (SIDEBAR + NỘI DUNG PROFILE)              -->
+        <!-- =============================================================== -->
+        <div class="row g-4">
+
+            <!-- CỘT TRÁI: SIDEBAR ĐIỀU HƯỚNG -->
+            <div class="col-12 col-lg-3">
+                <div class="profile-sidebar-card bg-white border rounded-3 p-2 shadow-sm sticky-top" style="top: 85px;">
+                    <nav class="profile-side-menu list-unstyled mb-0">
+                        <a asp-controller="Account" asp-action="Profile" class="side-menu-link active">
+                            <i class="fa-solid fa-id-card side-menu-icon"></i>
+                            <span>Thông tin tài khoản</span>
+                        </a>
+                        <a asp-controller="Order" asp-action="History" class="side-menu-link">
+                            <i class="fa-solid fa-receipt side-menu-icon"></i>
+                            <span>Lịch sử mua hàng</span>
+                        </a>
+                        <a href="javascript:void(0)" class="side-menu-link" data-bs-toggle="modal" data-bs-target="#modalChangePassword">
+                            <i class="fa-solid fa-key side-menu-icon"></i>
+                            <span>Đổi mật khẩu</span>
+                        </a>
+
+                        <hr class="my-2 border-secondary-subtle">
+
+                        <a href="/Contact" class="side-menu-link">
+                            <i class="fa-solid fa-headset side-menu-icon"></i>
+                            <span>Góp ý - Phản hồi - Hỗ trợ</span>
+                        </a>
+                        <a href="/Privacy" class="side-menu-link">
+                            <i class="fa-solid fa-shield-halved side-menu-icon"></i>
+                            <span>Điều khoản & Chính sách</span>
+                        </a>
+
+                        <hr class="my-2 border-secondary-subtle">
+
+                        <form asp-controller="Account" asp-action="Logout" method="post" id="sidebarLogoutForm">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="side-menu-link side-menu-logout text-danger w-100 text-start border-0 bg-transparent">
+                                <i class="fa-solid fa-right-from-bracket side-menu-icon text-danger"></i>
+                                <span>Đăng xuất</span>
+                            </button>
+                        </form>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- CỘT PHẢI: KHU VỰC THÔNG TIN TÀI KHOẢN -->
+            <div class="col-12 col-lg-9">
+
+                <!-- Alert Messages -->
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-3 mb-3" role="alert">
+                        <i class="fa-solid fa-circle-check me-2"></i>@TempData["SuccessMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm rounded-3 mb-3" role="alert">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>@TempData["ErrorMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                <!-- CARD 1: THÔNG TIN CÁ NHÂN -->
+                <div class="profile-content-card bg-white border rounded-3 p-4 mb-4 shadow-sm" id="section-personal">
+                    <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                        <h6 class="fw-bold text-dark mb-0 fs-6">
+                            <i class="fa-solid fa-user-gear me-2 text-secondary"></i>Thông tin cá nhân
+                        </h6>
+                        <button type="button" 
+                                class="btn-edit-trigger text-danger fw-semibold text-decoration-none border-0 bg-transparent small"
+                                data-bs-toggle="offcanvas" 
+                                data-bs-target="#offcanvasEditProfile">
+                            <i class="fa-solid fa-pen-to-square me-1"></i>Cập nhật
+                        </button>
+                    </div>
+
+                    <div class="profile-info-grid">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="info-field-group">
+                                    <div class="info-field-label text-muted small">Họ và tên:</div>
+                                    <div class="info-field-val fw-semibold text-dark">
+                                        @(string.IsNullOrEmpty(Model.FullName) ? "Chưa cập nhật" : Model.FullName)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="info-field-group">
+                                    <div class="info-field-label text-muted small">Số điện thoại:</div>
+                                    <div class="info-field-val fw-semibold text-dark font-monospace">
+                                        @(string.IsNullOrEmpty(Model.PhoneNumber) ? "Chưa cập nhật" : Model.PhoneNumber)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="info-field-group">
+                                    <div class="info-field-label text-muted small">Giới tính:</div>
+                                    <div class="info-field-val fw-semibold text-dark">
+                                        @(string.IsNullOrEmpty(Model.Gender) ? "Chưa thiết lập" : Model.Gender)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="info-field-group">
+                                    <div class="info-field-label text-muted small">Email:</div>
+                                    <div class="info-field-val fw-semibold text-dark">
+                                        @Model.Email
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="info-field-group">
+                                    <div class="info-field-label text-muted small">Tên đăng nhập:</div>
+                                    <div class="info-field-val fw-semibold text-dark font-monospace">
+                                        @Model.UserName
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="info-field-group">
+                                    <div class="info-field-label text-muted small">Địa chỉ mặc định:</div>
+                                    <div class="info-field-val fw-semibold text-dark">
+                                        @(defaultAddress != null ? defaultAddress.SpecificAddress : (!string.IsNullOrEmpty(Model.Address) ? Model.Address : "Chưa thiết lập"))
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: SỔ ĐỊA CHỈ -->
+                <div class="profile-content-card bg-white border rounded-3 p-4 mb-4 shadow-sm" id="section-address">
+                    <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <h6 class="fw-bold text-dark mb-0 fs-6">
+                                <i class="fa-solid fa-location-dot me-2 text-secondary"></i>Sổ địa chỉ
+                            </h6>
+                            <span class="badge bg-light text-secondary border">@(Model.Addresses?.Count ?? 0) địa chỉ</span>
+                        </div>
+                        <button type="button" 
+                                class="btn-add-address-btn text-danger fw-semibold border-0 bg-transparent small"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalAddAddress">
+                            <i class="fa-solid fa-plus me-1"></i>Thêm địa chỉ
+                        </button>
+                    </div>
+
+                    @if (Model.Addresses != null && Model.Addresses.Count > 0)
                     {
-                        <img src="https://ui-avatars.com/api/?name=@Model.UserName&background=3b5d50&color=fff" alt="Avatar" class="sidebar-avatar me-3" />
+                        <div class="address-list-container d-flex flex-column gap-3">
+                            @foreach (var addr in Model.Addresses)
+                            {
+                                <div class="address-item-box p-3 rounded-3 border @(addr.IsDefault ? "border-danger-subtle bg-danger-subtle-50" : "bg-white") position-relative">
+                                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2">
+                                        
+                                        <div class="address-details">
+                                            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                                <span class="fw-bold text-dark">@addr.FullName</span>
+                                                <span class="text-secondary small">|</span>
+                                                <span class="text-secondary font-monospace small">@addr.PhoneNumber</span>
+                                                @if (addr.IsDefault)
+                                                {
+                                                    <span class="badge-address-default">Mặc định</span>
+                                                }
+                                            </div>
+                                            <div class="text-secondary small">
+                                                <i class="fa-solid fa-map-pin me-1 text-muted"></i>@addr.SpecificAddress
+                                            </div>
+                                        </div>
+
+                                        <div class="address-actions d-flex align-items-center gap-2 mt-2 mt-md-0">
+                                            @if (!addr.IsDefault)
+                                            {
+                                                <form asp-controller="Account" asp-action="SetDefaultAddress" asp-route-id="@addr.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="returnUrl" value="/Account/Profile#section-address" />
+                                                    <button type="submit" class="btn-action-text text-secondary small">
+                                                        Đặt làm mặc định
+                                                    </button>
+                                                </form>
+                                            }
+
+                                            <button type="button" 
+                                                    class="btn-action-text text-primary small"
+                                                    onclick="openEditAddressModal(@addr.Id, '@Html.Raw(addr.FullName.Replace("'", "\'"))', '@addr.PhoneNumber', '@Html.Raw(addr.SpecificAddress.Replace("'", "\'"))', @(addr.IsDefault ? "true" : "false"))">
+                                                Cập nhật
+                                            </button>
+
+                                            <form asp-controller="Account" asp-action="DeleteAddress" asp-route-id="@addr.Id" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa địa chỉ này?');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="returnUrl" value="/Account/Profile#section-address" />
+                                                <button type="submit" class="btn-action-text text-danger small">
+                                                    Xóa
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     }
                     else
                     {
-                        <img src="@Model.AvatarUrl" alt="Avatar" class="sidebar-avatar me-3" />
+                        <div class="text-center py-4 border rounded-3 bg-light">
+                            <i class="fa-solid fa-map-location-dot fa-2x text-muted mb-2 opacity-50"></i>
+                            <div class="text-dark fw-semibold small">Bạn chưa có địa chỉ nhận hàng nào</div>
+                            <p class="text-muted small mb-2">Thêm địa chỉ giao hàng để đặt hàng nhanh chóng và thuận tiện hơn.</p>
+                            <button type="button" class="btn btn-sm btn-outline-danger px-3 rounded-pill" data-bs-toggle="modal" data-bs-target="#modalAddAddress">
+                                <i class="fa-solid fa-plus me-1"></i>Thêm địa chỉ đầu tiên
+                            </button>
+                        </div>
                     }
-                    <div>
-                        <h6 class="mb-0 fw-bold">@Model.UserName</h6>
-                        <a href="#" class="text-muted small text-decoration-none edit-profile-link">
-                            <svg viewBox="0 0 24 24" class="icon-pencil"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg> Sửa Hồ Sơ
-                        </a>
-                    </div>
                 </div>
 
-                <ul class="sidebar-menu list-unstyled">
-                    <li class="menu-item active mb-2">
-                        <a href="#">
-                            <svg viewBox="0 0 24 24" class="menu-icon text-primary"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg> Tài Khoản Của Tôi
-                        </a>
-                        <ul class="sub-menu list-unstyled ms-4 mt-2">
-                            <li><a asp-controller="Account" asp-action="Profile" class="active-text">Hồ Sơ</a></li>
-                            <li><a asp-controller="Account" asp-action="Bank">Ngân Hàng</a></li>
-                            <li><a asp-controller="Account" asp-action="Address">Địa Chỉ</a></li>
-                            <li><a asp-controller="Account" asp-action="ChangePassword">Đổi Mật Khẩu</a></li>
-                        </ul>
-                    </li>
-                    <li class="menu-item mb-2 mt-3">
-                        <a asp-controller="Order" asp-action="History" class="text-decoration-none text-dark">
-                            <svg viewBox="0 0 24 24" class="menu-icon text-info"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor" /></svg> Đơn Mua
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="col-md-9">
-                <div class="profile-card card border-0 shadow-sm">
-                    <div class="card-header bg-white border-bottom pt-4 pb-3 px-4">
-                        <h5 class="mb-1 fw-bold">Hồ Sơ Của Tôi</h5>
-                        <p class="text-muted small mb-0">Quản lý thông tin hồ sơ để bảo mật tài khoản</p>
+                <!-- CARD 3: BẢO MẬT MẬT KHẨU & TÀI KHOẢN LIÊN KẾT (2 CỘT) -->
+                <div class="row g-3">
+                    
+                    <!-- Cột 1: Mật khẩu -->
+                    <div class="col-12 col-md-6">
+                        <div class="profile-content-card bg-white border rounded-3 p-4 h-100 shadow-sm" id="section-password">
+                            <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                                <h6 class="fw-bold text-dark mb-0 fs-6">
+                                    <i class="fa-solid fa-lock me-2 text-secondary"></i>Mật khẩu
+                                </h6>
+                                <button type="button" class="btn-action-text text-danger fw-semibold small text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalChangePassword">
+                                    <i class="fa-solid fa-key me-1"></i>Thay đổi mật khẩu
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 pt-1">
+                                <div class="shield-icon-wrap bg-light border rounded-circle d-flex align-items-center justify-content-center">
+                                    <i class="fa-solid fa-shield-halved text-success fa-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-dark small">Bảo mật tài khoản</div>
+                                    <div class="text-muted small">Nên thay đổi mật khẩu định kỳ để đảm bảo an toàn tuyệt đối.</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="card-body p-4">
-                        @if (TempData["SuccessMessage"] != null)
-                        {
-                            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                                <strong>Thành công!</strong> @TempData["SuccessMessage"]
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <!-- Cột 2: Tài khoản liên kết (KIỂM TRA THỰC TẾ LIÊN KẾT GOOGLE) -->
+                    <div class="col-12 col-md-6">
+                        <div class="profile-content-card bg-white border rounded-3 p-4 h-100 shadow-sm">
+                            <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                                <h6 class="fw-bold text-dark mb-0 fs-6">
+                                    <i class="fa-solid fa-link me-2 text-secondary"></i>Tài khoản liên kết
+                                </h6>
+                                <span class="badge @(Model.IsGoogleLinked ? "bg-success-subtle text-success border border-success-subtle" : "bg-light text-secondary border")">
+                                    @(Model.IsGoogleLinked ? "Đã liên kết" : "Chưa liên kết")
+                                </span>
                             </div>
-                        }
-
-                        <form asp-action="UpdateProfile" asp-controller="Account" method="post" enctype="multipart/form-data">
-                            <input type="hidden" asp-for="Id" />
-                            <input type="hidden" asp-for="AvatarUrl" /> 
-                            <input type="hidden" asp-for="Email" />
-                            <input type="hidden" asp-for="PhoneNumber" />
-                            <input type="hidden" asp-for="UserName" />
-
-                            <div class="row">
-                                <div class="col-md-8 pe-md-4">
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-3 text-md-end pt-2">
-                                            <label class="form-label-custom mb-0">Tên đăng nhập</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <input asp-for="UserName" class="profile-form-control" readonly />
-                                            <div class="small text-muted mt-1">Tên Đăng nhập chỉ có thể thay đổi một lần.</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-3 align-items-center">
-                                        <div class="col-md-3 text-md-end">
-                                            <label asp-for="FullName" class="form-label-custom mb-0">Tên</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <input asp-for="FullName" class="profile-form-control" placeholder="Nhập họ và tên" />
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-3 align-items-center">
-                                        <div class="col-md-3 text-md-end">
-                                            <label class="form-label-custom mb-0">Email</label>
-                                        </div>
-                                        <div class="col-md-9 d-flex align-items-center">
-                                            <span class="me-3 text-dark">@Model.MaskedEmail</span>
-                                            <a asp-action="ChangeEmail" asp-controller="Account" class="text-decoration-none small profile-link-blue">Thay Đổi</a>
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-3 align-items-center">
-                                        <div class="col-md-3 text-md-end">
-                                            <label class="form-label-custom mb-0">Số điện thoại</label>
-                                        </div>
-                                        <div class="col-md-9 d-flex align-items-center">
-                                            <span class="me-3 text-dark">@Model.MaskedPhoneNumber</span>
-                                            <a asp-action="ChangePhone" asp-controller="Account" class="text-decoration-none small profile-link-blue">Thay Đổi</a>
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-3 align-items-center">
-                                        <div class="col-md-3 text-md-end">
-                                            <label class="form-label-custom mb-0">Giới tính</label>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <div class="d-flex align-items-center gap-4 pt-1">
-                                                <div class="form-check mb-0">
-                                                    <input class="form-check-input custom-radio-umi" type="radio" asp-for="Gender" value="Nam" id="genderMale">
-                                                    <label class="form-check-label text-dark" for="genderMale">Nam</label>
-                                                </div>
-                                                <div class="form-check mb-0">
-                                                    <input class="form-check-input custom-radio-umi" type="radio" asp-for="Gender" value="Nữ" id="genderFemale">
-                                                    <label class="form-check-label text-dark" for="genderFemale">Nữ</label>
-                                                </div>
+                            
+                            <div class="d-flex flex-column gap-3">
+                                
+                                <!-- Google thực tế -->
+                                <div class="d-flex align-items-center justify-content-between p-2 rounded-2 bg-light border">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fa-brands fa-google text-danger fs-5"></i>
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="text-dark small fw-semibold">Google</span>
+                                                @if (Model.IsGoogleLinked)
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0-5" style="font-size: 11px;">
+                                                        <i class="fa-solid fa-circle-check me-1"></i>Đã liên kết
+                                                    </span>
+                                                }
+                                            </div>
+                                            <div class="text-muted x-small">
+                                                @(Model.IsGoogleLinked ? "Đã liên kết với Google" : "Chưa kết nối tài khoản")
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div class="row mb-4 align-items-center">
-                                        <div class="col-md-3 text-md-end">
-                                            <label class="form-label-custom mb-0">Địa chỉ</label>
-                                        </div>
-                                        <div class="col-md-9 d-flex align-items-center">
-                                            <span class="me-3 text-dark">@(string.IsNullOrEmpty(Model.Address) ? "Chưa thiết lập" : Model.Address)</span>
-
-                                            <a href="/account/address" class="text-decoration-none small profile-link-blue">Thay Đổi</a>
-
-                                            <input type="hidden" asp-for="Address" />
-                                        </div>
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-3"></div>
-                                        <div class="col-md-9">
-                                            <button type="submit" class="btn-save-profile">Lưu</button>
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                                <div class="col-md-4 border-start text-center avatar-upload-section d-flex flex-column align-items-center pt-3">
-                                    @if (string.IsNullOrEmpty(Model.AvatarUrl))
+                                    @if (Model.IsGoogleLinked)
                                     {
-                                        <img id="avatarPreview" src="https://ui-avatars.com/api/?name=@Model.UserName&background=3b5d50&color=fff&size=150" alt="Avatar" class="avatar-preview-lg" />
+                                        <form asp-controller="Account" asp-action="UnlinkGoogle" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn hủy liên kết tài khoản Google này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-unlink-google" title="Hủy liên kết tài khoản Google">
+                                                <i class="fa-solid fa-link-slash"></i>
+                                                <span>Hủy liên kết</span>
+                                            </button>
+                                        </form>
                                     }
                                     else
                                     {
-                                        <img id="avatarPreview" src="@Model.AvatarUrl" alt="Avatar" class="avatar-preview-lg" />
+                                        <a href="/account/google-login?returnUrl=/Account/Profile" class="btn-link-google" title="Liên kết với tài khoản Google">
+                                            <i class="fa-brands fa-google me-1"></i>
+                                            <span>Liên kết ngay</span>
+                                        </a>
                                     }
+                                </div>
 
-                                    <label asp-for="AvatarFile" class="btn-choose-image mt-3">Chọn Ảnh</label>
-                                    <input asp-for="AvatarFile" type="file" class="d-none" accept="image/jpeg, image/png" onchange="previewImage(event)" />
-                                    
-                                    <div class="avatar-upload-hint mt-3">
-                                        Dung lượng file tối đa 1 MB<br />
-                                        Định dạng: .JPEG, .PNG
+                                <!-- Email chính -->
+                                <div class="d-flex align-items-center justify-content-between p-2 rounded-2 bg-light border">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fa-solid fa-envelope text-primary fs-5"></i>
+                                        <div>
+                                            <div class="text-dark small fw-semibold">Email tài khoản</div>
+                                            <div class="text-muted small font-monospace">@Model.MaskedEmail</div>
+                                        </div>
                                     </div>
-                                </div>  
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 small">
+                                        Mặc định
+                                    </span>
+                                </div>
+
                             </div>
-                        </form>
+                        </div>
                     </div>
+
                 </div>
+
             </div>
 
         </div>
     </div>
 </div>
 
+
+<!-- =================================================================== -->
+<!-- 3. NGĂN KÉO OFFCANVAS: CẬP NHẬT THÔNG TIN CÁ NHÂN (CELLPHONES STYLE) -->
+<!-- =================================================================== -->
+<div class="offcanvas offcanvas-end offcanvas-fuu" tabindex="-1" id="offcanvasEditProfile" aria-labelledby="offcanvasEditProfileLabel">
+    <div class="offcanvas-header border-bottom py-3 px-4">
+        <h5 class="offcanvas-title fw-bold text-dark fs-6" id="offcanvasEditProfileLabel">
+            Cập nhật thông tin cá nhân
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+
+    <div class="offcanvas-body p-4">
+        <form asp-controller="Account" asp-action="UpdateProfile" method="post" enctype="multipart/form-data" id="formUpdateProfile">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="AvatarUrl" />
+            <input type="hidden" asp-for="UserName" />
+            <input type="hidden" asp-for="Email" />
+
+            <!-- Avatar Preview & Change -->
+            <div class="avatar-edit-box text-center mb-4 pb-3 border-bottom">
+                <div class="position-relative d-inline-block">
+                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                    {
+                        <img id="offcanvasAvatarPreview" src="@Model.AvatarUrl" alt="Avatar" class="avatar-offcanvas-img rounded-circle border" />
+                    }
+                    else
+                    {
+                        <div id="offcanvasAvatarFallback" class="avatar-offcanvas-fallback rounded-circle d-flex align-items-center justify-content-center fw-bold text-white fs-4">
+                            @((!string.IsNullOrEmpty(Model.FullName) ? Model.FullName.Substring(0, 1) : (!string.IsNullOrEmpty(Model.UserName) ? Model.UserName.Substring(0, 1) : "F")).ToUpper())
+                        </div>
+                    }
+                    <label for="offcanvasAvatarFile" class="avatar-camera-overlay rounded-circle" title="Tải ảnh mới">
+                        <i class="fa-solid fa-camera"></i>
+                    </label>
+                </div>
+                <input type="file" id="offcanvasAvatarFile" name="AvatarFile" class="d-none" accept="image/jpeg,image/png,image/webp" onchange="previewOffcanvasAvatar(event)" />
+                <div class="text-muted small mt-2">Dung lượng tối đa 2MB (JPEG, PNG, WebP)</div>
+            </div>
+
+            <!-- Họ và tên -->
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label fuu-label">Họ và tên <span class="text-danger">*</span></label>
+                <input asp-for="FullName" class="form-control fuu-control" placeholder="Nhập họ và tên đầy đủ..." required />
+            </div>
+
+            <!-- Giới tính -->
+            <div class="mb-3">
+                <label asp-for="Gender" class="form-label fuu-label">Giới tính</label>
+                <select asp-for="Gender" class="form-select fuu-control">
+                    <option value="">-- Chọn giới tính --</option>
+                    <option value="Nam">Nam</option>
+                    <option value="Nữ">Nữ</option>
+                    <option value="Khác">Khác</option>
+                </select>
+            </div>
+
+            <!-- Số điện thoại -->
+            <div class="mb-3">
+                <label asp-for="PhoneNumber" class="form-label fuu-label">Số điện thoại</label>
+                <input asp-for="PhoneNumber" class="form-control fuu-control font-monospace" placeholder="09xxxxxxxx" />
+            </div>
+
+            <!-- Email (readonly) -->
+            <div class="mb-3">
+                <label class="form-label fuu-label">Địa chỉ Email</label>
+                <input type="text" class="form-control fuu-control bg-light text-muted" value="@Model.Email" readonly />
+                <div class="small text-muted mt-1">Email được cố định để định danh tài khoản.</div>
+            </div>
+
+            <!-- Địa chỉ mặc định -->
+            <div class="mb-4">
+                <label asp-for="Address" class="form-label fuu-label">Địa chỉ mặc định</label>
+                <input asp-for="Address" class="form-control fuu-control" placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành..." />
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="offcanvas-footer-buttons pt-3 border-top d-flex gap-2">
+                <button type="reset" class="btn btn-outline-secondary w-50 py-2 fw-semibold">
+                    Thiết lập lại
+                </button>
+                <button type="submit" class="btn btn-fuu-primary w-50 py-2 fw-semibold">
+                    Cập nhật thông tin
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- =================================================================== -->
+<!-- 4. MODAL: THÊM ĐỊA CHỈ MỚI (CHUẨN TỈNH/QUẬN/PHƯỜNG CELLPHONES)      -->
+<!-- =================================================================== -->
+<div class="modal fade" id="modalAddAddress" tabindex="-1" aria-labelledby="modalAddAddressLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="modalAddAddressLabel">
+                    Thêm địa chỉ
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form asp-controller="Account" asp-action="AddAddress" method="post" id="formAddAddress" onsubmit="return handleAddAddressSubmit(this);">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="/Account/Profile#section-address" />
+                <input type="hidden" name="SpecificAddress" id="addFinalSpecificAddress" />
+
+                <div class="modal-body p-4" style="max-height: calc(85vh - 120px); overflow-y: auto;">
+                    
+                    <!-- Thông tin người nhận -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fuu-label">Họ và tên người nhận <span class="text-danger">*</span></label>
+                            <input type="text" name="FullName" id="addReceiverName" class="form-control fuu-control" placeholder="Nhập họ và tên..." required />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fuu-label">Số điện thoại <span class="text-danger">*</span></label>
+                            <input type="tel" name="PhoneNumber" id="addReceiverPhone" class="form-control fuu-control font-monospace" placeholder="09xxxxxxxx" required />
+                        </div>
+                    </div>
+
+                    <!-- Địa chỉ nhận hàng Header -->
+                    <div class="fw-bold text-dark small mb-2 pt-1 border-top">
+                        Địa chỉ nhận hàng
+                    </div>
+
+                    <!-- Tỉnh/Thành phố -->
+                    <div class="mb-2">
+                        <label class="form-label fuu-label mb-1">Tỉnh/Thành phố <span class="text-danger">*</span></label>
+                        <select id="addProvince" class="form-select fuu-control" onchange="onProvinceSelected(this, 'addDistrict', 'addWard')" required>
+                            <option value="">Chọn Tỉnh/Thành phố</option>
+                        </select>
+                    </div>
+
+                    <!-- Quận/Huyện -->
+                    <div class="mb-2">
+                        <label class="form-label fuu-label mb-1">Quận/Huyện <span class="text-danger">*</span></label>
+                        <select id="addDistrict" class="form-select fuu-control" onchange="onDistrictSelected(this, 'addWard')" disabled required>
+                            <option value="">Chọn Quận/Huyện</option>
+                        </select>
+                    </div>
+
+                    <!-- Phường/Xã -->
+                    <div class="mb-2">
+                        <label class="form-label fuu-label mb-1">Phường/Xã <span class="text-danger">*</span></label>
+                        <select id="addWard" class="form-select fuu-control" disabled required>
+                            <option value="">Chọn Phường/Xã</option>
+                        </select>
+                    </div>
+
+                    <!-- Địa chỉ nhà -->
+                    <div class="mb-3">
+                        <label class="form-label fuu-label mb-1">Địa chỉ nhà <span class="text-danger">*</span></label>
+                        <input type="text" id="addStreet" class="form-control fuu-control" placeholder="Nhập địa chỉ nhà (số nhà, tên đường...)" required />
+                    </div>
+
+                    <hr class="my-3 border-secondary-subtle">
+
+                    <!-- Đặt tên gợi nhớ -->
+                    <div class="mb-3">
+                        <label class="form-label fuu-label mb-1">Đặt tên gợi nhớ</label>
+                        <input type="text" id="addAddressLabel" class="form-control fuu-control" placeholder="Đặt tên gợi nhớ (Ví dụ: Nhà riêng, Công ty, Bến bãi...)" />
+                    </div>
+
+                    <!-- Loại địa chỉ -->
+                    <div class="mb-3">
+                        <label class="form-label fuu-label mb-1">Loại địa chỉ</label>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn-address-type-pill active" id="pillAddHome" onclick="setAddressTypePill('Nhà', 'pillAddHome', 'pillAddOffice', 'hiddenAddType')">
+                                Nhà
+                            </button>
+                            <button type="button" class="btn-address-type-pill" id="pillAddOffice" onclick="setAddressTypePill('Văn phòng', 'pillAddHome', 'pillAddOffice', 'hiddenAddType')">
+                                Văn phòng
+                            </button>
+                            <input type="hidden" id="hiddenAddType" value="Nhà" />
+                        </div>
+                    </div>
+
+                    <hr class="my-3 border-secondary-subtle">
+
+                    <!-- Đặt làm địa chỉ mặc định (Switch) -->
+                    <div class="form-check form-switch d-flex justify-content-between align-items-center p-0 pt-1">
+                        <label class="form-check-label fw-semibold text-dark small" for="addIsDefaultSwitch">
+                            Đặt làm địa chỉ mặc định
+                        </label>
+                        <input class="form-check-input fuu-switch ms-0" type="checkbox" role="switch" name="IsDefault" value="true" id="addIsDefaultSwitch" />
+                    </div>
+
+                </div>
+
+                <div class="modal-footer border-top p-3 bg-white">
+                    <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold rounded-3 fs-6">
+                        Thêm địa chỉ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- =================================================================== -->
+<!-- 5. MODAL: CẬP NHẬT ĐỊA CHỈ (EDIT ADDRESS)                           -->
+<!-- =================================================================== -->
+<div class="modal fade" id="modalEditAddress" tabindex="-1" aria-labelledby="modalEditAddressLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="modalEditAddressLabel">
+                    Cập nhật địa chỉ
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form asp-controller="Account" asp-action="EditAddress" method="post" id="formEditAddress">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="/Account/Profile#section-address" />
+                <input type="hidden" name="Id" id="editAddressId" />
+
+                <div class="modal-body p-4">
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fuu-label">Họ và tên người nhận <span class="text-danger">*</span></label>
+                            <input type="text" name="FullName" id="editAddressFullName" class="form-control fuu-control" required />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fuu-label">Số điện thoại <span class="text-danger">*</span></label>
+                            <input type="tel" name="PhoneNumber" id="editAddressPhoneNumber" class="form-control fuu-control font-monospace" required />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Địa chỉ chi tiết <span class="text-danger">*</span></label>
+                        <textarea name="SpecificAddress" id="editAddressSpecificAddress" rows="3" class="form-control fuu-control" required></textarea>
+                        <div class="small text-muted mt-1">Bao gồm số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành.</div>
+                    </div>
+
+                    <div class="form-check form-switch d-flex justify-content-between align-items-center p-0 pt-2 border-top">
+                        <label class="form-check-label fw-semibold text-dark small" for="editAddressIsDefault">
+                            Đặt làm địa chỉ mặc định
+                        </label>
+                        <input class="form-check-input fuu-switch ms-0" type="checkbox" role="switch" name="IsDefault" value="true" id="editAddressIsDefault" />
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top p-3 bg-white">
+                    <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold rounded-3 fs-6">
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- =================================================================== -->
+<!-- 6. MODAL: ĐỔI MẬT KHẨU NGAY TRÊN TRANG PROFILE (POPUP MODAL)        -->
+<!-- =================================================================== -->
+<div class="modal fade" id="modalChangePassword" tabindex="-1" aria-labelledby="modalChangePasswordLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-light p-2 rounded-circle border text-dark">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark fs-6" id="modalChangePasswordLabel">
+                            Đổi Mật Khẩu
+                        </h5>
+                        <div class="text-muted small">Bảo vệ tài khoản an toàn</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form asp-controller="Account" asp-action="ChangePassword" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="/Account/Profile" />
+
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Mật khẩu hiện tại <span class="text-danger">*</span></label>
+                        <input type="password" name="CurrentPassword" class="form-control fuu-control" placeholder="Nhập mật khẩu hiện tại..." required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Mật khẩu mới <span class="text-danger">*</span></label>
+                        <input type="password" name="NewPassword" class="form-control fuu-control" placeholder="Ít nhất 6 ký tự..." minlength="6" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Xác nhận mật khẩu mới <span class="text-danger">*</span></label>
+                        <input type="password" name="ConfirmPassword" class="form-control fuu-control" placeholder="Nhập lại mật khẩu mới..." minlength="6" required />
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top p-3 d-flex gap-2 bg-light">
+                    <button type="button" class="btn btn-outline-secondary w-50 py-2 fw-semibold" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-fuu-primary w-50 py-2 fw-semibold">Cập nhật mật khẩu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- =================================================================== -->
+<!-- 7. CSS NỘI BỘ TRANG PROFILE (ANTI-AI-SLOP TIÊU CHUẨN)               -->
+<!-- =================================================================== -->
+<style>
+    :root {
+        --fuu-primary: #253f36;
+        --fuu-primary-hover: #1b2f28;
+        --fuu-red: #d32f2f;
+        --fuu-red-hover: #b71c1c;
+        --fuu-border: #e2e8f0;
+        --fuu-bg-subtle: #f8fafc;
+    }
+
+    /* Ẩn hình ảnh cần câu trang trí footer gây che khuất nội dung */
+    .footer-section .sofa-img {
+        display: none !important;
+    }
+
+    .profile-container {
+        background-color: #f4f6f8;
+        min-height: 80vh;
+        padding-bottom: 70px !important;
+    }
+
+    /* User Summary Card */
+    .user-summary-card {
+        border-color: var(--fuu-border) !important;
+    }
+
+    .user-top-avatar {
+        width: 68px;
+        height: 68px;
+        object-fit: cover;
+    }
+
+    .user-top-avatar-fallback {
+        width: 68px;
+        height: 68px;
+        background-color: var(--fuu-primary);
+        font-size: 1.5rem;
+    }
+
+    .avatar-quick-edit-btn {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 24px;
+        height: 24px;
+        background: #ffffff;
+        border: 1px solid var(--fuu-border);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: var(--fuu-primary);
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+    }
+
+    .avatar-quick-edit-btn:hover {
+        background: var(--fuu-primary);
+        color: #ffffff;
+    }
+
+    .btn-toggle-mask-phone {
+        background: transparent;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0;
+        font-size: 0.85rem;
+    }
+
+    .btn-toggle-mask-phone:hover {
+        color: var(--fuu-primary);
+    }
+
+    .stat-icon-wrap {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* Border responsive utilities */
+    @@media (min-width: 768px) {
+        .border-end-md {
+            border-right: 1px solid var(--fuu-border);
+        }
+    }
+    @@media (min-width: 992px) {
+        .border-end-lg {
+            border-right: 1px solid var(--fuu-border);
+        }
+    }
+
+    .x-small {
+        font-size: 0.75rem;
+    }
+
+    /* Sidebar Navigation Card */
+    .profile-sidebar-card {
+        border-color: var(--fuu-border) !important;
+    }
+
+    .side-menu-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        color: #334155;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        margin-bottom: 2px;
+    }
+
+    .side-menu-icon {
+        width: 20px;
+        text-align: center;
+        color: #64748b;
+        font-size: 0.95rem;
+    }
+
+    .side-menu-link:hover {
+        background: #f1f5f9;
+        color: var(--fuu-primary);
+    }
+
+    .side-menu-link:hover .side-menu-icon {
+        color: var(--fuu-primary);
+    }
+
+    .side-menu-link.active {
+        background: #eef4f1;
+        color: var(--fuu-primary);
+        font-weight: 700;
+        border-left: 3px solid var(--fuu-primary);
+    }
+
+    .side-menu-link.active .side-menu-icon {
+        color: var(--fuu-primary);
+    }
+
+    .side-menu-logout:hover {
+        background: #fee2e2 !important;
+        color: #dc2626 !important;
+    }
+
+    /* Profile Content Cards */
+    .profile-content-card {
+        border-color: var(--fuu-border) !important;
+    }
+
+    .info-field-group {
+        padding: 8px 12px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #edf2f7;
+    }
+
+    .info-field-label {
+        font-size: 0.775rem;
+        margin-bottom: 2px;
+    }
+
+    .info-field-val {
+        font-size: 0.875rem;
+        word-break: break-word;
+    }
+
+    /* Address Items */
+    .address-item-box {
+        border-color: #cbd5e1;
+        transition: all 0.15s ease;
+    }
+
+    .address-item-box:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    .badge-address-default {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+
+    .bg-danger-subtle-50 {
+        background-color: #fffafa;
+    }
+
+    .btn-action-text {
+        background: none;
+        border: none;
+        padding: 0;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: underline;
+    }
+
+    .btn-action-text:hover {
+        opacity: 0.8;
+    }
+
+    .shield-icon-wrap {
+        width: 48px;
+        height: 48px;
+    }
+
+    /* Anti-AI-slop High-contrast Form Controls */
+    .fuu-label {
+        font-weight: 600;
+        font-size: 0.825rem;
+        color: #1e293b;
+        margin-bottom: 5px;
+    }
+
+    .fuu-control {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        font-size: 0.875rem !important;
+        background: #ffffff !important;
+        color: #1e293b !important;
+    }
+
+    .fuu-control:focus {
+        border-color: var(--fuu-primary) !important;
+        box-shadow: 0 0 0 2px rgba(37, 63, 54, 0.15) !important;
+    }
+
+    .fuu-switch {
+        cursor: pointer;
+        width: 40px !important;
+        height: 22px !important;
+    }
+    .fuu-switch:checked {
+        background-color: var(--fuu-red) !important;
+        border-color: var(--fuu-red) !important;
+    }
+
+    /* Address Type Pills */
+    .btn-address-type-pill {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 6px 18px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-address-type-pill.active {
+        border-color: var(--fuu-red);
+        color: var(--fuu-red);
+        background-color: #fff5f5;
+        font-weight: 600;
+    }
+
+    .btn-fuu-primary {
+        background: var(--fuu-primary) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 6px !important;
+        transition: background 0.15s ease;
+    }
+
+    .btn-fuu-primary:hover {
+        background: var(--fuu-primary-hover) !important;
+        color: #ffffff !important;
+    }
+
+    /* Offcanvas Styling */
+    .offcanvas-fuu {
+        width: 480px;
+        max-width: 95vw;
+        border-left: 1px solid var(--fuu-border);
+    }
+
+    .avatar-offcanvas-img {
+        width: 90px;
+        height: 90px;
+        object-fit: cover;
+    }
+
+    .avatar-offcanvas-fallback {
+        width: 90px;
+        height: 90px;
+        background-color: var(--fuu-primary);
+    }
+
+    .avatar-camera-overlay {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 30px;
+        height: 30px;
+        background: #ffffff;
+        border: 1px solid var(--fuu-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        color: var(--fuu-primary);
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        transition: all 0.2s ease;
+    }
+
+    .avatar-camera-overlay:hover {
+        background: var(--fuu-primary);
+        color: #ffffff;
+    }
+
+    /* Nút Hủy liên kết Google & Liên kết ngay */
+    .btn-unlink-google {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        background: #ffffff !important;
+        color: #dc2626 !important;
+        border: 1px solid #fca5a5 !important;
+        border-radius: 6px !important;
+        padding: 5px 12px !important;
+        font-size: 0.8125rem !important;
+        font-weight: 500 !important;
+        line-height: 1.25 !important;
+        cursor: pointer !important;
+        text-decoration: none !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+
+    .btn-unlink-google:hover {
+        background-color: #fef2f2 !important;
+        border-color: #ef4444 !important;
+        color: #b91c1c !important;
+        box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1) !important;
+    }
+
+    .btn-unlink-google i {
+        font-size: 0.775rem !important;
+    }
+
+    .btn-link-google {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        background: var(--fuu-primary) !important;
+        color: #ffffff !important;
+        border: 1px solid var(--fuu-primary) !important;
+        border-radius: 6px !important;
+        padding: 5px 12px !important;
+        font-size: 0.8125rem !important;
+        font-weight: 500 !important;
+        line-height: 1.25 !important;
+        cursor: pointer !important;
+        text-decoration: none !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+
+    .btn-link-google:hover {
+        background: var(--fuu-primary-hover) !important;
+        border-color: var(--fuu-primary-hover) !important;
+        color: #ffffff !important;
+    }
+
+    @@media (max-width: 991px) {
+        .profile-sidebar-card {
+            position: static !important;
+            margin-bottom: 16px;
+        }
+        .profile-side-menu {
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            gap: 8px;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .profile-side-menu::-webkit-scrollbar {
+            display: none;
+        }
+        .profile-side-menu .side-menu-link {
+            border-radius: 20px !important;
+            padding: 6px 14px !important;
+            background: #f1f5f9;
+            font-size: 0.8125rem !important;
+            flex-shrink: 0;
+        }
+        .profile-side-menu .side-menu-link.active {
+            background: #253f36 !important;
+            color: #ffffff !important;
+        }
+        .profile-side-menu hr {
+            display: none;
+        }
+        .profile-sidebar-card form {
+            display: inline-flex;
+            flex-shrink: 0;
+            margin-bottom: 0;
+        }
+    }
+</style>
+
+
+<!-- =================================================================== -->
+<!-- 8. JAVASCRIPT XỬ LÝ (MODAL, OFFCANVAS, LOCATION API PROVINCES)       -->
+<!-- =================================================================== -->
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
-        function previewImage(event) {
-            var reader = new FileReader();
-            reader.onload = function() {
-                var output = document.getElementById('avatarPreview');
-                output.src = reader.result;
+        // Toggle ẩn/hiện số điện thoại
+        let isPhoneMasked = true;
+        function togglePhoneMask(fullPhone, maskedPhone) {
+            const el = document.getElementById("displayPhone");
+            const icon = document.getElementById("eyePhoneIcon");
+            if (!el || !icon) return;
+
+            if (isPhoneMasked) {
+                el.textContent = fullPhone;
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+                isPhoneMasked = false;
+            } else {
+                el.textContent = maskedPhone;
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+                isPhoneMasked = true;
             }
-            if(event.target.files[0]) {
-                reader.readAsDataURL(event.target.files[0]);
+        }
+
+        // Preview ảnh đại diện trong Offcanvas
+        function previewOffcanvasAvatar(event) {
+            const input = event.target;
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewImg = document.getElementById("offcanvasAvatarPreview");
+                    const fallback = document.getElementById("offcanvasAvatarFallback");
+                    if (previewImg) {
+                        previewImg.src = e.target.result;
+                    } else if (fallback) {
+                        const newImg = document.createElement("img");
+                        newImg.id = "offcanvasAvatarPreview";
+                        newImg.src = e.target.result;
+                        newImg.className = "avatar-offcanvas-img rounded-circle border";
+                        fallback.parentNode.replaceChild(newImg, fallback);
+                    }
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Chọn Loại địa chỉ (Nhà / Văn phòng)
+        function setAddressTypePill(typeVal, homeId, officeId, hiddenId) {
+            const homeBtn = document.getElementById(homeId);
+            const officeBtn = document.getElementById(officeId);
+            const hiddenInput = document.getElementById(hiddenId);
+
+            if (typeVal === "Nhà") {
+                homeBtn.classList.add("active");
+                officeBtn.classList.remove("active");
+            } else {
+                homeBtn.classList.remove("active");
+                officeBtn.classList.add("active");
+            }
+
+            if (hiddenInput) hiddenInput.value = typeVal;
+        }
+
+        // ===============================================================
+        // LOAD LOCATION PROVINCES / DISTRICTS / WARDS
+        // ===============================================================
+        document.addEventListener("DOMContentLoaded", function () {
+            loadLocationProvinces("addProvince");
+        });
+
+        async function loadLocationProvinces(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            try {
+                const res = await fetch("/api/location/provinces");
+                if (!res.ok) throw new Error("Không thể tải tỉnh thành");
+                const data = await res.json();
+
+                select.innerHTML = '<option value="">Chọn Tỉnh/Thành phố</option>';
+                data.forEach(p => {
+                    const opt = document.createElement("option");
+                    opt.value = p.code;
+                    opt.dataset.name = p.name;
+                    opt.textContent = p.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Lỗi nạp tỉnh thành:", err);
+            }
+        }
+
+        async function onProvinceSelected(provinceSelect, districtSelectId, wardSelectId) {
+            const districtSelect = document.getElementById(districtSelectId);
+            const wardSelect = document.getElementById(wardSelectId);
+
+            districtSelect.innerHTML = '<option value="">Chọn Quận/Huyện</option>';
+            wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+            wardSelect.disabled = true;
+
+            const provinceCode = provinceSelect.value;
+            if (!provinceCode) {
+                districtSelect.disabled = true;
+                return;
+            }
+
+            try {
+                districtSelect.disabled = true;
+                const res = await fetch(`/api/location/districts/${provinceCode}`);
+                if (!res.ok) throw new Error("Lỗi tải quận huyện");
+                const data = await res.json();
+
+                districtSelect.innerHTML = '<option value="">Chọn Quận/Huyện</option>';
+                data.forEach(d => {
+                    const opt = document.createElement("option");
+                    opt.value = d.code;
+                    opt.dataset.name = d.name;
+                    opt.textContent = d.name;
+                    districtSelect.appendChild(opt);
+                });
+                districtSelect.disabled = false;
+            } catch (err) {
+                console.error("Lỗi nạp quận huyện:", err);
+            }
+        }
+
+        async function onDistrictSelected(districtSelect, wardSelectId) {
+            const wardSelect = document.getElementById(wardSelectId);
+            wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+
+            const districtCode = districtSelect.value;
+            if (!districtCode) {
+                wardSelect.disabled = true;
+                return;
+            }
+
+            try {
+                wardSelect.disabled = true;
+                const res = await fetch(`/api/location/wards/${districtCode}`);
+                if (!res.ok) throw new Error("Lỗi tải phường xã");
+                const data = await res.json();
+
+                wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+                data.forEach(w => {
+                    const opt = document.createElement("option");
+                    opt.value = w.code;
+                    opt.dataset.name = w.name;
+                    opt.textContent = w.name;
+                    wardSelect.appendChild(opt);
+                });
+                wardSelect.disabled = false;
+            } catch (err) {
+                console.error("Lỗi nạp phường xã:", err);
+            }
+        }
+
+        // Xử lý submit Thêm địa chỉ (gộp thành chuỗi đầy đủ)
+        function handleAddAddressSubmit(form) {
+            const provSelect = document.getElementById("addProvince");
+            const distSelect = document.getElementById("addDistrict");
+            const wardSelect = document.getElementById("addWard");
+            const streetInput = document.getElementById("addStreet");
+            const labelInput = document.getElementById("addAddressLabel");
+            const typeInput = document.getElementById("hiddenAddType");
+
+            const provName = provSelect.options[provSelect.selectedIndex]?.dataset.name || "";
+            const distName = distSelect.options[distSelect.selectedIndex]?.dataset.name || "";
+            const wardName = wardSelect.options[wardSelect.selectedIndex]?.dataset.name || "";
+            const street = streetInput.value.trim();
+            const label = labelInput ? labelInput.value.trim() : "";
+            const addrType = typeInput ? typeInput.value.trim() : "Nhà";
+
+            if (!street || !provName || !distName || !wardName) {
+                alert("Vui lòng chọn đầy đủ Tỉnh/Thành phố, Quận/Huyện, Phường/Xã và Nhập địa chỉ nhà.");
+                return false;
+            }
+
+            let fullAddress = `${street}, ${wardName}, ${distName}, ${provName}`;
+            if (label) {
+                fullAddress = `[${label} - ${addrType}] ` + fullAddress;
+            }
+
+            document.getElementById("addFinalSpecificAddress").value = fullAddress;
+            return true;
+        }
+
+        // Mở Modal Sửa Địa Chỉ và nạp dữ liệu
+        function openEditAddressModal(id, fullName, phone, address, isDefault) {
+            document.getElementById("editAddressId").value = id;
+            document.getElementById("editAddressFullName").value = fullName;
+            document.getElementById("editAddressPhoneNumber").value = phone;
+            document.getElementById("editAddressSpecificAddress").value = address;
+            document.getElementById("editAddressIsDefault").checked = isDefault;
+
+            const modalEl = document.getElementById("modalEditAddress");
+            if (modalEl && typeof bootstrap !== "undefined") {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
             }
         }
     </script>

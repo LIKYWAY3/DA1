@@ -382,5 +382,47 @@ namespace ASPtestShop.Services.Implementations
                 Status = request.Status
             };
         }
+
+        public async Task<BatchRefundActionResultDto> BatchProcessRefundsAsync(List<int> refundRequestIds, string adminUserId, ProcessRefundDto dto)
+        {
+            if (refundRequestIds == null || !refundRequestIds.Any())
+            {
+                return new BatchRefundActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một yêu cầu hoàn tiền."
+                };
+            }
+
+            if (dto.Status == "Rejected" && string.IsNullOrWhiteSpace(dto.AdminNote))
+            {
+                return new BatchRefundActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng nhập lý do từ chối để thông báo cho khách hàng."
+                };
+            }
+
+            int successCount = 0;
+            var distinctIds = refundRequestIds.Distinct().ToList();
+
+            foreach (var id in distinctIds)
+            {
+                var result = await ProcessRefundAsync(id, adminUserId, dto);
+                if (result.Success)
+                {
+                    successCount++;
+                }
+            }
+
+            var actionName = dto.Status == "Approved" ? "phê duyệt" : "từ chối";
+            return new BatchRefundActionResultDto
+            {
+                Success = successCount > 0,
+                Message = $"Đã {actionName} thành công {successCount}/{distinctIds.Count} yêu cầu hoàn tiền.",
+                SuccessCount = successCount,
+                FailedCount = distinctIds.Count - successCount
+            };
+        }
     }
 }

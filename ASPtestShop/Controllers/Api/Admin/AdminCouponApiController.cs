@@ -96,5 +96,39 @@ namespace ASPtestShop.Controllers.Api.Admin
 
             return Ok(new { message = result.Message });
         }
+
+        // POST: /api/admin/coupons/batch-toggle
+        [HttpPost("batch-toggle")]
+        public async Task<IActionResult> BatchToggle([FromBody] BatchCouponRequestDto dto)
+        {
+            if (dto?.CouponIds == null || !dto.CouponIds.Any() || !dto.IsActive.HasValue)
+            {
+                return BadRequest(new BatchCouponActionResultDto
+                {
+                    Success = false,
+                    Message = "Dữ liệu không hợp lệ."
+                });
+            }
+
+            var result = await _couponService.BatchToggleActiveAsync(dto.CouponIds, dto.IsActive.Value);
+            return Ok(result);
+        }
+
+        // POST: /api/admin/coupons/batch-delete
+        [HttpPost("batch-delete")]
+        public async Task<IActionResult> BatchDelete([FromBody] BatchCouponRequestDto dto)
+        {
+            if (dto?.CouponIds == null || !dto.CouponIds.Any())
+            {
+                return BadRequest(new BatchCouponActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một mã giảm giá để xóa."
+                });
+            }
+
+            var result = await _couponService.BatchDeleteCouponsAsync(dto.CouponIds);
+            return Ok(result);
+        }
     }
 }

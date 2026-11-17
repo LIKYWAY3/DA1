@@ -25,6 +25,9 @@ namespace ASPtestShop.Services.Interfaces
         // Admin: Phê duyệt hoặc từ chối hoàn tiền
         Task<RefundResultDto> ProcessRefundAsync(int refundRequestId, string adminUserId, ProcessRefundDto dto);
 
+        // Admin: Xử lý hàng loạt yêu cầu hoàn tiền
+        Task<BatchRefundActionResultDto> BatchProcessRefundsAsync(List<int> refundRequestIds, string adminUserId, ProcessRefundDto dto);
+
         // Khách hàng: Gửi lại thông tin tài khoản khi yêu cầu bị từ chối
         Task<RefundResultDto> ResubmitRefundRequestAsync(string userId, ResubmitRefundRequestDto dto);
     }

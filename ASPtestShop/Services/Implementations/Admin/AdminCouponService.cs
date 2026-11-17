@@ -165,5 +165,103 @@ namespace ASPtestShop.Services.Implementations.Admin
             await _context.SaveChangesAsync();
             return (true, "Đã xóa mã giảm giá thành công!");
         }
+
+        public async Task<BatchCouponActionResultDto> BatchToggleActiveAsync(List<int> ids, bool isActive)
+        {
+            if (ids == null || !ids.Any())
+            {
+                return new BatchCouponActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một mã giảm giá để thay đổi trạng thái."
+                };
+            }
+
+            var distinctIds = ids.Distinct().ToList();
+            var coupons = await _context.Coupons.Where(c => distinctIds.Contains(c.CouponId)).ToListAsync();
+
+            if (!coupons.Any())
+            {
+                return new BatchCouponActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy mã giảm giá nào trong danh sách đã chọn."
+                };
+            }
+
+            foreach (var coupon in coupons)
+            {
+                coupon.IsActive = isActive;
+            }
+
+            await _context.SaveChangesAsync();
+
+            var actionName = isActive ? "Kích hoạt" : "Vô hiệu hóa";
+            return new BatchCouponActionResultDto
+            {
+                Success = true,
+                Message = $"Đã {actionName.ToLower()} thành công {coupons.Count} mã giảm giá.",
+                SuccessCount = coupons.Count,
+                FailedCount = distinctIds.Count - coupons.Count
+            };
+        }
+
+        public async Task<BatchCouponActionResultDto> BatchDeleteCouponsAsync(List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+            {
+                return new BatchCouponActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một mã giảm giá để xóa."
+                };
+            }
+
+            var distinctIds = ids.Distinct().ToList();
+            var coupons = await _context.Coupons
+                .Include(c => c.Orders)
+                .Where(c => distinctIds.Contains(c.CouponId))
+                .ToListAsync();
+
+            if (!coupons.Any())
+            {
+                return new BatchCouponActionResultDto
+                {
+                    Success = false,
+                    Message = "Không tìm thấy mã giảm giá nào trong danh sách đã chọn."
+                };
+            }
+
+            int hardDeleted = 0;
+            int softDeleted = 0;
+
+            foreach (var coupon in coupons)
+            {
+                if (coupon.Orders != null && coupon.Orders.Any())
+                {
+                    coupon.IsActive = false; // Soft delete
+                    softDeleted++;
+                }
+                else
+                {
+                    _context.Coupons.Remove(coupon);
+                    hardDeleted++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            var msg = softDeleted > 0
+                ? $"Đã xóa {hardDeleted} mã và vô hiệu hóa {softDeleted} mã (do đã có đơn hàng sử dụng)."
+                : $"Đã xóa thành công {hardDeleted} mã giảm giá.";
+
+            return new BatchCouponActionResultDto
+            {
+                Success = true,
+                Message = msg,
+                SuccessCount = coupons.Count,
+                FailedCount = distinctIds.Count - coupons.Count
+            };
+        }
     }
 }

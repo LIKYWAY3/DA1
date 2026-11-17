@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using ASPtestShop.Auth;
 using ASPtestShop.Models.ViewModels.Auth;
 using ASPtestShop.Services.Interfaces.User;
@@ -270,6 +271,7 @@ using System.Text.Json;
                     var verifiedEmail = userDoc.RootElement.TryGetProperty("verified_email", out var ve) && ve.GetBoolean();
                     var name = userDoc.RootElement.TryGetProperty("name", out var nm) ? nm.GetString() : "Người dùng Google";
                     var picture = userDoc.RootElement.TryGetProperty("picture", out var pic) ? pic.GetString() : null;
+                    var googleId = userDoc.RootElement.TryGetProperty("sub", out var subProp) ? subProp.GetString() : (userDoc.RootElement.TryGetProperty("id", out var idProp) ? idProp.GetString() : null);
 
                     if (string.IsNullOrEmpty(email) || !verifiedEmail)
                     {
@@ -277,8 +279,66 @@ using System.Text.Json;
                         return RedirectToAction("Login", new { returnUrl });
                     }
 
-                    var user = await _userManager.FindByEmailAsync(email);
+                    // Nếu user đã đăng nhập và đang thực hiện liên kết tài khoản từ Profile
+                    var currentLoggedInUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                    if (!string.IsNullOrEmpty(currentLoggedInUserId))
+                    {
+                        var currentUser = await _userManager.FindByIdAsync(currentLoggedInUserId);
+                        if (currentUser != null)
+                        {
+                            if (!string.IsNullOrEmpty(googleId))
+                            {
+                                // Kiểm tra xem Google ID này đã được liên kết với một tài khoản khác trong hệ thống chưa
+                                var userWithThisGoogle = await _userManager.FindByLoginAsync("Google", googleId);
+                                if (userWithThisGoogle != null && userWithThisGoogle.Id != currentUser.Id)
+                                {
+                                    TempData["ErrorMessage"] = "Tài khoản Google này đã được liên kết với một tài khoản khác.";
+                                    return Redirect(returnUrl ?? "/Account/Profile");
+                                }
 
+                                var existingLogins = await _userManager.GetLoginsAsync(currentUser);
+                                if (!existingLogins.Any(l => l.LoginProvider == "Google"))
+                                {
+                                    var addLoginResult = await _userManager.AddLoginAsync(currentUser, new UserLoginInfo("Google", googleId, "Google"));
+                                    if (!addLoginResult.Succeeded)
+                                    {
+                                        TempData["ErrorMessage"] = "Không thể liên kết tài khoản Google: " + string.Join(", ", addLoginResult.Errors.Select(e => e.Description));
+                                        return Redirect(returnUrl ?? "/Account/Profile");
+                                    }
+                                }
+                            }
+                            TempData["SuccessMessage"] = "Liên kết tài khoản Google thành công!";
+                            return Redirect(returnUrl ?? "/Account/Profile");
+                        }
+                    }
+
+                    // =========================================================================
+                    // NGƯỜI DÙNG ĐĂNG NHẬP BẰNG GOOGLE (CHƯA ĐĂNG NHẬP TRƯỚC ĐÓ)
+                    // =========================================================================
+                    ApplicationUser? user = null;
+
+                    // 1. ƯU TIÊN 1: Tìm kiếm tài khoản đã liên kết với Google ID (sub) trong AspNetUserLogins
+                    if (!string.IsNullOrEmpty(googleId))
+                    {
+                        user = await _userManager.FindByLoginAsync("Google", googleId);
+                    }
+
+                    // 2. ƯU TIÊN 2: Nếu chưa có trong AspNetUserLogins, tìm theo Email
+                    if (user == null && !string.IsNullOrEmpty(email))
+                    {
+                        user = await _userManager.FindByEmailAsync(email);
+                        // Nếu tìm thấy theo email, tự động ghi nhận liên kết Google để các lần đăng nhập sau khớp ngay
+                        if (user != null && !string.IsNullOrEmpty(googleId))
+                        {
+                            var existingLogins = await _userManager.GetLoginsAsync(user);
+                            if (!existingLogins.Any(l => l.LoginProvider == "Google"))
+                            {
+                                await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", googleId, "Google"));
+                            }
+                        }
+                    }
+
+                    // 3. ƯU TIÊN 3: Chưa có bất kỳ tài khoản nào -> Khởi tạo tài khoản Customer mới
                     if (user == null)
                     {
                         var baseUserName = email.Split('@')[0].Replace(".", "_");
@@ -299,6 +359,12 @@ using System.Text.Json;
                         {
                             TempData["ErrorMessage"] = "Không thể khởi tạo tài khoản mới từ Google: " + string.Join(", ", createResult.Errors.Select(e => e.Description));
                             return RedirectToAction("Login", new { returnUrl });
+                        }
+
+                        // Gán LoginProvider Google vào AspNetUserLogins cho tài khoản mới
+                        if (!string.IsNullOrEmpty(googleId))
+                        {
+                            await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", googleId, "Google"));
                         }
 
                         await _userManager.AddToRoleAsync(user, "Customer");
@@ -626,8 +692,32 @@ using System.Text.Json;
             if (userId == null) return RedirectToAction("Login");
 
             var userProfile = await _userAuthService.GetUserProfileAsync(userId);
-
             if (userProfile == null) return NotFound("Không tìm thấy thông tin người dùng");
+
+            // Query user orders for overview stats
+            var orders = await _context.Orders
+                .Where(o => o.UserId == userId)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var totalOrders = orders.Count;
+            var totalSpent = orders
+                .Where(o => o.OrderStatus != "Cancelled")
+                .Sum(o => o.FinalAmount);
+
+            // Query user addresses
+            var addresses = await _context.UserAddresses
+                .Where(a => a.UserId == userId)
+                .OrderByDescending(a => a.IsDefault)
+                .ThenByDescending(a => a.Id)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var defaultAddress = addresses.FirstOrDefault(a => a.IsDefault) ?? addresses.FirstOrDefault();
+
+            var appUser = await _userManager.FindByIdAsync(userId);
+            var logins = appUser != null ? await _userManager.GetLoginsAsync(appUser) : new List<UserLoginInfo>();
+            var isGoogleLinked = logins.Any(l => l.LoginProvider.Equals("Google", StringComparison.OrdinalIgnoreCase));
 
             var model = new UserProfileViewModel
             {
@@ -636,9 +726,14 @@ using System.Text.Json;
                 UserName = userProfile.UserName,
                 Email = userProfile.Email,
                 PhoneNumber = userProfile.PhoneNumber,
-                Address = userProfile.Address,
+                Address = userProfile.Address ?? defaultAddress?.SpecificAddress,
                 Gender = userProfile.Gender,
-                AvatarUrl = userProfile.AvatarUrl
+                AvatarUrl = userProfile.AvatarUrl,
+                TotalOrders = totalOrders,
+                TotalSpent = totalSpent,
+                Addresses = addresses,
+                DefaultAddress = defaultAddress,
+                IsGoogleLinked = isGoogleLinked
             };
 
             return View(model);
@@ -682,6 +777,48 @@ using System.Text.Json;
                 }
 
                 return View("Profile", model);
+            }
+
+            // POST: /account/unlink-google
+            [HttpPost("unlink-google")]
+            [Authorize]
+            [ValidateAntiForgeryToken]
+            public async Task<IActionResult> UnlinkGoogle()
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null) return RedirectToAction("Login");
+
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user != null)
+                {
+                    var hasPassword = await _userManager.HasPasswordAsync(user);
+                    var logins = await _userManager.GetLoginsAsync(user);
+                    var googleLogin = logins.FirstOrDefault(l => l.LoginProvider.Equals("Google", StringComparison.OrdinalIgnoreCase));
+
+                    if (googleLogin != null)
+                    {
+                        if (!hasPassword && logins.Count <= 1)
+                        {
+                            TempData["ErrorMessage"] = "Bạn chưa đặt mật khẩu cho tài khoản, không thể hủy liên kết Google để tránh mất quyền đăng nhập.";
+                            return RedirectToAction("Profile");
+                        }
+
+                        var result = await _userManager.RemoveLoginAsync(user, googleLogin.LoginProvider, googleLogin.ProviderKey);
+                        if (result.Succeeded)
+                        {
+                            TempData["SuccessMessage"] = "Đã hủy liên kết tài khoản Google thành công!";
+                        }
+                        else
+                        {
+                            TempData["ErrorMessage"] = "Không thể hủy liên kết: " + string.Join(", ", result.Errors.Select(e => e.Description));
+                        }
+                    }
+                    else
+                    {
+                        TempData["ErrorMessage"] = "Tài khoản hiện tại chưa được liên kết với Google.";
+                    }
+                }
+                return RedirectToAction("Profile");
             }
             // GET: /account/ChangePhone
             [HttpGet("ChangePhone")]
@@ -816,30 +953,16 @@ using System.Text.Json;
             // GET: /account/address
             [HttpGet("address")]
             [Authorize]
-            public async Task<IActionResult> Address()
+            public IActionResult Address()
             {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (userId == null) return RedirectToAction("Login");
-
-                var user = await _userManager.FindByIdAsync(userId);
-
-                var addresses = await _userAuthService.GetUserAddressesAsync(userId);
-                ViewBag.Addresses = addresses;
-
-                var model = new UserProfileViewModel
-                {
-                    UserName = user.UserName,
-                    AvatarUrl = user.AvatarUrl
-                };
-
-                return View(model);
+                return Redirect("/Account/Profile#section-address");
             }
 
             // POST: /account/add-address
             [HttpPost("add-address")]
             [Authorize]
             [ValidateAntiForgeryToken]
-            public async Task<IActionResult> AddAddress(AddAddressViewModel model)
+            public async Task<IActionResult> AddAddress(AddAddressViewModel model, string? returnUrl = null)
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userId == null) return RedirectToAction("Login");
@@ -851,34 +974,51 @@ using System.Text.Json;
                     TempData["SuccessMessage"] = result.Message;
                 }
 
+                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    return Redirect(returnUrl);
+                }
+
                 return RedirectToAction("Address");
             }
 
             [HttpPost("set-default-address/{id}")]
             [Authorize]
-            public async Task<IActionResult> SetDefaultAddress(int id)
+            public async Task<IActionResult> SetDefaultAddress(int id, string? returnUrl = null)
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var result = await _userAuthService.SetDefaultAddressAsync(userId, id);
                 if (result.Success) TempData["SuccessMessage"] = result.Message;
+
+                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    return Redirect(returnUrl);
+                }
+
                 return RedirectToAction("Address");
             }
 
             [HttpPost("edit-address")]
             [Authorize]
             [ValidateAntiForgeryToken]
-            public async Task<IActionResult> EditAddress(EditAddressViewModel model)
+            public async Task<IActionResult> EditAddress(EditAddressViewModel model, string? returnUrl = null)
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var result = await _userAuthService.EditAddressAsync(userId, model);
                 if (result.Success) TempData["SuccessMessage"] = result.Message;
+
+                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    return Redirect(returnUrl);
+                }
+
                 return RedirectToAction("Address");
             }
 
             [HttpPost("delete-address/{id}")]
             [Authorize]
             [ValidateAntiForgeryToken]
-            public async Task<IActionResult> DeleteAddress(int id)
+            public async Task<IActionResult> DeleteAddress(int id, string? returnUrl = null)
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userId == null) return RedirectToAction("Login");
@@ -888,6 +1028,11 @@ using System.Text.Json;
                     TempData["SuccessMessage"] = result.Message;
                 else
                     TempData["ErrorMessage"] = result.Message;
+
+                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    return Redirect(returnUrl);
+                }
 
                 return RedirectToAction("Address");
             }
@@ -901,7 +1046,7 @@ using System.Text.Json;
             // POST: /account/change-password
             [HttpPost("change-password")]
             [ValidateAntiForgeryToken]
-            public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+            public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model, string? returnUrl = null)
             {
                 if (model.CurrentPassword == model.NewPassword)
                 {
@@ -909,6 +1054,12 @@ using System.Text.Json;
                 }
                 if (!ModelState.IsValid)
                 {
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                        TempData["ErrorMessage"] = !string.IsNullOrEmpty(errors) ? errors : "Thông tin đổi mật khẩu không hợp lệ.";
+                        return Redirect(returnUrl);
+                    }
                     return View(model);
                 }
 
@@ -923,10 +1074,19 @@ using System.Text.Json;
                 if (result.Success)
                 {
                     TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
                     return RedirectToAction("Profile");
                 }
                 else
                 {
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        TempData["ErrorMessage"] = result.Message ?? "Có lỗi xảy ra khi đổi mật khẩu.";
+                        return Redirect(returnUrl);
+                    }
                     ModelState.AddModelError(string.Empty, result.Message ?? "Có lỗi xảy ra khi đổi mật khẩu.");
                     return View(model);
                 }

@@ -97,10 +97,10 @@
             <div id="uploadedImageList" class="row g-3 mb-3">
             </div>
 
-            <button class="btn btn-primary" id="submitProductBtn" type="button" onclick="saveProduct()">
+            <button class="fuu-btn-primary" id="submitProductBtn" type="button" onclick="saveProduct()">
                 Thêm sản phẩm
             </button>
-            <button class="btn btn-secondary" type="button" onclick="resetProductForm()">
+            <button class="btn btn-outline-secondary" type="button" onclick="resetProductForm()">
                 Reset
             </button>
         </div>
@@ -595,18 +595,20 @@
                     <td>${product.stockQuantity}</td>
                     <td>${status}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning" type="button" onclick="editProduct(${product.productId})">
-                            Sửa
-                        </button>
+                        <div class="fuu-action-group">
+                            <button class="fuu-btn-action fuu-btn-edit" type="button" onclick="editProduct(${product.productId})" title="Sửa sản phẩm">
+                                <i class="fa fa-pen"></i> Sửa
+                            </button>
 
-                        ${product.isActive
-                            ? `<button class="btn btn-sm btn-danger" type="button" onclick="hideProduct(${product.productId})">
-                                    Ẩn
-                               </button>`
-                            : `<button class="btn btn-sm btn-success" type="button" onclick="restoreProduct(${product.productId})">
-                                    Restore
-                               </button>`
-                        }
+                            ${product.isActive
+                                ? `<button class="fuu-btn-action fuu-btn-delete" type="button" onclick="hideProduct(${product.productId})" title="Ẩn sản phẩm">
+                                        <i class="fa fa-eye-slash"></i> Ẩn
+                                   </button>`
+                                : `<button class="fuu-btn-action fuu-btn-approve" type="button" onclick="restoreProduct(${product.productId})" title="Khôi phục sản phẩm">
+                                        <i class="fa fa-undo"></i> Hiện
+                                   </button>`
+                            }
+                        </div>
                     </td>
                 </tr>
             `;

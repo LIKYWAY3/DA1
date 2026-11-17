@@ -1,3 +1,287 @@
+@section Styles {
+	<style>
+		/* FUUFISHING FEATURED SHOWCASE SLIDER (RETAIL STYLE - ANTI-AI-SLOP) */
+		.fuu-showcase-section {
+			padding: 30px 0 50px 0;
+		}
+
+		.fuu-showcase-wrapper {
+			position: relative;
+			background: #f6f9f7;
+			border: 2px solid #253f36;
+			border-radius: 20px;
+			padding: 0 16px 20px 16px;
+			box-shadow: 0 8px 30px rgba(37, 63, 54, 0.08);
+		}
+
+		.fuu-showcase-header {
+			display: flex;
+			justify-content: center;
+			margin-top: -18px;
+			margin-bottom: 16px;
+		}
+
+		.fuu-showcase-badge {
+			background: #253f36;
+			color: #ffffff;
+			font-weight: 700;
+			font-size: 1.05rem;
+			padding: 8px 32px;
+			border-radius: 999px;
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			box-shadow: 0 4px 14px rgba(37, 63, 54, 0.25);
+			border: 2px solid #ffffff;
+		}
+
+		.fuu-slider-container {
+			position: relative;
+			padding: 4px 0;
+		}
+
+		.fuu-slider-track {
+			display: flex !important;
+			flex-direction: row !important;
+			flex-wrap: nowrap !important;
+			gap: 14px;
+			overflow-x: auto;
+			scroll-behavior: smooth;
+			scroll-snap-type: x mandatory;
+			scrollbar-width: none;
+			-ms-overflow-style: none;
+			padding: 10px 4px 14px 4px;
+		}
+
+		.fuu-slider-track::-webkit-scrollbar {
+			display: none;
+		}
+
+		/* Nav Arrows */
+		.fuu-slider-nav {
+			position: absolute;
+			top: 50%;
+			transform: translateY(-50%);
+			width: 44px;
+			height: 44px;
+			border-radius: 50%;
+			background: #ffffff;
+			border: 1px solid #d1d5db;
+			box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #1e293b;
+			cursor: pointer;
+			z-index: 10;
+			transition: all 0.2s ease;
+		}
+
+		.fuu-slider-nav:hover {
+			background: #253f36;
+			color: #ffffff;
+			border-color: #253f36;
+			box-shadow: 0 6px 18px rgba(37, 63, 54, 0.25);
+		}
+
+		.fuu-slider-prev {
+			left: -18px;
+		}
+
+		.fuu-slider-next {
+			right: -18px;
+		}
+
+		/* Product Card */
+		.fuu-retail-card {
+			flex: 0 0 216px !important;
+			width: 216px !important;
+			max-width: 216px !important;
+			min-width: 216px !important;
+			background: #ffffff;
+			border: 1px solid #e2e8f0;
+			border-radius: 12px;
+			padding: 10px;
+			display: flex !important;
+			flex-direction: column !important;
+			justify-content: space-between;
+			scroll-snap-align: start;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+			text-decoration: none;
+			position: relative;
+			box-sizing: border-box;
+		}
+
+		.fuu-retail-card:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+			border-color: #253f36;
+		}
+
+		.fuu-card-badges {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			min-height: 24px;
+			margin-bottom: 6px;
+		}
+
+		.fuu-badge-discount {
+			background-color: #dc2626;
+			color: #ffffff;
+			font-size: 0.6875rem;
+			font-weight: 700;
+			padding: 2px 6px;
+			border-radius: 4px;
+			line-height: 1.2;
+		}
+
+		.fuu-card-thumb-wrap {
+			height: 160px;
+			width: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 6px;
+			overflow: hidden;
+			text-decoration: none;
+		}
+
+		.fuu-card-thumb {
+			max-height: 145px;
+			max-width: 100%;
+			width: auto;
+			height: auto;
+			object-fit: contain;
+			transition: transform 0.25s ease;
+		}
+
+		.fuu-retail-card:hover .fuu-card-thumb {
+			transform: scale(1.05);
+		}
+
+		.fuu-card-info {
+			padding-top: 8px;
+			display: flex;
+			flex-direction: column;
+			flex-grow: 1;
+		}
+
+		.fuu-card-title {
+			font-size: 0.875rem;
+			font-weight: 600;
+			color: #1e293b;
+			line-height: 1.35;
+			height: 2.7em;
+			overflow: hidden;
+			display: -webkit-box;
+			-webkit-line-clamp: 2;
+			-webkit-box-orient: vertical;
+			text-decoration: none;
+			margin-bottom: 8px;
+			transition: color 0.15s ease;
+		}
+
+		.fuu-retail-card:hover .fuu-card-title {
+			color: #253f36;
+		}
+
+		.fuu-card-price-row {
+			display: flex;
+			align-items: baseline;
+			flex-wrap: wrap;
+			gap: 6px;
+			margin-bottom: 4px;
+		}
+
+		.fuu-price-current {
+			color: #dc2626;
+			font-weight: 700;
+			font-size: 1.05rem;
+			line-height: 1.2;
+		}
+
+		.fuu-price-original {
+			color: #94a3b8;
+			text-decoration: line-through;
+			font-size: 0.78rem;
+		}
+
+		/* Nút dấu cộng xem chi tiết khi hover giống sản phẩm khác */
+		.fuu-card-cross {
+			position: absolute;
+			bottom: 12px;
+			right: 12px;
+			width: 32px;
+			height: 32px;
+			border-radius: 50%;
+			background: #253f36;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			opacity: 0;
+			transform: translateY(6px);
+			transition: all 0.25s ease;
+			box-shadow: 0 4px 10px rgba(37, 63, 54, 0.25);
+			z-index: 5;
+			text-decoration: none;
+		}
+
+		.fuu-retail-card:hover .fuu-card-cross {
+			opacity: 1;
+			transform: translateY(0);
+		}
+
+		.fuu-card-cross:hover {
+			background: #1b2e27;
+			transform: translateY(0) scale(1.1);
+		}
+
+		.fuu-card-cross img {
+			width: 14px;
+			height: 14px;
+		}
+
+		@@media (max-width: 768px) {
+			.fuu-retail-card {
+				flex: 0 0 175px !important;
+				width: 175px !important;
+				max-width: 175px !important;
+				min-width: 175px !important;
+				padding: 8px;
+			}
+			.fuu-card-thumb-wrap {
+				height: 130px;
+			}
+			.fuu-card-thumb {
+				max-height: 120px;
+			}
+			.fuu-slider-nav {
+				display: none !important;
+			}
+			.fuu-showcase-wrapper {
+				padding: 0 10px 16px 10px;
+			}
+			.fuu-showcase-badge {
+				font-size: 0.95rem;
+				padding: 8px 24px;
+			}
+			.fuu-card-cross {
+				opacity: 0.9;
+				transform: translateY(0);
+				width: 28px;
+				height: 28px;
+			}
+			.fuu-card-cross img {
+				width: 12px;
+				height: 12px;
+			}
+		}
+	</style>
+}
+
 <!-- Start Hero Section -->
 <div class="hero">
 	<div class="container">
@@ -18,21 +302,39 @@
 	</div>
 </div>
 <!-- End Hero Section -->
-<!-- Start Product Section -->
-<div class="product-section">
+<!-- Start Featured Showcase Section -->
+<div class="fuu-showcase-section">
 	<div class="container"> 
-		<div class="row mb-4">
-			<div class="col-lg-7 mx-auto text-center">
-				<h2 class="section-title">SẢN PHẨM NỔI BẬT</h2>
+		<div class="fuu-showcase-wrapper">
+			<!-- Header Tab Badge -->
+			<div class="fuu-showcase-header">
+				<div class="fuu-showcase-badge">
+					<i class="fa fa-compass text-warning me-2"></i>
+					<span>GỢI Ý CHO BẠN</span>
+				</div>
 			</div>
-		</div>
-		<div class="product-marquee-wrapper">
-			<div class="product-marquee-track" id="product-list">
+
+			<!-- Slider Container with Nav Arrows -->
+			<div class="fuu-slider-container">
+				<button type="button" class="fuu-slider-nav fuu-slider-prev" onclick="scrollFeaturedTrack(-1)" aria-label="Xem sản phẩm trước">
+					<i class="fa fa-chevron-left"></i>
+				</button>
+
+				<div class="fuu-slider-track" id="product-list">
+					<div class="text-center text-muted py-5 w-100">
+						<div class="spinner-border text-success mb-2" role="status"></div>
+						<div>Đang tải sản phẩm gợi ý...</div>
+					</div>
+				</div>
+
+				<button type="button" class="fuu-slider-nav fuu-slider-next" onclick="scrollFeaturedTrack(1)" aria-label="Xem sản phẩm tiếp theo">
+					<i class="fa fa-chevron-right"></i>
+				</button>
 			</div>
 		</div>
 	</div>
 </div>
-<!-- End Product Section -->
+<!-- End Featured Showcase Section -->
 <!-- Start Why Choose Us Section -->
 <div class="why-choose-section">
 	<div class="container">
@@ -284,13 +586,14 @@
 			let skeletonHtml = "";
 			for (let i = 0; i < 6; i++) {
 				skeletonHtml += `
-					<div class="marquee-item skeleton-marquee-item">
-						<div class="skeleton-product-card">
-							<div class="skeleton-thumb skeleton-shimmer"></div>
-							<div class="skeleton-title skeleton-shimmer"></div>
-							<div class="skeleton-subtitle skeleton-shimmer"></div>
-							<div class="skeleton-price skeleton-shimmer"></div>
-							<div class="skeleton-btn skeleton-shimmer"></div>
+					<div class="fuu-retail-card" style="opacity: 0.6; min-width: 216px;">
+						<div style="height: 24px;"></div>
+						<div class="fuu-card-thumb-wrap">
+							<div style="width: 130px; height: 130px; background: #e2e8f0; border-radius: 8px;"></div>
+						</div>
+						<div class="fuu-card-info">
+							<div style="height: 16px; background: #e2e8f0; border-radius: 4px; margin-bottom: 8px;"></div>
+							<div style="height: 18px; width: 65%; background: #e2e8f0; border-radius: 4px;"></div>
 						</div>
 					</div>
 				`;
@@ -343,16 +646,62 @@
 			}
 		}
 
-		//product chạy chạy
+		// Autoplay / Tự động lướt sản phẩm gợi ý
+		let showcaseAutoplayTimer = null;
+
+		function startShowcaseAutoplay() {
+			stopShowcaseAutoplay();
+			showcaseAutoplayTimer = setInterval(function () {
+				const track = document.getElementById("product-list");
+				if (!track) return;
+				const maxScroll = track.scrollWidth - track.clientWidth;
+				// Nếu đã cuộn gần hết (còn ít hơn 25px) -> lướt mượt về đầu trang
+				if (track.scrollLeft >= maxScroll - 25) {
+					track.scrollTo({ left: 0, behavior: "smooth" });
+				} else {
+					// Lướt qua 1 thẻ (khoảng 230px: 216px card + 14px gap)
+					track.scrollBy({ left: 230, behavior: "smooth" });
+				}
+			}, 3500);
+		}
+
+		function stopShowcaseAutoplay() {
+			if (showcaseAutoplayTimer) {
+				clearInterval(showcaseAutoplayTimer);
+				showcaseAutoplayTimer = null;
+			}
+		}
+
+		function restartShowcaseAutoplay() {
+			stopShowcaseAutoplay();
+			startShowcaseAutoplay();
+		}
+
+		function initShowcaseInteractions() {
+			const wrapper = document.querySelector(".fuu-showcase-wrapper");
+			if (!wrapper || wrapper.dataset.bound) return;
+			wrapper.dataset.bound = "true";
+
+			// Tạm dừng khi rê chuột vào để người dùng dễ xem và click
+			wrapper.addEventListener("mouseenter", stopShowcaseAutoplay);
+			wrapper.addEventListener("mouseleave", startShowcaseAutoplay);
+
+			// Tạm dừng trên cảm ứng khi chạm
+			wrapper.addEventListener("touchstart", stopShowcaseAutoplay, { passive: true });
+			wrapper.addEventListener("touchend", startShowcaseAutoplay, { passive: true });
+		}
+
+		// Render sản phẩm gợi ý dạng retail slider
 		function renderFeaturedProducts(products) {
 			const productList = document.getElementById("product-list");
+			if (!productList) return;
 
 			productList.innerHTML = "";
 
 			if (!products || products.length === 0) {
 				productList.innerHTML = `
-					<div class="col-12 text-center py-5" style="width:100vw;">
-						<p class="text-muted mb-0">Hiện chưa có sản phẩm nổi bật.</p>
+					<div class="text-center py-5 w-100">
+						<p class="text-muted mb-0">Hiện chưa có sản phẩm gợi ý.</p>
 					</div>
 				`;
 				return;
@@ -369,31 +718,63 @@
 				const originalPrice = Number(product.originalPrice ?? product.price ?? 0);
 				const imageUrl = product.thumbnailUrl ?? product.imageUrl ?? "/images/no-image.png";
 
-				const originalPriceHtml = originalPrice > price
-					? `<div class="text-muted text-decoration-line-through small">${formatCurrency(originalPrice)}</div>`
-					: `<div style="height: 26px;"></div>`;
+				// Tính % giảm giá nếu originalPrice > price
+				let discountBadgeHtml = "";
+				let originalPriceHtml = "";
+				if (originalPrice > price && originalPrice > 0) {
+					const pct = Math.round(((originalPrice - price) / originalPrice) * 100);
+					if (pct > 0) {
+						discountBadgeHtml = `<span class="fuu-badge-discount">Giảm ${pct}%</span>`;
+						originalPriceHtml = `<span class="fuu-price-original">${formatCurrency(originalPrice)}</span>`;
+					}
+				}
 
 				htmlContent += `
-					<div class="marquee-item">
-						<a class="product-item" href="/Product/Detail/${productId}">
+					<div class="fuu-retail-card">
+						<div class="fuu-card-badges">
+							${discountBadgeHtml}
+						</div>
+
+						<a href="/Product/Detail/${productId}" class="fuu-card-thumb-wrap">
 							<img src="${escapeAttribute(imageUrl)}"
 								 alt="${escapeAttribute(productName)}"
-								 class="img-fluid product-thumbnail"
+								 class="fuu-card-thumb"
 								 loading="lazy"
 								 onerror="this.onerror=null; this.src='/images/no-image.png';">
+						</a>
 
-							<h3 class="product-title">${escapeHtml(productName)}</h3>
-							<strong class="product-price">${formatCurrency(price)}</strong>
-							${originalPriceHtml}
+						<div class="fuu-card-info">
+							<a href="/Product/Detail/${productId}" class="fuu-card-title" title="${escapeAttribute(productName)}">
+								${escapeHtml(productName)}
+							</a>
 
-							<span class="icon-cross">
-								<img src="/images/cross.svg" alt="Xem sản phẩm" class="img-fluid">
-							</span>
+							<div class="fuu-card-price-row">
+								<strong class="fuu-price-current">${formatCurrency(price)}</strong>
+								${originalPriceHtml}
+							</div>
+						</div>
+
+						<!-- Nút dấu cộng xem chi tiết khi hover giống sản phẩm khác -->
+						<a href="/Product/Detail/${productId}" class="fuu-card-cross" title="Xem chi tiết">
+							<img src="/images/cross.svg" alt="Xem chi tiết" class="img-fluid">
 						</a>
 					</div>
 				`;
 			});
-			productList.innerHTML = htmlContent + htmlContent;
+
+			productList.innerHTML = htmlContent;
+
+			// Kích hoạt tự động lướt và bắt sự kiện hover/touch
+			startShowcaseAutoplay();
+			initShowcaseInteractions();
+		}
+
+		function scrollFeaturedTrack(direction) {
+			const track = document.getElementById("product-list");
+			if (!track) return;
+			const scrollAmount = 460 * direction;
+			track.scrollBy({ left: scrollAmount, behavior: "smooth" });
+			restartShowcaseAutoplay();
 		}
 
 		function formatCurrency(value) {

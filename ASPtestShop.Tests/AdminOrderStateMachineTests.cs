@@ -277,5 +277,116 @@ namespace ASPtestShop.Tests
             var updatedProduct = await context.Products.FindAsync(101);
             Assert.Equal(13, updatedProduct?.StockQuantity);
         }
+
+        [Fact]
+        public async Task CleanupAllCancelledOrders_ShouldCleanlyRemoveCancelledOrders_AndCascadeRefundsAndPayments()
+        {
+            using var context = CreateInMemoryDbContext();
+
+            var cancelledOrder = new Order
+            {
+                OrderId = 701,
+                OrderCode = "OD_701_CANCELLED",
+                OrderStatus = "Cancelled",
+                PaymentStatus = "Refunded",
+                OrderItems = new List<OrderItem>()
+            };
+
+            var pendingOrder = new Order
+            {
+                OrderId = 702,
+                OrderCode = "OD_702_PENDING",
+                OrderStatus = "Pending",
+                PaymentStatus = "Unpaid",
+                OrderItems = new List<OrderItem>()
+            };
+
+            var refundRequest = new RefundRequest
+            {
+                RefundRequestId = 71,
+                OrderId = 701,
+                UserId = "user-701",
+                Amount = 500000,
+                Reason = "Khách hủy đơn và yêu cầu hoàn tiền",
+                Status = "Approved"
+            };
+
+            var payment = new Payment
+            {
+                PaymentId = 72,
+                OrderId = 701,
+                PaymentMethod = "VNPAY",
+                PaymentStatus = "Refunded"
+            };
+
+            context.Orders.AddRange(cancelledOrder, pendingOrder);
+            context.RefundRequests.Add(refundRequest);
+            context.Payments.Add(payment);
+            await context.SaveChangesAsync();
+
+            var service = new AdminOrderService(context);
+            var result = await service.CleanupAllCancelledOrdersAsync();
+
+            Assert.True(result.Success);
+            Assert.Contains("Đã dọn dẹp thành công 1 đơn hàng đã hủy", result.Message);
+
+            var db701 = await context.Orders.FindAsync(701);
+            var db702 = await context.Orders.FindAsync(702);
+            var dbRefund = await context.RefundRequests.FindAsync(71);
+            var dbPayment = await context.Payments.FindAsync(72);
+
+            Assert.Null(db701);
+            Assert.NotNull(db702); // Đơn Pending vẫn còn
+            Assert.Null(dbRefund); // RefundRequest đã được xóa an toàn
+            Assert.Null(dbPayment); // Payment đã được xóa an toàn
+        }
+
+        [Fact]
+        public async Task DeleteCancelledOrder_ShouldRemoveRelatedRefundAndPayment()
+        {
+            using var context = CreateInMemoryDbContext();
+
+            var cancelledOrder = new Order
+            {
+                OrderId = 703,
+                OrderCode = "OD_703_CANCELLED",
+                OrderStatus = "Cancelled",
+                PaymentStatus = "Refunded",
+                OrderItems = new List<OrderItem>()
+            };
+
+            var refundRequest = new RefundRequest
+            {
+                RefundRequestId = 73,
+                OrderId = 703,
+                UserId = "user-703",
+                Amount = 300000,
+                Reason = "Hủy đơn",
+                Status = "Approved"
+            };
+
+            var payment = new Payment
+            {
+                PaymentId = 74,
+                OrderId = 703,
+                PaymentMethod = "MOMO",
+                PaymentStatus = "Refunded"
+            };
+
+            context.Orders.Add(cancelledOrder);
+            context.RefundRequests.Add(refundRequest);
+            context.Payments.Add(payment);
+            await context.SaveChangesAsync();
+
+            var service = new AdminOrderService(context);
+            var result = await service.DeleteCancelledOrderAsync(703);
+
+            Assert.True(result.Success);
+            Assert.Contains("Đã xóa thành công", result.Message);
+
+            Assert.Null(await context.Orders.FindAsync(703));
+            Assert.Null(await context.RefundRequests.FindAsync(73));
+            Assert.Null(await context.Payments.FindAsync(74));
+        }
     }
 }

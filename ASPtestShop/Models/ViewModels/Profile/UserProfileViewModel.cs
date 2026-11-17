@@ -58,5 +58,10 @@ namespace ASPtestShop.Models.ViewModels.Profile
             }
         }
         public List<BankAccountDto>? BankAccounts { get; set; }
+        public int TotalOrders { get; set; }
+        public decimal TotalSpent { get; set; }
+        public List<ASPtestShop.Data.Entities.UserAddress>? Addresses { get; set; }
+        public ASPtestShop.Data.Entities.UserAddress? DefaultAddress { get; set; }
+        public bool IsGoogleLinked { get; set; }
     }
 }

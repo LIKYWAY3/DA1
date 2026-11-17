@@ -1599,3 +1599,278 @@ input[type="password"]::-ms-clear {
     box-shadow: 0 0 0 0.25rem rgba(59, 93, 80, 0.25) !important;
     border-color: #3b5d50 !important;
 }
+
+
+/* ==========================================================================
+   FUUFISHING FEATURED SHOWCASE SLIDER (RETAIL STYLE - ANTI-AI-SLOP)
+   ========================================================================== */
+.fuu-showcase-section {
+    padding: 30px 0 50px 0;
+}
+
+.fuu-showcase-wrapper {
+    position: relative;
+    background: #ffffff;
+    border: 2px solid #253f36;
+    border-radius: 20px;
+    padding: 0 16px 20px 16px;
+    box-shadow: 0 6px 24px rgba(37, 63, 54, 0.08);
+}
+
+.fuu-showcase-header {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+    transform: translateY(-2px);
+}
+
+.fuu-showcase-badge {
+    background: #253f36;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 10px 38px;
+    border-radius: 0 0 16px 16px;
+    display: inline-flex;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 14px rgba(37, 63, 54, 0.25);
+}
+
+.fuu-slider-container {
+    position: relative;
+    padding: 4px 0;
+}
+
+.fuu-slider-track {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 10px 4px 14px 4px;
+}
+
+.fuu-slider-track::-webkit-scrollbar {
+    display: none;
+}
+
+/* Nav Arrows */
+.fuu-slider-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1e293b;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.fuu-slider-nav:hover {
+    background: #253f36;
+    color: #ffffff;
+    border-color: #253f36;
+    box-shadow: 0 6px 18px rgba(37, 63, 54, 0.25);
+}
+
+.fuu-slider-prev {
+    left: -20px;
+}
+
+.fuu-slider-next {
+    right: -20px;
+}
+
+/* Product Card */
+.fuu-retail-card {
+    flex: 0 0 216px;
+    width: 216px;
+    max-width: 216px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    scroll-snap-align: start;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    text-decoration: none;
+    position: relative;
+}
+
+.fuu-retail-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    border-color: #253f36;
+}
+
+.fuu-card-badges {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 24px;
+    margin-bottom: 6px;
+}
+
+.fuu-badge-discount {
+    background-color: #dc2626;
+    color: #ffffff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1.2;
+}
+
+
+
+.fuu-card-thumb-wrap {
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.fuu-card-thumb {
+    max-height: 145px;
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.25s ease;
+}
+
+.fuu-retail-card:hover .fuu-card-thumb {
+    transform: scale(1.05);
+}
+
+.fuu-card-info {
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.fuu-card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.35;
+    height: 2.7em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-decoration: none;
+    margin-bottom: 8px;
+    transition: color 0.15s ease;
+}
+
+.fuu-retail-card:hover .fuu-card-title {
+    color: #253f36;
+}
+
+.fuu-card-price-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.fuu-price-current {
+    color: #dc2626;
+    font-weight: 700;
+    font-size: 1.05rem;
+    line-height: 1.2;
+}
+
+.fuu-price-original {
+    color: #94a3b8;
+    text-decoration: line-through;
+    font-size: 0.78rem;
+}
+
+/* Nút dấu cộng xem chi tiết khi hover giống sản phẩm khác */
+.fuu-card-cross {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #253f36;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 10px rgba(37, 63, 54, 0.25);
+    z-index: 5;
+    text-decoration: none;
+}
+
+.fuu-retail-card:hover .fuu-card-cross {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fuu-card-cross:hover {
+    background: #1b2e27;
+    transform: translateY(0) scale(1.1);
+}
+
+.fuu-card-cross img {
+    width: 14px;
+    height: 14px;
+}
+
+@media (max-width: 768px) {
+    .fuu-retail-card {
+        flex: 0 0 175px;
+        width: 175px;
+        max-width: 175px;
+        padding: 8px;
+    }
+    .fuu-card-thumb-wrap {
+        height: 130px;
+    }
+    .fuu-card-thumb {
+        max-height: 120px;
+    }
+    .fuu-slider-nav {
+        display: none !important;
+    }
+    .fuu-showcase-wrapper {
+        padding: 0 10px 16px 10px;
+    }
+    .fuu-showcase-badge {
+        font-size: 0.95rem;
+        padding: 8px 24px;
+    }
+    .fuu-card-cross {
+        opacity: 0.9;
+        transform: translateY(0);
+        width: 28px;
+        height: 28px;
+    }
+    .fuu-card-cross img {
+        width: 12px;
+        height: 12px;
+    }
+}

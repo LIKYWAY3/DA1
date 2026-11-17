@@ -1,4 +1,5 @@
 using ASPtestShop.Auth;
+using ASPtestShop.Models.ViewModels.Profile;
 using ASPtestShop.Services.Interfaces.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,6 +41,30 @@ namespace ASPtestShop.Controllers.Api
             }).ToList();
 
             return Ok(result);
+        }
+
+        [HttpPost("addresses")]
+        public async Task<IActionResult> AddAddress([FromBody] AddAddressViewModel model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "Bạn chưa đăng nhập." });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                return BadRequest(new { message = string.Join(", ", errors) });
+            }
+
+            var result = await _userAuthService.AddAddressAsync(userId, model);
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Ok(new { success = true, message = "Đã lưu địa chỉ thành công." });
         }
 
         [HttpGet("profile-info")]

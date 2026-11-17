@@ -178,7 +178,9 @@ namespace ASPtestShop.Services.Implementations.Admin
 
         public async Task<AdminOrderActionResultDto> DeleteCancelledOrderAsync(int orderId)
         {
-            var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
             if (order == null)
             {
                 return new AdminOrderActionResultDto
@@ -200,6 +202,31 @@ namespace ASPtestShop.Services.Implementations.Admin
             var strategy = _context.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>
             {
+                // Xóa ràng buộc RefundRequests tránh xung đột FK Restrict
+                var refunds = await _context.RefundRequests.Where(r => r.OrderId == orderId).ToListAsync();
+                if (refunds.Any())
+                {
+                    _context.RefundRequests.RemoveRange(refunds);
+                }
+
+                // Xóa ràng buộc Payments
+                var payments = await _context.Payments.Where(p => p.OrderId == orderId).ToListAsync();
+                if (payments.Any())
+                {
+                    _context.Payments.RemoveRange(payments);
+                }
+
+                // Gỡ liên kết Review.OrderItemId (nếu có)
+                var itemIds = order.OrderItems.Select(oi => oi.OrderItemId).ToList();
+                if (itemIds.Any())
+                {
+                    var reviews = await _context.Reviews.Where(r => r.OrderItemId.HasValue && itemIds.Contains(r.OrderItemId.Value)).ToListAsync();
+                    foreach (var rev in reviews)
+                    {
+                        rev.OrderItemId = null;
+                    }
+                }
+
                 _context.Orders.Remove(order);
                 await _context.SaveChangesAsync();
                 return new AdminOrderActionResultDto
@@ -213,6 +240,7 @@ namespace ASPtestShop.Services.Implementations.Admin
         public async Task<AdminOrderActionResultDto> CleanupAllCancelledOrdersAsync()
         {
             var cancelledOrders = await _context.Orders
+                .Include(o => o.OrderItems)
                 .Where(o => o.OrderStatus == "Cancelled")
                 .ToListAsync();
 
@@ -226,9 +254,43 @@ namespace ASPtestShop.Services.Implementations.Admin
             }
 
             var count = cancelledOrders.Count;
+            var cancelledOrderIds = cancelledOrders.Select(o => o.OrderId).ToList();
+
             var strategy = _context.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>
             {
+                // 1. Xóa tất cả RefundRequests của các đơn bị hủy
+                var refunds = await _context.RefundRequests
+                    .Where(r => cancelledOrderIds.Contains(r.OrderId))
+                    .ToListAsync();
+                if (refunds.Any())
+                {
+                    _context.RefundRequests.RemoveRange(refunds);
+                }
+
+                // 2. Xóa tất cả Payments của các đơn bị hủy
+                var payments = await _context.Payments
+                    .Where(p => cancelledOrderIds.Contains(p.OrderId))
+                    .ToListAsync();
+                if (payments.Any())
+                {
+                    _context.Payments.RemoveRange(payments);
+                }
+
+                // 3. Gỡ liên kết Review.OrderItemId (nếu có)
+                var itemIds = cancelledOrders.SelectMany(o => o.OrderItems).Select(oi => oi.OrderItemId).ToList();
+                if (itemIds.Any())
+                {
+                    var reviews = await _context.Reviews
+                        .Where(r => r.OrderItemId.HasValue && itemIds.Contains(r.OrderItemId.Value))
+                        .ToListAsync();
+                    foreach (var rev in reviews)
+                    {
+                        rev.OrderItemId = null;
+                    }
+                }
+
+                // 4. Xóa các đơn hàng đã hủy
                 _context.Orders.RemoveRange(cancelledOrders);
                 await _context.SaveChangesAsync();
                 return new AdminOrderActionResultDto
@@ -448,10 +510,32 @@ namespace ASPtestShop.Services.Implementations.Admin
             }
 
             var orderIdsToDelete = orders.Select(o => o.OrderId).ToList();
+
+            // 1. Xóa các RefundRequests liên quan tránh lỗi FK Restrict
+            var refunds = await _context.RefundRequests.Where(r => orderIdsToDelete.Contains(r.OrderId)).ToListAsync();
+            if (refunds.Any())
+            {
+                _context.RefundRequests.RemoveRange(refunds);
+            }
+
+            // 2. Xóa các Payments liên quan
             var payments = await _context.Payments.Where(p => orderIdsToDelete.Contains(p.OrderId)).ToListAsync();
             if (payments.Any())
             {
                 _context.Payments.RemoveRange(payments);
+            }
+
+            // 3. Gỡ liên kết Review.OrderItemId (nếu có)
+            var itemIds = orders.SelectMany(o => o.OrderItems).Select(oi => oi.OrderItemId).ToList();
+            if (itemIds.Any())
+            {
+                var reviews = await _context.Reviews
+                    .Where(r => r.OrderItemId.HasValue && itemIds.Contains(r.OrderItemId.Value))
+                    .ToListAsync();
+                foreach (var rev in reviews)
+                {
+                    rev.OrderItemId = null;
+                }
             }
 
             _context.Orders.RemoveRange(orders);

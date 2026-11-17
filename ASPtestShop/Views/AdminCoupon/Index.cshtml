@@ -6,11 +6,11 @@
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold mb-1">Quản lý mã giảm giá (Coupons)</h3>
+            <h3 class="fw-bold mb-1">Quản lý mã giảm giá</h3>
             <p class="text-muted small mb-0">Tạo mã khuyến mãi, cấu hình mức giảm và theo dõi lượt sử dụng</p>
         </div>
-        <button type="button" class="btn btn-success rounded-pill px-4 py-2" onclick="openCreateModal()">
-            + Thêm mã giảm giá mới
+        <button type="button" class="fuu-btn-primary" onclick="openCreateModal()">
+            <i class="fa fa-plus"></i> Thêm mã giảm giá
         </button>
     </div>
 
@@ -18,10 +18,35 @@
 
     <div class="card border-0 shadow-sm" style="border-radius: 12px; background: #fff;">
         <div class="card-body p-4">
+            <!-- THANH TÁC VỤ HÀNG LOẠT -->
+            <div id="batchActionBar" class="d-none fuu-batch-bar">
+                <div class="d-flex align-items-center">
+                    <i class="fa fa-check-square me-2 text-warning"></i>
+                    <span>Đã chọn <strong id="selectedCouponCount" class="badge-count">0</strong> mã giảm giá</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm btn-light fw-semibold" onclick="batchToggleCoupons(true)">
+                        <i class="fa fa-toggle-on me-1 text-success"></i> Bật đã chọn
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light fw-semibold" onclick="batchToggleCoupons(false)">
+                        <i class="fa fa-toggle-off me-1 text-secondary"></i> Tắt đã chọn
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger fw-semibold" onclick="batchDeleteCoupons()">
+                        <i class="fa fa-trash-alt me-1"></i> Xóa đã chọn
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light" onclick="clearSelectedCoupons()">
+                        Bỏ chọn
+                    </button>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th style="width: 40px;" class="text-center">
+                                <input type="checkbox" id="selectAllCoupons" class="fuu-checkbox" onchange="toggleSelectAllCoupons(this)" title="Chọn tất cả">
+                            </th>
                             <th>Mã CODE</th>
                             <th>Mức giảm</th>
                             <th>Đơn tối thiểu</th>
@@ -29,12 +54,12 @@
                             <th style="min-width: 140px;">Tiến độ sử dụng</th>
                             <th>Thời hạn</th>
                             <th>Trạng thái</th>
-                            <th class="text-end">Hành động</th>
+                            <th class="text-end" style="min-width: 190px;">Hành động</th>
                         </tr>
                     </thead>
                     <tbody id="couponTableBody">
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">Đang tải dữ liệu mã giảm giá...</td>
+                            <td colspan="9" class="text-center text-muted py-4">Đang tải dữ liệu mã giảm giá...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -46,8 +71,8 @@
 <!-- MODAL THÊM / SỬA COUPON -->
 <div class="modal fade" id="couponModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 pb-0">
+        <div class="modal-content border-0 shadow" style="border-radius: 10px;">
+            <div class="modal-header border-bottom pb-3">
                 <h5 class="modal-title fw-bold" id="modalTitle">Thêm mã giảm giá mới</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -113,9 +138,9 @@
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-success rounded-pill px-4" id="btnSubmit">Lưu mã giảm giá</button>
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="fuu-btn-primary px-4" id="btnSubmit">Lưu mã giảm giá</button>
                     </div>
                 </form>
             </div>
@@ -126,6 +151,7 @@
 @section Scripts {
     <script>
         let couponModal = null;
+        let allCouponsCache = [];
         const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
 
         document.addEventListener("DOMContentLoaded", function () {
@@ -145,11 +171,12 @@
         }
 
         async function loadCoupons() {
+            clearSelectedCoupons();
             try {
                 const res = await fetch("/api/admin/coupons", { method: "GET", credentials: "include" });
                 if (!res.ok) throw new Error("Không thể tải danh sách mã giảm giá");
-                const list = await res.json();
-                renderCouponTable(list);
+                allCouponsCache = await res.json();
+                renderCouponTable(allCouponsCache);
             } catch (err) {
                 showAlert(err.message, "danger");
             }
@@ -158,7 +185,7 @@
         function renderCouponTable(list) {
             const tbody = document.getElementById("couponTableBody");
             if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Chưa có mã giảm giá nào. Hãy bấm nút Thêm mới ở trên!</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Chưa có mã giảm giá nào. Hãy bấm nút Thêm mới ở trên!</td></tr>';
                 return;
             }
 
@@ -189,8 +216,11 @@
 
                 return `
                     <tr>
+                        <td class="text-center">
+                            <input type="checkbox" class="fuu-checkbox coupon-select-checkbox" value="${c.couponId}" onchange="handleCouponRowSelect()" />
+                        </td>
                         <td>
-                            <span class="badge bg-dark px-3 py-2 fs-6 font-monospace">${c.code}</span>
+                            <span class="badge bg-dark px-3 py-2 fs-6 font-monospace">${escapeHtml(c.code)}</span>
                         </td>
                         <td>${discountText}</td>
                         <td>${minOrderText}</td>
@@ -207,15 +237,18 @@
                         <td class="small text-muted">${sDate} &rarr; ${eDate}</td>
                         <td>${statusBadge}</td>
                         <td class="text-end">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-${c.isActive ? 'warning' : 'success'}" onclick="toggleActive(${c.couponId})">
-                                    ${c.isActive ? 'Tắt' : 'Bật'}
+                            <div class="fuu-action-group justify-content-end">
+                                <button type="button" class="fuu-btn-action ${c.isActive ? 'fuu-btn-toggle-on' : 'fuu-btn-toggle-off'}" onclick="toggleActive(${c.couponId})" title="${c.isActive ? 'Bấm để tắt mã' : 'Bấm để bật mã'}">
+                                    <i class="fa fa-${c.isActive ? 'toggle-on' : 'toggle-off'}"></i>
+                                    <span>${c.isActive ? 'Bật' : 'Tắt'}</span>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditModal(${c.couponId})">
-                                    Sửa
+                                <button type="button" class="fuu-btn-action fuu-btn-edit" onclick="openEditModal(${c.couponId})" title="Chỉnh sửa mã">
+                                    <i class="fa fa-pen"></i>
+                                    <span>Sửa</span>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteCoupon(${c.couponId}, '${c.code}')">
-                                    Xóa
+                                <button type="button" class="fuu-btn-action fuu-btn-delete" onclick="deleteCoupon(${c.couponId}, '${escapeHtml(c.code)}')" title="Xóa mã">
+                                    <i class="fa fa-trash-alt"></i>
+                                    <span>Xóa</span>
                                 </button>
                             </div>
                         </td>
@@ -224,6 +257,109 @@
             }).join('');
         }
 
+        // ==========================================
+        // XỬ LÝ CHỌN HÀNG LOẠT (BATCH ACTIONS)
+        // ==========================================
+        function toggleSelectAllCoupons(master) {
+            const checkboxes = document.querySelectorAll(".coupon-select-checkbox");
+            checkboxes.forEach(cb => cb.checked = master.checked);
+            handleCouponRowSelect();
+        }
+
+        function handleCouponRowSelect() {
+            const checkedBoxes = document.querySelectorAll(".coupon-select-checkbox:checked");
+            const allBoxes = document.querySelectorAll(".coupon-select-checkbox");
+            const count = checkedBoxes.length;
+
+            const countEl = document.getElementById("selectedCouponCount");
+            if (countEl) countEl.textContent = count;
+
+            const bar = document.getElementById("batchActionBar");
+            if (bar) {
+                if (count > 0) bar.classList.remove("d-none");
+                else bar.classList.add("d-none");
+            }
+
+            const master = document.getElementById("selectAllCoupons");
+            if (master) {
+                master.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+            }
+        }
+
+        function clearSelectedCoupons() {
+            const master = document.getElementById("selectAllCoupons");
+            if (master) master.checked = false;
+            document.querySelectorAll(".coupon-select-checkbox").forEach(cb => cb.checked = false);
+            handleCouponRowSelect();
+        }
+
+        function getSelectedCouponIds() {
+            const checkedBoxes = document.querySelectorAll(".coupon-select-checkbox:checked");
+            return Array.from(checkedBoxes).map(cb => parseInt(cb.value)).filter(id => !isNaN(id) && id > 0);
+        }
+
+        async function batchToggleCoupons(isActive) {
+            const ids = getSelectedCouponIds();
+            if (ids.length === 0) {
+                showAlert("Vui lòng chọn ít nhất một mã giảm giá.", "warning");
+                return;
+            }
+
+            const actionText = isActive ? "kích hoạt (Bật)" : "vô hiệu hóa (Tắt)";
+            if (!confirm(`Bạn có chắc chắn muốn ${actionText} ${ids.length} mã giảm giá đã chọn?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/admin/coupons/batch-toggle", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ couponIds: ids, isActive: isActive })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || "Lỗi thao tác hàng loạt");
+
+                showAlert(data.message, "success");
+                loadCoupons();
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
+        }
+
+        async function batchDeleteCoupons() {
+            const ids = getSelectedCouponIds();
+            if (ids.length === 0) {
+                showAlert("Vui lòng chọn ít nhất một mã giảm giá để xóa.", "warning");
+                return;
+            }
+
+            if (!confirm(`Bạn có chắc chắn muốn xóa ${ids.length} mã giảm giá đã chọn? Những mã đã được sử dụng trong đơn hàng sẽ tự động chuyển sang trạng thái Vô hiệu hóa.`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/admin/coupons/batch-delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ couponIds: ids })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || "Lỗi xóa hàng loạt");
+
+                showAlert(data.message, "success");
+                loadCoupons();
+            } catch (err) {
+                showAlert(err.message, "danger");
+            }
+        }
+
+        // ==========================================
+        // CÁC HÀM XỬ LÝ FORM & MODAL
+        // ==========================================
         function toggleDiscountTypeUi() {
             const type = document.getElementById("inputDiscountType").value;
             const lbl = document.getElementById("lblDiscountValue");
@@ -265,7 +401,7 @@
                 if (!res.ok) throw new Error("Không thể tải thông tin mã giảm giá");
                 const c = await res.json();
 
-                document.getElementById("modalTitle").textContent = "Cập nhật mã: " + c.code;
+                document.getElementById("modalTitle").textContent = `Chỉnh sửa mã: ${c.code}`;
                 document.getElementById("couponId").value = c.couponId;
                 document.getElementById("inputCode").value = c.code;
                 document.getElementById("inputCode").readOnly = true;
@@ -276,8 +412,8 @@
                 document.getElementById("inputUsageTotal").value = c.usageLimitTotal;
                 document.getElementById("inputUsagePerUser").value = c.usageLimitPerCustomer;
 
-                document.getElementById("inputStartDate").value = new Date(c.startDate).toISOString().slice(0, 16);
-                document.getElementById("inputEndDate").value = new Date(c.endDate).toISOString().slice(0, 16);
+                document.getElementById("inputStartDate").value = c.startDate ? c.startDate.slice(0, 16) : "";
+                document.getElementById("inputEndDate").value = c.endDate ? c.endDate.slice(0, 16) : "";
 
                 document.getElementById("grpIsActive").style.display = "block";
                 document.getElementById("inputIsActive").checked = c.isActive;
@@ -359,6 +495,13 @@
             } catch (err) {
                 showAlert(err.message, "danger");
             }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     </script>
 }

@@ -11,21 +11,39 @@
 	<meta name="keywords" content="bootstrap, bootstrap4" />
 
 	<!-- Bootstrap CSS -->
-	<link href="~/css/bootstrap.min.css" rel="stylesheet">	
+	<link href="~/css/bootstrap.min.css" rel="stylesheet" asp-append-version="true">	
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-	<link href="~/css/tiny-slider.css" rel="stylesheet">
-	<link href="~/css/style.css" rel="stylesheet">
-	<link href="~/css/skeleton.css" rel="stylesheet">
+	<link href="~/css/tiny-slider.css" rel="stylesheet" asp-append-version="true">
+	<link href="~/css/style.css" rel="stylesheet" asp-append-version="true">
+	<link href="~/css/skeleton.css" rel="stylesheet" asp-append-version="true">
 	<title>Fuu Fishing</title>
+	<style>
+		html, body {
+			height: 100%;
+			overflow-x: hidden;
+		}
+		body {
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh;
+		}
+		.site-main-content {
+			flex: 1 0 auto;
+		}
+		.footer-section {
+			flex-shrink: 0;
+			margin-top: auto;
+		}
+	</style>
 	@await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
 	<!-- Start Header/Navigation -->
 	<partial name="_Header" />
 	<!-- End Header/Navigation -->
-    <div>
+    <main class="site-main-content flex-grow-1">
         @RenderBody()
-    </div>
+    </main>
 	@await Html.PartialAsync("_Footer")
 	@await RenderSectionAsync("Scripts", required: false)
 	<script src="~/js/bootstrap.bundle.min.js"></script>

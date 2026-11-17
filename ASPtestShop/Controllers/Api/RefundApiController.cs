@@ -134,6 +134,35 @@ namespace ASPtestShop.Controllers.Api
         }
 
         // =======================================================================
+        // POST: api/refunds/admin/batch-process
+        // Admin: Xử lý hàng loạt yêu cầu hoàn tiền
+        // =======================================================================
+        [HttpPost("admin/batch-process")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> BatchProcessRefund([FromBody] BatchProcessRefundRequestDto dto)
+        {
+            if (dto?.RefundRequestIds == null || !dto.RefundRequestIds.Any())
+            {
+                return BadRequest(new BatchRefundActionResultDto
+                {
+                    Success = false,
+                    Message = "Vui lòng chọn ít nhất một yêu cầu hoàn tiền."
+                });
+            }
+
+            var adminUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Admin";
+            var processDto = new ProcessRefundDto
+            {
+                Status = dto.Status,
+                TransactionCode = dto.TransactionCode,
+                AdminNote = dto.AdminNote
+            };
+
+            var result = await _refundService.BatchProcessRefundsAsync(dto.RefundRequestIds, adminUserId, processDto);
+            return Ok(result);
+        }
+
+        // =======================================================================
         // POST: api/refunds/resubmit
         // Khách hàng gửi lại thông tin tài khoản khi yêu cầu bị từ chối
         // =======================================================================

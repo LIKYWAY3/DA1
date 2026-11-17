@@ -19,6 +19,30 @@ namespace ASPtestShop.Controllers.Api
             _context = context;
         }
 
+        // GET: /api/coupons/available
+        [HttpGet("available")]
+        public async Task<IActionResult> GetAvailableCoupons()
+        {
+            var now = DateTime.UtcNow;
+            var coupons = await _context.Coupons
+                .Where(c => c.IsActive && c.EndDate >= now && c.UsedCount < c.UsageLimitTotal)
+                .OrderBy(c => c.MinOrderAmount)
+                .Select(c => new
+                {
+                    couponId = c.CouponId,
+                    code = c.Code,
+                    discountType = c.DiscountType,
+                    discountValue = c.DiscountValue,
+                    minOrderAmount = c.MinOrderAmount,
+                    maxDiscountAmount = c.MaxDiscountAmount,
+                    startDate = c.StartDate,
+                    endDate = c.EndDate
+                })
+                .ToListAsync();
+
+            return Ok(coupons);
+        }
+
         // POST: /api/coupons/apply
         [HttpPost("apply")]
         public async Task<IActionResult> ApplyCoupon([FromBody] ApplyCouponRequestDto request)

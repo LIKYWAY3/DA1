@@ -46,8 +46,8 @@
                 </label>
             </div>
 
-            <button class="btn btn-primary" id="submitCategoryBtn" onclick="submitCategory()">Lưu</button>
-            <button class="btn btn-secondary" onclick="resetForm()">Reset</button>
+            <button class="fuu-btn-primary" id="submitCategoryBtn" onclick="submitCategory()">Lưu</button>
+            <button class="btn btn-outline-secondary" onclick="resetForm()">Reset</button>
         </div>
     </div>
 
@@ -149,12 +149,12 @@
                 : `<span class="badge bg-secondary">Đã ẩn</span>`;
 
             const actionButton = category.isActive
-                ? `<button class="btn btn-sm btn-danger" onclick="deleteCategory(${category.categoryId})">
-                            Ẩn
-                       </button>`
-                : `<button class="btn btn-sm btn-success" onclick="restoreCategory(${category.categoryId})">
-                            Restore
-                       </button>`;
+                ? `<button class="fuu-btn-action fuu-btn-delete" onclick="deleteCategory(${category.categoryId})" title="Ẩn danh mục">
+                        <i class="fa fa-eye-slash"></i> Ẩn
+                   </button>`
+                : `<button class="fuu-btn-action fuu-btn-approve" onclick="restoreCategory(${category.categoryId})" title="Khôi phục danh mục">
+                        <i class="fa fa-undo"></i> Hiện
+                   </button>`;
 
             const row = `
                     <tr>
@@ -166,11 +166,12 @@
                         <td>${category.subCategoryCount ?? 0}</td>
                         <td>${statusBadge}</td>
                         <td>
-                            <button class="btn btn-sm btn-warning" onclick="editCategory(${category.categoryId})">
-                                Sửa
-                            </button>
-
-                            ${actionButton}
+                            <div class="fuu-action-group">
+                                <button class="fuu-btn-action fuu-btn-edit" onclick="editCategory(${category.categoryId})" title="Sửa">
+                                    <i class="fa fa-pen"></i> Sửa
+                                </button>
+                                ${actionButton}
+                            </div>
                         </td>
                     </tr>
                 `;

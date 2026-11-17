@@ -1,79 +1,54 @@
 @{
-    ViewData["Title"] = "Chi tiết đơn hàng";
+    ViewData["Title"] = "Chi tiết đơn hàng - FuuFishing";
+    Layout = "~/Views/Shared/_LayoutCustomer.cshtml";
     var orderId = ViewBag.OrderId;
 }
 
-<div class="container my-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Chi tiết đơn hàng</h2>
-
-        <a href="/orders/history" class="btn btn-outline-dark">
-            Quay lại lịch sử
-        </a>
-    </div>
-
-    <div id="orderDetailMessage"></div>
-
-    <div id="orderDetailContent">
-        <div class="text-center text-muted py-5">
-            Đang tải chi tiết đơn hàng...
+<div class="order-detail-page py-4">
+    <div class="container">
+        
+        <!-- 1. BREADCRUMB / ĐIỀU HƯỚNG QUAY LẠI LỊCH SỬ ĐƠN HÀNG -->
+        <div class="d-flex align-items-center mb-3">
+            <a href="/orders/history" class="text-decoration-none text-dark fw-bold small me-2 back-history-link">
+                <i class="fa-solid fa-chevron-left me-1"></i> Lịch sử mua hàng
+            </a>
+            <span class="text-muted small">/ Chi tiết đơn hàng</span>
         </div>
-    </div>
 
-    <!-- UC-20: Modal Yêu cầu hoàn tiền -->
-    <div class="modal fade" id="refundModal" tabindex="-1" aria-labelledby="refundModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="refundModalLabel">Yêu cầu hoàn tiền đơn hàng</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <!-- Thông báo lỗi tổng quát nếu có -->
+        <div id="orderDetailMessage"></div>
+
+        <!-- NỘI DUNG CHÍNH (DYNAMIC RENDER VIA JS) -->
+        <div id="orderDetailContent">
+            <div class="text-center py-5 bg-white border rounded-3 shadow-sm">
+                <div class="spinner-border text-fuu-primary mb-3" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
                 </div>
-                <div class="modal-body">
-                    <div id="refundModalMessage"></div>
-                    <form id="refundForm">
-                        <div class="mb-3">
-                            <label class="form-label">Số tiền hoàn dự kiến</label>
-                            <input type="text" id="refundAmountDisplay" class="form-control fw-bold text-danger" readonly />
-                        </div>
-                        <div class="mb-3">
-                            <label for="refundReason" class="form-label">Lý do yêu cầu hoàn tiền <span class="text-danger">*</span></label>
-                            <textarea id="refundReason" class="form-control" rows="3" placeholder="Nhập lý do muốn hoàn tiền..." required maxlength="500"></textarea>
-                        </div>
-                        <h6 class="border-top pt-3 mt-3">Thông tin nhận tiền hoàn</h6>
-                        <div class="mb-3">
-                            <label for="refundBankName" class="form-label">Tên ngân hàng</label>
-                            <input type="text" id="refundBankName" class="form-control" placeholder="VD: Vietcombank, MB, Techcombank..." maxlength="100" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="refundAccountNumber" class="form-label">Số tài khoản</label>
-                            <input type="text" id="refundAccountNumber" class="form-control" placeholder="Nhập số tài khoản ngân hàng" maxlength="50" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="refundAccountHolderName" class="form-label">Tên chủ tài khoản</label>
-                            <input type="text" id="refundAccountHolderName" class="form-control text-uppercase" placeholder="VD: NGUYEN VAN A" maxlength="100" />
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" id="btnSubmitRefund" class="btn btn-danger" onclick="submitRefundRequest()">Xác nhận gửi yêu cầu</button>
-                </div>
+                <div class="text-muted small">Đang tải chi tiết đơn hàng #${orderId}...</div>
             </div>
         </div>
+
     </div>
+
+    <!-- =================================================================== -->
+    <!-- CÁC MODAL NGHIỆP VỤ (HỦY ĐƠN / YÊU CẦU HOÀN TIỀN)                   -->
+    <!-- =================================================================== -->
+
     <!-- Modal Hủy đơn hàng trực tiếp (Pending) -->
     <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-danger text-white py-3">
-                    <h5 class="modal-title fw-bold" id="cancelOrderModalLabel"><i class="fa fa-times-circle me-2"></i>Hủy đơn hàng</h5>
+                    <h6 class="modal-title fw-bold mb-0" id="cancelOrderModalLabel">
+                        <i class="fa-solid fa-circle-xmark me-2"></i>Hủy đơn hàng
+                    </h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div id="cancelOrderModalMessage"></div>
                     <div class="mb-3">
-                        <label for="cancelReasonSelect" class="form-label fw-semibold">Lý do hủy / hoàn hàng <span class="text-danger">*</span></label>
-                        <select id="cancelReasonSelect" class="form-select mb-2" style="border: 1px solid #2f2f2f; background-color: #ffffff; color: #121617;">
+                        <label for="cancelReasonSelect" class="form-label fw-semibold small">Lý do hủy đơn <span class="text-danger">*</span></label>
+                        <select id="cancelReasonSelect" class="form-select form-select-sm mb-2" onchange="toggleCustomCancelReason(this)">
                             <option value="Đổi ý không muốn mua nữa">Đổi ý không muốn mua nữa</option>
                             <option value="Muốn thay đổi địa chỉ giao hàng / số điện thoại">Muốn thay đổi địa chỉ giao hàng / số điện thoại</option>
                             <option value="Đặt nhầm sản phẩm hoặc số lượng">Đặt nhầm sản phẩm hoặc số lượng</option>
@@ -81,13 +56,12 @@
                             <option value="Tìm thấy giá tốt hơn ở nơi khác">Tìm thấy giá tốt hơn ở nơi khác</option>
                             <option value="Lý do khác">Lý do khác...</option>
                         </select>
-                        <label for="customCancelReason" class="form-label small text-muted mb-1">Ghi chú chi tiết lý do (tùy chọn hoặc chi tiết lý do khác):</label>
-                        <textarea id="customCancelReason" class="form-control" rows="3" placeholder="Nhập lý do cụ thể hoặc ghi chú thêm cho người bán / cửa hàng..." maxlength="400" style="border: 1px solid #2f2f2f; background-color: #ffffff; color: #121617;"></textarea>
+                        <textarea id="customCancelReason" class="form-control form-control-sm d-none" rows="3" placeholder="Nhập lý do cụ thể..." maxlength="400"></textarea>
                     </div>
 
                     <div id="cancelRefundFields" class="d-none border-top pt-3 mt-3">
                         <div class="alert alert-warning py-2 small mb-3">
-                            <i class="fa fa-info-circle me-1"></i> Đơn hàng này đã thanh toán online. Sau khi hủy, hệ thống sẽ gửi yêu cầu hoàn tiền tới Ban quản trị để chuyển trả tiền cho bạn.
+                            <i class="fa-solid fa-circle-info me-1"></i> Đơn hàng này đã thanh toán online. Sau khi hủy, hệ thống sẽ gửi yêu cầu hoàn tiền tới Ban quản trị để hoàn trả lại tiền cho bạn.
                         </div>
                         <h6 class="fw-bold mb-2 small text-uppercase">Tài khoản nhận tiền hoàn</h6>
                         <div class="mb-2">
@@ -104,79 +78,128 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" id="btnSubmitCancel" class="btn btn-danger fw-bold" onclick="submitCancelOrder()">
-                        <i class="fa fa-times-circle me-1"></i> Xác nhận hủy đơn
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnSubmitCancel" class="btn btn-danger btn-sm fw-bold" onclick="submitCancelOrder()">
+                        <i class="fa-solid fa-check me-1"></i> Xác nhận hủy đơn
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Gửi yêu cầu hủy đơn (Confirmed) -->
+    <!-- Modal Yêu cầu hủy đơn (Confirmed) -->
     <div class="modal fade" id="requestCancelModal" tabindex="-1" aria-labelledby="requestCancelModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-dark text-white py-3">
-                    <h5 class="modal-title fw-bold" id="requestCancelModalLabel"><i class="fa fa-ban me-2"></i>Yêu cầu hủy đơn hàng</h5>
+                    <h6 class="modal-title fw-bold mb-0" id="requestCancelModalLabel">
+                        <i class="fa-solid fa-ban me-2"></i>Yêu cầu hủy đơn hàng
+                    </h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div id="requestCancelModalMessage"></div>
                     <div class="alert alert-secondary py-2 small mb-3">
-                        <i class="fa fa-info-circle me-1"></i> Đơn hàng đã được xác nhận đóng gói. Yêu cầu của bạn sẽ được gửi tới Ban quản trị để phê duyệt trước khi hủy.
+                        <i class="fa-solid fa-circle-info me-1"></i> Đơn hàng đã được xác nhận đóng gói. Yêu cầu của bạn sẽ được gửi tới Ban quản trị để phê duyệt trước khi hủy.
                     </div>
                     <div class="mb-3">
-                        <label for="requestCancelReason" class="form-label fw-semibold">Lý do yêu cầu hủy <span class="text-danger">*</span></label>
-                        <textarea id="requestCancelReason" class="form-control" rows="3" placeholder="Nhập lý do bạn muốn hủy đơn..." required maxlength="400"></textarea>
+                        <label for="requestCancelReason" class="form-label fw-semibold small">Lý do yêu cầu hủy <span class="text-danger">*</span></label>
+                        <textarea id="requestCancelReason" class="form-control form-control-sm" rows="3" placeholder="Nhập lý do bạn muốn hủy đơn..." required maxlength="400"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" id="btnSubmitRequestCancel" class="btn btn-dark fw-bold" onclick="submitRequestCancel()">
-                        <i class="fa fa-paper-plane me-1"></i> Gửi yêu cầu
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnSubmitRequestCancel" class="btn btn-dark btn-sm fw-bold" onclick="submitRequestCancel()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Gửi yêu cầu
                     </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Modal Yêu cầu hoàn tiền -->
+    <div class="modal fade" id="refundModal" tabindex="-1" aria-labelledby="refundModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white py-3">
+                    <h6 class="modal-title fw-bold mb-0" id="refundModalLabel">
+                        <i class="fa-solid fa-hand-holding-dollar me-2"></i>Yêu cầu hoàn tiền
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="refundModalMessage"></div>
+                    <form id="refundForm">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Số tiền hoàn dự kiến</label>
+                            <input type="text" id="refundAmountDisplay" class="form-control form-control-sm fw-bold text-danger" readonly />
+                        </div>
+                        <div class="mb-3">
+                            <label for="refundReason" class="form-label small fw-semibold">Lý do yêu cầu hoàn tiền <span class="text-danger">*</span></label>
+                            <textarea id="refundReason" class="form-control form-control-sm" rows="3" placeholder="Nhập lý do muốn hoàn tiền..." required maxlength="500"></textarea>
+                        </div>
+                        <h6 class="border-top pt-3 mt-3 small text-uppercase fw-bold">Thông tin nhận tiền hoàn</h6>
+                        <div class="mb-2">
+                            <label for="refundBankName" class="form-label small fw-semibold">Tên ngân hàng <span class="text-danger">*</span></label>
+                            <input type="text" id="refundBankName" class="form-control form-control-sm" placeholder="VD: Vietcombank, MB, Techcombank..." maxlength="100" />
+                        </div>
+                        <div class="mb-2">
+                            <label for="refundAccountNumber" class="form-label small fw-semibold">Số tài khoản <span class="text-danger">*</span></label>
+                            <input type="text" id="refundAccountNumber" class="form-control form-control-sm" placeholder="Nhập số tài khoản ngân hàng" maxlength="50" />
+                        </div>
+                        <div class="mb-2">
+                            <label for="refundAccountHolderName" class="form-label small fw-semibold">Tên chủ tài khoản <span class="text-danger">*</span></label>
+                            <input type="text" id="refundAccountHolderName" class="form-control form-control-sm text-uppercase" placeholder="VD: NGUYEN VAN A" maxlength="100" />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnSubmitRefund" class="btn btn-danger btn-sm fw-bold" onclick="submitRefundRequest()">
+                        <i class="fa-solid fa-check me-1"></i> Xác nhận gửi yêu cầu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Gửi lại thông tin tài khoản hoàn tiền khi bị từ chối -->
     <div class="modal fade" id="resubmitRefundModal" tabindex="-1" aria-labelledby="resubmitRefundModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-dark text-white py-3">
-                    <h5 class="modal-title fw-bold" id="resubmitRefundModalLabel">
-                        <i class="fa fa-redo me-2"></i>Cập nhật thông tin nhận hoàn tiền
-                    </h5>
+                    <h6 class="modal-title fw-bold mb-0" id="resubmitRefundModalLabel">
+                        <i class="fa-solid fa-rotate-right me-2"></i>Cập nhật thông tin nhận hoàn tiền
+                    </h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div id="resubmitRefundModalMessage"></div>
                     <div class="alert alert-secondary py-2 small mb-3">
-                        <i class="fa fa-info-circle me-1"></i> Vui lòng kiểm tra kỹ số tài khoản và ngân hàng chính xác để Ban quản trị xử lý hoàn tiền chuyển khoản nhanh nhất.
+                        <i class="fa-solid fa-circle-info me-1"></i> Vui lòng kiểm tra kỹ số tài khoản và ngân hàng chính xác để Ban quản trị xử lý hoàn tiền chuyển khoản nhanh nhất.
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <label for="resubmitBankName" class="form-label small fw-semibold">Tên ngân hàng <span class="text-danger">*</span></label>
-                        <input type="text" id="resubmitBankName" class="form-control" placeholder="VD: Vietcombank, Techcombank, MB..." required maxlength="100" />
+                        <input type="text" id="resubmitBankName" class="form-control form-control-sm" placeholder="VD: Vietcombank, Techcombank, MB..." required maxlength="100" />
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <label for="resubmitAccountNumber" class="form-label small fw-semibold">Số tài khoản nhận tiền <span class="text-danger">*</span></label>
-                        <input type="text" id="resubmitAccountNumber" class="form-control" placeholder="Nhập số tài khoản ngân hàng" required maxlength="50" />
+                        <input type="text" id="resubmitAccountNumber" class="form-control form-control-sm" placeholder="Nhập số tài khoản ngân hàng" required maxlength="50" />
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <label for="resubmitAccountHolderName" class="form-label small fw-semibold">Tên chủ tài khoản <span class="text-danger">*</span></label>
-                        <input type="text" id="resubmitAccountHolderName" class="form-control text-uppercase" placeholder="VD: NGUYEN VAN A" required maxlength="100" />
+                        <input type="text" id="resubmitAccountHolderName" class="form-control form-control-sm text-uppercase" placeholder="VD: NGUYEN VAN A" required maxlength="100" />
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <label for="resubmitReason" class="form-label small fw-semibold">Ghi chú bổ sung (tùy chọn)</label>
-                        <textarea id="resubmitReason" class="form-control" rows="2" placeholder="Ghi chú thêm cho Ban quản trị..." maxlength="500"></textarea>
+                        <textarea id="resubmitReason" class="form-control form-control-sm" rows="2" placeholder="Ghi chú thêm cho Ban quản trị..." maxlength="500"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" id="btnSubmitResubmitRefund" class="btn btn-danger fw-bold" onclick="submitResubmitRefund()">
-                        <i class="fa fa-paper-plane me-1"></i> Gửi lại yêu cầu
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnSubmitResubmitRefund" class="btn btn-danger btn-sm fw-bold" onclick="submitResubmitRefund()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Gửi lại yêu cầu
                     </button>
                 </div>
             </div>
@@ -184,728 +207,1110 @@
     </div>
 </div>
 
-<script>
-    const orderId = @orderId;
-    const orderDetailMessage = document.getElementById("orderDetailMessage");
-    const orderDetailContent = document.getElementById("orderDetailContent");
+<style>
+    /* Ẩn cần câu footer trang trí gây che khuất */
+    .footer-section .sofa-img {
+        display: none !important;
+    }
 
-    document.addEventListener("DOMContentLoaded", function() {
-        loadOrderDetail();
-    });
+    .order-detail-page {
+        background-color: #f4f6f8;
+        min-height: 80vh;
+        padding-bottom: 70px !important;
+    }
 
-    async function loadOrderDetail() {
-        try {
-            const response = await fetch(`/api/orders/${orderId}`, {
-                method: "GET",
-                credentials: "include"
-            });
+    .back-history-link:hover {
+        color: #253f36 !important;
+        text-decoration: underline !important;
+    }
 
-            if (response.status === 401) {
-                window.location.href = "/account/login";
-                return;
-            }
+    /* Thumbnail sản phẩm */
+    .order-detail-thumb {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        flex-shrink: 0;
+        background-color: #f8fafc;
+    }
 
-            if (response.status === 404) {
-                orderDetailContent.innerHTML = `
-                        <div class="alert alert-warning">
-                            Không tìm thấy đơn hàng.
+    /* =================================================== */
+    /* Order Stepper Timeline (Responsive & Chống tràn)    */
+    /* =================================================== */
+    .order-stepper {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        position: relative;
+        padding: 16px 8px 8px 8px;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .stepper-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        position: relative;
+    }
+
+    .stepper-node {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .stepper-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: #ffffff;
+        border: 2px solid #cbd5e1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8125rem;
+        color: #94a3b8;
+        z-index: 2;
+        transition: all 0.2s ease;
+    }
+
+    .stepper-item.completed .stepper-icon {
+        background-color: #253f36;
+        border-color: #253f36;
+        color: #ffffff;
+    }
+
+    .stepper-item.active .stepper-icon {
+        background-color: #253f36;
+        border-color: #253f36;
+        color: #ffffff;
+        box-shadow: 0 0 0 4px rgba(37, 63, 54, 0.15);
+    }
+
+    .stepper-item.cancelled .stepper-icon {
+        background-color: #dc2626;
+        border-color: #dc2626;
+        color: #ffffff;
+    }
+
+    /* Thanh line nối giữa các bước */
+    .stepper-line {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100%;
+        height: 3px;
+        transform: translateY(-50%);
+        background-color: #e2e8f0;
+        z-index: 1;
+        transition: background-color 0.3s ease;
+    }
+
+    .stepper-line.completed {
+        background-color: #253f36;
+    }
+
+    .stepper-line.cancelled {
+        background-color: #dc2626;
+    }
+
+    .stepper-title {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 2px;
+        padding: 0 4px;
+    }
+
+    .stepper-time {
+        font-size: 0.725rem;
+        color: #64748b;
+    }
+
+    /* =================================================== */
+    /* Badges trạng thái đơn hàng (Tương thích chuẩn)       */
+    /* =================================================== */
+    .fuu-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 4px;
+        line-height: 1.3;
+        white-space: nowrap;
+    }
+
+    .fuu-status-badge.status-pending {
+        background-color: #fef3c7 !important;
+        color: #92400e !important;
+        border: 1px solid #fde68a !important;
+    }
+
+    .fuu-status-badge.status-confirmed,
+    .fuu-status-badge.status-processing {
+        background-color: #e0f2fe !important;
+        color: #0369a1 !important;
+        border: 1px solid #bae6fd !important;
+    }
+
+    .fuu-status-badge.status-shipped {
+        background-color: #f0fdfa !important;
+        color: #0f766e !important;
+        border: 1px solid #99f6e4 !important;
+    }
+
+    .fuu-status-badge.status-completed {
+        background-color: #dcfce7 !important;
+        color: #15803d !important;
+        border: 1px solid #bbf7d0 !important;
+    }
+
+    .fuu-status-badge.status-cancelled {
+        background-color: #fee2e2 !important;
+        color: #dc2626 !important;
+        border: 1px solid #fecaca !important;
+    }
+
+    .fuu-status-badge.status-default {
+        background-color: #f1f5f9 !important;
+        color: #475569 !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+
+    /* =================================================== */
+    /* Nút bấm chuẩn Anti-AI-slop (Khắc phục .btn đen sì)  */
+    /* =================================================== */
+    .btn-buy-again {
+        background: #ffffff !important;
+        color: #dc2626 !important;
+        border: 1px solid #dc2626 !important;
+        border-radius: 4px !important;
+        font-size: 0.8125rem !important;
+        font-weight: 600 !important;
+        padding: 5px 14px !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.15s ease !important;
+        text-decoration: none !important;
+        line-height: 1.4 !important;
+    }
+    .btn-buy-again:hover {
+        background: #fef2f2 !important;
+        border-color: #b91c1c !important;
+        color: #b91c1c !important;
+    }
+
+    .btn-cancel-order {
+        background: #ffffff !important;
+        color: #dc2626 !important;
+        border: 1.5px solid #dc2626 !important;
+        border-radius: 6px !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        padding: 9px 16px !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+        transition: all 0.15s ease !important;
+        text-decoration: none !important;
+    }
+    .btn-cancel-order:hover {
+        background: #fef2f2 !important;
+        color: #b91c1c !important;
+        border-color: #b91c1c !important;
+    }
+
+    .btn-request-cancel {
+        background: #ffffff !important;
+        color: #d97706 !important;
+        border: 1.5px solid #d97706 !important;
+        border-radius: 6px !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        padding: 9px 16px !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+        transition: all 0.15s ease !important;
+        text-decoration: none !important;
+    }
+    .btn-request-cancel:hover {
+        background: #fffbeb !important;
+        color: #b45309 !important;
+        border-color: #b45309 !important;
+    }
+
+    .btn-request-refund {
+        background: #ffffff !important;
+        color: #253f36 !important;
+        border: 1.5px solid #253f36 !important;
+        border-radius: 6px !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        padding: 9px 16px !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+        transition: all 0.15s ease !important;
+        text-decoration: none !important;
+    }
+    .btn-request-refund:hover {
+        background: #f0fdf4 !important;
+        color: #1e332c !important;
+        border-color: #1e332c !important;
+    }
+
+    /* Modal buttons */
+    .order-detail-page .modal-footer .btn {
+        border-radius: 6px !important;
+        padding: 6px 14px !important;
+        font-weight: 600 !important;
+        font-size: 0.8125rem !important;
+    }
+    .order-detail-page .modal-footer .btn-danger {
+        background-color: #dc2626 !important;
+        border-color: #dc2626 !important;
+        color: #ffffff !important;
+    }
+    .order-detail-page .modal-footer .btn-danger:hover {
+        background-color: #b91c1c !important;
+        border-color: #b91c1c !important;
+    }
+    .order-detail-page .modal-footer .btn-outline-secondary {
+        background-color: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        color: #475569 !important;
+    }
+    .order-detail-page .modal-footer .btn-outline-secondary:hover {
+        background-color: #f1f5f9 !important;
+        color: #1e293b !important;
+    }
+    .order-detail-page .modal-footer .btn-dark {
+        background-color: #253f36 !important;
+        border-color: #253f36 !important;
+        color: #ffffff !important;
+    }
+    .order-detail-page .modal-footer .btn-dark:hover {
+        background-color: #1e332c !important;
+        border-color: #1e332c !important;
+    }
+
+    .text-fuu-primary {
+        color: #253f36 !important;
+    }
+
+    .x-small {
+        font-size: 0.75rem;
+    }
+
+    @@media (max-width: 576px) {
+        .order-detail-page {
+            padding-top: 16px !important;
+            padding-bottom: 50px !important;
+        }
+        .order-stepper {
+            padding: 12px 2px 4px 2px;
+        }
+        .stepper-icon {
+            width: 26px;
+            height: 26px;
+            font-size: 0.75rem;
+        }
+        .stepper-title {
+            font-size: 0.7rem;
+            padding: 0 1px;
+        }
+        .stepper-time {
+            font-size: 0.65rem;
+        }
+        .order-detail-thumb {
+            width: 56px;
+            height: 56px;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        const orderId = @orderId;
+        const orderDetailMessage = document.getElementById("orderDetailMessage");
+        const orderDetailContent = document.getElementById("orderDetailContent");
+
+        document.addEventListener("DOMContentLoaded", function () {
+            loadOrderDetail();
+        });
+
+        async function loadOrderDetail() {
+            try {
+                const response = await fetch(`/api/orders/${orderId}`, {
+                    method: "GET",
+                    credentials: "include"
+                });
+
+                if (response.status === 401) {
+                    window.location.href = `/account/login?returnUrl=/orders/detail/${orderId}`;
+                    return;
+                }
+
+                if (response.status === 404) {
+                    orderDetailContent.innerHTML = `
+                        <div class="alert alert-warning border-0 shadow-sm rounded-3">
+                            Không tìm thấy đơn hàng #${orderId}.
                         </div>
                     `;
-                return;
-            }
+                    return;
+                }
 
-            if (!response.ok) {
-                orderDetailContent.innerHTML = `
-                        <div class="alert alert-danger">
-                            Không thể tải chi tiết đơn hàng.
+                if (!response.ok) {
+                    orderDetailContent.innerHTML = `
+                        <div class="alert alert-danger border-0 shadow-sm rounded-3">
+                            Không thể tải chi tiết đơn hàng. Vui lòng thử lại sau.
                         </div>
                     `;
-                return;
-            }
+                    return;
+                }
 
-            const result = await response.json();
-            const order = result.orderDetails || result.OrderDetails || result.data || result;
+                const result = await response.json();
+                const order = result.orderDetails || result.OrderDetails || result.data || result;
 
-            if (!order || !order.orderId) {
-                orderDetailContent.innerHTML = `
-                        <div class="alert alert-warning">
+                if (!order || !order.orderId) {
+                    orderDetailContent.innerHTML = `
+                        <div class="alert alert-warning border-0 shadow-sm rounded-3">
                             ${result.message || "Không tìm thấy chi tiết đơn hàng."}
                         </div>
                     `;
-                return;
-            }
+                    return;
+                }
 
-            renderOrderDetail(order);
-            await loadCustomerRefundStatus(order.orderId);
+                renderOrderDetail(order);
+                await loadCustomerRefundStatus(order.orderId);
 
-            if (window.location.hash === "#cancel" && order.orderStatus === "Pending") {
-                openCancelModal(order.orderId, order.paymentStatus);
-            }
+                if (window.location.hash === "#cancel" && order.orderStatus === "Pending") {
+                    openCancelModal(order.orderId, order.paymentStatus);
+                }
 
-        } catch (error) {
-            console.error(error);
-
-            orderDetailContent.innerHTML = `
-                    <div class="alert alert-danger">
+            } catch (error) {
+                console.error("Lỗi nạp chi tiết đơn hàng:", error);
+                orderDetailContent.innerHTML = `
+                    <div class="alert alert-danger border-0 shadow-sm rounded-3">
                         Có lỗi xảy ra khi tải chi tiết đơn hàng.
                     </div>
                 `;
+            }
         }
-    }
 
-    function renderOrderDetail(order) {
-        const items = order.items || [];
+        // Render giao diện chi tiết theo chuẩn CellphoneS (Ảnh 2)
+        function renderOrderDetail(order) {
+            const items = order.items || [];
+            const statusBadge = renderStatusBadge(order.orderStatus);
+            const totalQuantity = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
 
-        orderDetailContent.innerHTML = `
-                <div class="row">
-                    <div class="col-lg-7">
-                        <div class="card shadow-sm border-0 mb-4">
-                            <div class="card-header bg-dark text-white">
-                                <h5 class="mb-0">Thông tin đơn hàng</h5>
-                            </div>
-
-                            <div class="card-body">
-                                <p>
-                                    <strong>Mã đơn:</strong>
-                                    ${order.orderCode || ""}
-                                </p>
-
-                                <p>
-                                    <strong>Ngày đặt:</strong>
-                                    ${formatDate(order.createdAt)}
-                                </p>
-
-                                <p>
-                                    <strong>Trạng thái đơn:</strong>
-                                    ${renderOrderStatus(order.orderStatus)}
-                                </p>
-
-                                <p>
-                                    <strong>Trạng thái thanh toán:</strong>
-                                    ${renderPaymentStatus(order.paymentStatus)}
-                                </p>
-
-                                <p>
-                                    <strong>Phương thức thanh toán:</strong>
-                                    ${order.paymentMethod || "COD"}
-                                </p>
+            orderDetailContent.innerHTML = `
+                <!-- 1. CARD TỔNG QUAN & SẢN PHẨM & TIMELINE STEPPER -->
+                <div class="card bg-white border rounded-3 p-3 p-md-4 shadow-sm mb-4">
+                    
+                    <!-- Header Tổng quan -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-3 mb-3 border-bottom">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1 fs-6">Tổng quan</h5>
+                            <div class="small">
+                                <span class="text-muted">Đơn hàng:</span>
+                                <strong class="text-dark font-monospace">#${order.orderCode || order.orderId}</strong>
+                                <span class="text-muted mx-2">•</span>
+                                <span class="text-muted">Ngày đặt hàng:</span>
+                                <span class="text-dark fw-semibold">${formatDate(order.createdAt)}</span>
                             </div>
                         </div>
-
-                        <div class="card shadow-sm border-0">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Sản phẩm trong đơn</h5>
-                            </div>
-
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table align-middle">
-                                        <thead>
-                                            <tr>
-                                                <th>Sản phẩm</th>
-                                                <th class="text-center">SL</th>
-                                                <th class="text-end">Đơn giá</th>
-                                                <th class="text-end">Thành tiền</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            ${renderOrderItems(items)}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                        <div>
+                            ${statusBadge}
                         </div>
                     </div>
 
-                    <div class="col-lg-5">
-                        <div class="card shadow-sm border-0 mb-4">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Thông tin nhận hàng</h5>
-                            </div>
-
-                            <div class="card-body">
-                                <p>
-                                    <strong>Người nhận:</strong>
-                                    ${escapeHtml(order.receiverName)}
-                                </p>
-
-                                <p>
-                                    <strong>Số điện thoại:</strong>
-                                    ${escapeHtml(order.receiverPhone)}
-                                </p>
-
-                                <p>
-                                    <strong>Địa chỉ:</strong>
-                                    ${escapeHtml(order.shippingAddress)}
-                                </p>
-
-                                <p>
-                                    <strong>Ghi chú:</strong>
-                                    ${escapeHtml(order.note || "Không có")}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="card shadow-sm border-0">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Tổng kết thanh toán</h5>
-                            </div>
-
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Tạm tính</span>
-                                    <strong>${formatCurrency(order.totalAmount)}</strong>
+                    <!-- Danh sách sản phẩm trong đơn (kèm nút Mua lại) -->
+                    <div class="d-flex flex-column gap-3 mb-4">
+                        ${items.map(item => `
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 p-2 rounded-2 bg-light border">
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="${item.imageUrl || '/images/products/product-1.png'}" 
+                                         alt="${escapeHtml(item.productNameSnapshot)}" 
+                                         class="order-detail-thumb rounded-2 border" 
+                                         onerror="this.src='/images/products/product-1.png'" />
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1 fs-6">${escapeHtml(item.productNameSnapshot || '')}</h6>
+                                        <div class="text-danger fw-semibold font-monospace small">${formatCurrency(item.unitPrice)}</div>
+                                    </div>
                                 </div>
-
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Giảm giá</span>
-                                    <strong>${formatCurrency(order.discountAmount)}</strong>
+                                <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-3 flex-shrink-0">
+                                    <span class="text-muted small">Số lượng: <strong class="text-dark">${item.quantity}</strong></span>
+                                    <button type="button" class="btn-buy-again" onclick="buyAgain(${item.productId})">
+                                        Mua lại
+                                    </button>
                                 </div>
-
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Phí vận chuyển</span>
-                                    <strong>${formatCurrency(order.shippingFee)}</strong>
-                                </div>
-
-                                <hr />
-
-                                <div class="d-flex justify-content-between fs-5">
-                                    <span>Tổng thanh toán</span>
-                                    <strong>${formatCurrency(order.finalAmount)}</strong>
-                                </div>
-
-                                ${renderOrderActions(order)}
-                                <div id="customerRefundSection"></div>
                             </div>
-                        </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Thanh tiến trình Stepper Timeline -->
+                    <div class="pt-3 border-top">
+                        ${renderOrderStepper(order)}
                     </div>
                 </div>
-            `;
-    }
 
-    function renderOrderItems(items) {
-        if (!items || items.length === 0) {
-            return `
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-4">
-                            Không có sản phẩm trong đơn.
-                        </td>
-                    </tr>
-                `;
-        }
+                <!-- 2. BỐ CỤC 2 CỘT: THÔNG TIN KHÁCH HÀNG & THÔNG TIN THANH TOÁN -->
+                <div class="row g-4">
+                    
+                    <!-- CỘT TRÁI: THÔNG TIN KHÁCH HÀNG (ĐÃ BỎ BẢO HÀNH & HỖ TRỢ THEO YÊU CẦU) -->
+                    <div class="col-12 col-lg-6">
+                        <div class="card bg-white border rounded-3 p-4 shadow-sm h-100">
+                            <h6 class="fw-bold text-dark pb-2 mb-3 border-bottom fs-6">
+                                <i class="fa-solid fa-user me-2 text-secondary"></i>Thông tin khách hàng
+                            </h6>
 
-        return items.map(item => `
-                <tr>
-                    <td>
-                        <div class="d-flex align-items-center gap-3">
-                            ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${escapeHtml(item.productNameSnapshot)}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6;" />` : `<div style="width: 48px; height: 48px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><i class="fa fa-box text-muted"></i></div>`}
+                            <div class="d-flex flex-column gap-2 small">
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">Họ và tên:</span>
+                                    <strong class="text-dark">${escapeHtml(order.receiverName)}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-light">
+                                    <span class="text-muted">Số điện thoại:</span>
+                                    <strong class="text-dark font-monospace">${escapeHtml(order.receiverPhone)}</strong>
+                                </div>
+                                <div class="py-1 border-bottom border-light">
+                                    <div class="text-muted mb-1">Địa chỉ nhận hàng:</div>
+                                    <strong class="text-dark d-block">${escapeHtml(order.shippingAddress)}</strong>
+                                </div>
+                                <div class="py-1">
+                                    <div class="text-muted mb-1">Ghi chú đơn hàng:</div>
+                                    <span class="text-dark">${escapeHtml(order.note || '-')}</span>
+                                </div>
+                            </div>
+
+                            <!-- Hành động đơn hàng (Hủy đơn hàng / Yêu cầu hủy) -->
+                            ${renderOrderActions(order)}
+                            
+                            <!-- Trạng thái hoàn tiền (nếu có) -->
+                            <div id="customerRefundSection"></div>
+                        </div>
+                    </div>
+
+                    <!-- CỘT PHẢI: THÔNG TIN THANH TOÁN -->
+                    <div class="col-12 col-lg-6">
+                        <div class="card bg-white border rounded-3 p-4 shadow-sm h-100">
+                            <h6 class="fw-bold text-dark pb-2 mb-3 border-bottom fs-6">
+                                <i class="fa-solid fa-credit-card me-2 text-secondary"></i>Thông tin thanh toán
+                            </h6>
+
+                            <!-- Nhóm 1: Sản phẩm -->
+                            <div class="mb-3">
+                                <div class="fw-semibold text-secondary x-small text-uppercase mb-2">Sản phẩm</div>
+                                <div class="d-flex justify-content-between py-1 small">
+                                    <span class="text-muted">Số lượng sản phẩm:</span>
+                                    <strong class="text-dark">${totalQuantity}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 small">
+                                    <span class="text-muted">Tổng tiền hàng:</span>
+                                    <strong class="text-dark">${formatCurrency(order.totalAmount)}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 small">
+                                    <span class="text-muted">Giảm giá:</span>
+                                    <span class="text-success fw-semibold">-${formatCurrency(order.discountAmount)}</span>
+                                </div>
+                                <div class="d-flex justify-content-between py-1 small">
+                                    <span class="text-muted">Phí vận chuyển:</span>
+                                    <span class="text-dark fw-semibold">${order.shippingFee === 0 ? 'Miễn phí' : formatCurrency(order.shippingFee)}</span>
+                                </div>
+                            </div>
+
+                            <hr class="my-2 border-secondary-subtle">
+
+                            <!-- Nhóm 2: Thanh toán -->
                             <div>
-                                <span class="fw-bold">${escapeHtml(item.productNameSnapshot || "")}</span>
+                                <div class="fw-semibold text-secondary x-small text-uppercase mb-2">Thanh toán</div>
+                                <div class="d-flex justify-content-between align-items-center py-2 mb-1">
+                                    <div>
+                                        <div class="fw-bold text-dark">Tổng số tiền</div>
+                                        <div class="text-muted x-small">(Đã bao gồm VAT và làm tròn)</div>
+                                    </div>
+                                    <div class="fw-bold fs-5 text-danger">${formatCurrency(order.finalAmount)}</div>
+                                </div>
+
+                                <div class="d-flex justify-content-between py-1 small">
+                                    <div>
+                                        <span class="text-muted">Tổng số tiền đã thanh toán:</span>
+                                        <div class="text-muted x-small">${order.paymentStatus === 'Paid' ? '(Đã thanh toán trước)' : '(Chưa thanh toán)'}</div>
+                                    </div>
+                                    <strong class="text-dark">${order.paymentStatus === 'Paid' ? formatCurrency(order.finalAmount) : '0₫'}</strong>
+                                </div>
+
+                                <div class="d-flex justify-content-between py-1 small">
+                                    <div>
+                                        <span class="text-muted">Tổng số tiền còn lại:</span>
+                                        <div class="text-muted x-small">${order.paymentStatus === 'Paid' ? '(Đã hoàn tất)' : '(Cần thanh toán khi nhận)'}</div>
+                                    </div>
+                                    <strong class="${order.paymentStatus === 'Paid' ? 'text-success' : 'text-danger'}">${order.paymentStatus === 'Paid' ? '0₫' : formatCurrency(order.finalAmount)}</strong>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center py-1 small mt-2 pt-2 border-top">
+                                    <span class="text-muted">Phương thức:</span>
+                                    <span class="badge bg-light text-dark border">${order.paymentMethod || 'COD'}</span>
+                                </div>
                             </div>
+
                         </div>
-                    </td>
+                    </div>
 
-                    <td class="text-center">
-                        ${item.quantity || 0}
-                    </td>
-
-                    <td class="text-end">
-                        ${formatCurrency(item.unitPrice)}
-                    </td>
-
-                    <td class="text-end">
-                        <strong>${formatCurrency(item.lineTotal)}</strong>
-                    </td>
-                </tr>
-            `).join("");
-    }
-
-    function formatCurrency(value) {
-        return new Intl.NumberFormat("vi-VN", {
-            style: "currency",
-            currency: "VND"
-        }).format(value || 0);
-    }
-
-    function formatDate(value) {
-        if (!value) return "";
-
-        const date = new Date(value);
-
-        return date.toLocaleDateString("vi-VN") + " " + date.toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit"
-        });
-    }
-
-    function renderOrderStatus(status) {
-        const value = status || "Pending";
-
-        let badgeClass = "bg-secondary";
-
-        if (value === "Pending") badgeClass = "bg-warning text-dark";
-        if (value === "Confirmed") badgeClass = "bg-primary";
-        if (value === "Shipped") badgeClass = "bg-info text-dark";
-        if (value === "Completed") badgeClass = "bg-success";
-        if (value === "Cancelled") badgeClass = "bg-danger";
-
-        return `<span class="badge ${badgeClass}">${value}</span>`;
-    }
-
-    function renderPaymentStatus(status) {
-        const value = status || "Unpaid";
-
-        let badgeClass = "bg-secondary";
-        let text = value;
-
-        if (value === "Unpaid") { badgeClass = "bg-warning text-dark"; text = "Chưa thanh toán"; }
-        if (value === "Pending") { badgeClass = "bg-warning text-dark"; text = "Chờ TT Online"; }
-        if (value === "Paid") { badgeClass = "bg-success"; text = "Đã thanh toán"; }
-        if (value === "Failed") { badgeClass = "bg-danger"; text = "Thất bại"; }
-        if (value === "RefundPending") { badgeClass = "bg-info text-dark"; text = "Chờ hoàn tiền"; }
-        if (value === "Refunded") { badgeClass = "bg-dark text-white"; text = "Đã hoàn tiền"; }
-
-        return `<span class="badge ${badgeClass}">${text}</span>`;
-    }
-
-    // ==========================================
-    // HÀNH ĐỘNG ĐƠN HÀNG & HỦY ĐƠN / HOÀN TIỀN
-    // ==========================================
-    let currentRefundOrderId = 0;
-    let currentCancelOrderId = 0;
-    let currentCancelPaymentStatus = "";
-    let currentRequestCancelOrderId = 0;
-
-    function renderOrderActions(order) {
-        let html = "";
-
-        if (order.orderStatus === "Pending") {
-            html += `
-                <div class="mt-3 pt-3 border-top">
-                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" onclick="openCancelModal(${order.orderId}, '${order.paymentStatus}')">
-                        <i class="fa fa-times-circle me-1"></i> Hủy đơn hàng
-                    </button>
                 </div>
             `;
-        } else if (order.orderStatus === "Confirmed") {
-            const hasRequested = order.note && order.note.includes("[Yêu cầu hủy]");
-            if (hasRequested) {
-                html += `
-                    <div class="alert alert-warning mt-3 mb-0 small">
-                        <h6 class="alert-heading mb-1 fw-bold"><i class="fa fa-clock me-1"></i> Đang chờ duyệt hủy</h6>
-                        Yêu cầu hủy đơn hàng của bạn đang được Ban quản trị xem xét.
+        }
+
+        // 3. Render Order Stepper Timeline (Responsive, chuẩn tỉ lệ, chống tràn)
+        function renderOrderStepper(order) {
+            const isCancelled = order.orderStatus === "Cancelled";
+            const isCompleted = order.orderStatus === "Completed";
+            const isShipped = order.orderStatus === "Shipped";
+            const isConfirmed = order.orderStatus === "Confirmed" || order.orderStatus === "Processing";
+
+            if (isCancelled) {
+                return `
+                    <div class="order-stepper">
+                        <div class="stepper-item completed">
+                            <div class="stepper-node">
+                                <div class="stepper-icon"><i class="fa-solid fa-check"></i></div>
+                                <div class="stepper-line cancelled"></div>
+                            </div>
+                            <div class="stepper-title">Đặt hàng thành công</div>
+                            <div class="stepper-time">${formatDate(order.createdAt)}</div>
+                        </div>
+
+                        <div class="stepper-item cancelled">
+                            <div class="stepper-node">
+                                <div class="stepper-icon"><i class="fa-solid fa-xmark"></i></div>
+                            </div>
+                            <div class="stepper-title text-danger">Đã hủy đơn hàng</div>
+                            <div class="stepper-time">Đơn đã đóng</div>
+                        </div>
                     </div>
                 `;
-            } else {
+            }
+
+            const step1LineCompleted = isConfirmed || isShipped || isCompleted;
+            const step2LineCompleted = isCompleted;
+
+            return `
+                <div class="order-stepper">
+                    <div class="stepper-item completed">
+                        <div class="stepper-node">
+                            <div class="stepper-icon"><i class="fa-solid fa-check"></i></div>
+                            <div class="stepper-line ${step1LineCompleted ? 'completed' : ''}"></div>
+                        </div>
+                        <div class="stepper-title">Đặt hàng thành công</div>
+                        <div class="stepper-time">${formatDate(order.createdAt)}</div>
+                    </div>
+
+                    <div class="stepper-item ${isCompleted ? 'completed' : (isShipped || isConfirmed ? 'active' : '')}">
+                        <div class="stepper-node">
+                            <div class="stepper-icon"><i class="${isCompleted ? 'fa-solid fa-check' : 'fa-solid fa-truck-fast'}"></i></div>
+                            <div class="stepper-line ${step2LineCompleted ? 'completed' : ''}"></div>
+                        </div>
+                        <div class="stepper-title">${isShipped ? 'Đang vận chuyển' : (isConfirmed ? 'Đang xử lý & chuẩn bị' : 'Chờ xác nhận đơn')}</div>
+                        <div class="stepper-time">${isShipped || isConfirmed || isCompleted ? 'Đang xử lý' : 'Chờ duyệt'}</div>
+                    </div>
+
+                    <div class="stepper-item ${isCompleted ? 'completed' : ''}">
+                        <div class="stepper-node">
+                            <div class="stepper-icon"><i class="${isCompleted ? 'fa-solid fa-check' : 'fa-solid fa-box-archive'}"></i></div>
+                        </div>
+                        <div class="stepper-title">Nhận hàng thành công</div>
+                        <div class="stepper-time">${isCompleted ? 'Giao thành công' : 'Dự kiến'}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 4. Chức năng Mua lại (Thêm sản phẩm vào giỏ hàng và tới giỏ)
+        async function buyAgain(productId) {
+            try {
+                const response = await fetch("/api/cart/add", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ productId: productId, quantity: 1 })
+                });
+
+                if (response.status === 401) {
+                    window.location.href = `/account/login?returnUrl=/orders/detail/${orderId}`;
+                    return;
+                }
+
+                const data = await response.json();
+                if (response.ok) {
+                    window.location.href = "/cart";
+                } else {
+                    alert(data.message || "Không thể thêm sản phẩm vào giỏ hàng.");
+                }
+            } catch (err) {
+                console.error("Lỗi mua lại:", err);
+                alert("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+            }
+        }
+
+        // Định dạng trạng thái đơn hàng (Badge màu sắc dịu chuẩn Anti-AI-slop & rõ nét)
+        function renderStatusBadge(status) {
+            const val = (status || "Pending").trim();
+            const lower = val.toLowerCase();
+            if (lower === "pending" || lower === "chờ xác nhận") {
+                return `<span class="fuu-status-badge status-pending"><i class="fa-solid fa-clock me-1"></i>Chờ xác nhận</span>`;
+            }
+            if (lower === "confirmed" || lower === "đã xác nhận") {
+                return `<span class="fuu-status-badge status-confirmed"><i class="fa-solid fa-spinner me-1"></i>Đang xử lý</span>`;
+            }
+            if (lower === "processing" || lower === "đang chuẩn bị" || lower === "chờ lấy hàng") {
+                return `<span class="fuu-status-badge status-processing"><i class="fa-solid fa-box me-1"></i>Chờ lấy hàng</span>`;
+            }
+            if (lower === "shipped" || lower === "đang giao" || lower === "đang vận chuyển") {
+                return `<span class="fuu-status-badge status-shipped"><i class="fa-solid fa-truck-fast me-1"></i>Đang vận chuyển</span>`;
+            }
+            if (lower === "completed" || lower === "đã giao" || lower === "đã nhận hàng") {
+                return `<span class="fuu-status-badge status-completed"><i class="fa-solid fa-circle-check me-1"></i>Đã nhận hàng</span>`;
+            }
+            if (lower === "cancelled" || lower === "đã hủy" || lower === "hủy") {
+                return `<span class="fuu-status-badge status-cancelled"><i class="fa-solid fa-ban me-1"></i>Đã hủy</span>`;
+            }
+            return `<span class="fuu-status-badge status-default">${escapeHtml(val)}</span>`;
+        }
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val || 0);
+        }
+
+        function formatDate(val) {
+            if (!val) return "";
+            const d = new Date(val);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return "";
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag));
+        }
+
+        // ==========================================
+        // HÀNH ĐỘNG ĐƠN HÀNG & HỦY ĐƠN / HOÀN TIỀN
+        // ==========================================
+        let currentRefundOrderId = 0;
+        let currentCancelOrderId = 0;
+        let currentCancelPaymentStatus = "";
+        let currentRequestCancelOrderId = 0;
+
+        function renderOrderActions(order) {
+            let html = "";
+
+            if (order.orderStatus === "Pending") {
                 html += `
                     <div class="mt-3 pt-3 border-top">
-                        <button type="button" class="btn btn-outline-warning text-dark w-100 py-2 fw-bold" onclick="openRequestCancelModal(${order.orderId})">
-                            <i class="fa fa-ban me-1"></i> Yêu cầu hủy đơn hàng
+                        <button type="button" class="btn-cancel-order" onclick="openCancelModal(${order.orderId}, '${order.paymentStatus}')">
+                            <i class="fa-solid fa-circle-xmark me-1"></i> Hủy đơn hàng
+                        </button>
+                    </div>
+                `;
+            } else if (order.orderStatus === "Confirmed") {
+                const hasRequested = order.note && order.note.includes("[Yêu cầu hủy]");
+                if (hasRequested) {
+                    html += `
+                        <div class="alert alert-warning mt-3 mb-0 small">
+                            <h6 class="alert-heading mb-1 fw-bold"><i class="fa-solid fa-clock me-1"></i> Đang chờ duyệt hủy</h6>
+                            Yêu cầu hủy đơn hàng của bạn đang được Ban quản trị xem xét.
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="mt-3 pt-3 border-top">
+                            <button type="button" class="btn-request-cancel" onclick="openRequestCancelModal(${order.orderId})">
+                                <i class="fa-solid fa-ban me-1"></i> Yêu cầu hủy đơn hàng
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+
+            if (order.paymentStatus === "Paid" && order.orderStatus === "Completed") {
+                html += `
+                    <div class="mt-3 pt-3 border-top">
+                        <button type="button" class="btn-request-refund" onclick="openRefundModal(${order.orderId}, ${order.finalAmount})">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Yêu cầu hoàn tiền
                         </button>
                     </div>
                 `;
             }
+
+            return html;
         }
 
-        if (order.paymentMethod === "VIETQR" && order.paymentStatus === "Unpaid" && order.orderStatus !== "Cancelled") {
-            const vietQrUrl = `https://img.vietqr.io/image/MB-0987654321-compact2.png?amount=${Math.round(order.finalAmount)}&addInfo=${encodeURIComponent(order.orderCode)}&accountName=${encodeURIComponent("FUU FISHING STORE")}`;
-            html += `
-                <div class="mt-3 pt-3 border-top">
-                    <div class="border rounded p-3 text-center" style="border: 1px solid #2f2f2f !important; background: #fafafa;">
-                        <div class="fw-bold text-dark mb-2"><i class="fa fa-qrcode me-1"></i> Quét mã VietQR thanh toán</div>
-                        <div class="p-2 bg-white d-inline-block rounded border" style="border-color: #2f2f2f !important;">
-                            <img src="${vietQrUrl}" alt="VietQR" class="img-fluid" style="max-width: 190px;" />
-                        </div>
-                        <div class="mt-2 text-start small">
-                            <div><strong>Ngân hàng:</strong> MBBank</div>
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <span><strong>STK:</strong> 0987654321</span>
-                                <button type="button" class="btn btn-sm btn-outline-dark py-0 px-2" onclick="copyDetailText('0987654321', 'Đã sao chép STK!')">Chép</button>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <span><strong>Nội dung:</strong> <span class="font-monospace fw-bold">${order.orderCode}</span></span>
-                                <button type="button" class="btn btn-sm btn-outline-dark py-0 px-2" onclick="copyDetailText('${order.orderCode}', 'Đã sao chép mã đơn!')">Chép</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+        function openCancelModal(orderId, paymentStatus) {
+            currentCancelOrderId = orderId;
+            currentCancelPaymentStatus = paymentStatus;
+            document.getElementById("cancelOrderModalMessage").innerHTML = "";
+            document.getElementById("cancelReasonSelect").value = "Đổi ý không muốn mua nữa";
+            document.getElementById("customCancelReason").value = "";
+            document.getElementById("customCancelReason").classList.add("d-none");
+
+            const refundFields = document.getElementById("cancelRefundFields");
+            if (paymentStatus === "Paid") {
+                refundFields.classList.remove("d-none");
+            } else {
+                refundFields.classList.add("d-none");
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById("cancelOrderModal"));
+            modal.show();
         }
 
-        if (order.paymentStatus === "Paid" && order.orderStatus === "Completed") {
-            html += `
-                <div class="mt-3 pt-3 border-top">
-                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" onclick="openRefundModal(${order.orderId}, ${order.finalAmount})">
-                        <i class="fa fa-undo me-1"></i> Yêu cầu hoàn tiền
-                    </button>
-                </div>
-            `;
+        function toggleCustomCancelReason(select) {
+            const customText = document.getElementById("customCancelReason");
+            if (select.value === "Lý do khác") {
+                customText.classList.remove("d-none");
+                customText.focus();
+            } else {
+                customText.classList.add("d-none");
+            }
         }
 
-        return html;
-    }
+        async function submitCancelOrder() {
+            const select = document.getElementById("cancelReasonSelect");
+            const custom = document.getElementById("customCancelReason");
+            let reason = select.value;
+            const customText = custom.value.trim();
 
-    function openCancelModal(orderId, paymentStatus) {
-        currentCancelOrderId = orderId;
-        currentCancelPaymentStatus = paymentStatus;
-        document.getElementById("cancelOrderModalMessage").innerHTML = "";
-        document.getElementById("cancelReasonSelect").value = "Đổi ý không muốn mua nữa";
-        document.getElementById("customCancelReason").value = "";
-        document.getElementById("customCancelReason").classList.add("d-none");
+            if (select.value === "Lý do khác") {
+                if (!customText) {
+                    document.getElementById("cancelOrderModalMessage").innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng nhập chi tiết lý do hủy đơn.</div>`;
+                    custom.focus();
+                    return;
+                }
+                reason = customText;
+            } else if (customText) {
+                reason = `${select.value} (${customText})`;
+            }
 
-        const refundFields = document.getElementById("cancelRefundFields");
-        if (paymentStatus === "Paid") {
-            refundFields.classList.remove("d-none");
-        } else {
-            refundFields.classList.add("d-none");
+            const msgDiv = document.getElementById("cancelOrderModalMessage");
+            const btn = document.getElementById("btnSubmitCancel");
+
+            let bankName = "";
+            let accountNumber = "";
+            let accountHolderName = "";
+
+            if (currentCancelPaymentStatus === "Paid") {
+                bankName = document.getElementById("cancelBankName").value.trim();
+                accountNumber = document.getElementById("cancelAccountNumber").value.trim();
+                accountHolderName = document.getElementById("cancelAccountHolderName").value.trim();
+
+                if (!bankName || !accountNumber || !accountHolderName) {
+                    msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng nhập đầy đủ thông tin tài khoản ngân hàng để nhận tiền hoàn.</div>`;
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...`;
+
+            try {
+                const res = await fetch(`/api/orders/cancel/${currentCancelOrderId}`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                    body: JSON.stringify({
+                        reason: reason,
+                        bankName: bankName || null,
+                        accountNumber: accountNumber || null,
+                        accountHolderName: accountHolderName || null
+                    })
+                });
+
+                const result = await res.json();
+                if (!res.ok || !result.success) {
+                    throw new Error(result.message || "Hủy đơn hàng thất bại.");
+                }
+
+                msgDiv.innerHTML = `<div class="alert alert-success py-2 small">${result.message}</div>`;
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("cancelOrderModal"));
+                    if (modal) modal.hide();
+                    loadOrderDetail();
+                }, 1200);
+            } catch (e) {
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">${e.message || "Có lỗi xảy ra"}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-check me-1"></i> Xác nhận hủy đơn`;
+            }
         }
 
-        const modal = new bootstrap.Modal(document.getElementById("cancelOrderModal"));
-        modal.show();
-    }
-
-    function toggleCustomCancelReason(select) {
-        const customText = document.getElementById("customCancelReason");
-        if (select.value === "Lý do khác") {
-            customText.classList.remove("d-none");
-            customText.focus();
-        } else {
-            customText.classList.add("d-none");
+        function openRequestCancelModal(orderId) {
+            currentRequestCancelOrderId = orderId;
+            document.getElementById("requestCancelReason").value = "";
+            document.getElementById("requestCancelModalMessage").innerHTML = "";
+            const modal = new bootstrap.Modal(document.getElementById("requestCancelModal"));
+            modal.show();
         }
-    }
 
-    async function submitCancelOrder() {
-        const select = document.getElementById("cancelReasonSelect");
-        const custom = document.getElementById("customCancelReason");
-        let reason = select.value;
-        const customText = custom.value.trim();
+        async function submitRequestCancel() {
+            const reason = document.getElementById("requestCancelReason").value.trim();
+            const msgDiv = document.getElementById("requestCancelModalMessage");
+            const btn = document.getElementById("btnSubmitRequestCancel");
 
-        if (select.value === "Lý do khác") {
-            if (!customText) {
-                document.getElementById("cancelOrderModalMessage").innerHTML = `<div class="alert alert-danger py-2">Vui lòng nhập chi tiết lý do hủy đơn.</div>`;
-                custom.focus();
+            if (!reason) {
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng nhập lý do yêu cầu hủy đơn.</div>`;
                 return;
             }
-            reason = customText;
-        } else if (customText) {
-            reason = `${select.value} (${customText})`;
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...`;
+
+            try {
+                const res = await fetch(`/api/orders/request-cancel/${currentRequestCancelOrderId}`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                    body: JSON.stringify({ reason: reason })
+                });
+
+                const result = await res.json();
+                if (!res.ok || !result.success) {
+                    throw new Error(result.message || "Gửi yêu cầu hủy thất bại.");
+                }
+
+                msgDiv.innerHTML = `<div class="alert alert-success py-2 small">${result.message}</div>`;
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("requestCancelModal"));
+                    if (modal) modal.hide();
+                    loadOrderDetail();
+                }, 1200);
+            } catch (e) {
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">${e.message || "Có lỗi xảy ra"}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane me-1"></i> Gửi yêu cầu`;
+            }
         }
 
-        const msgDiv = document.getElementById("cancelOrderModalMessage");
-        const btn = document.getElementById("btnSubmitCancel");
+        function openRefundModal(orderId, amount) {
+            currentRefundOrderId = orderId;
+            document.getElementById("refundAmountDisplay").value = formatCurrency(amount);
+            document.getElementById("refundReason").value = "";
+            document.getElementById("refundModalMessage").innerHTML = "";
+            
+            const modal = new bootstrap.Modal(document.getElementById("refundModal"));
+            modal.show();
+        }
 
-        let bankName = "";
-        let accountNumber = "";
-        let accountHolderName = "";
+        async function submitRefundRequest() {
+            const reason = document.getElementById("refundReason").value.trim();
+            const bankName = document.getElementById("refundBankName").value.trim();
+            const accountNumber = document.getElementById("refundAccountNumber").value.trim();
+            const accountHolderName = document.getElementById("refundAccountHolderName").value.trim();
+            const msgDiv = document.getElementById("refundModalMessage");
+            const btn = document.getElementById("btnSubmitRefund");
 
-        if (currentCancelPaymentStatus === "Paid") {
-            bankName = document.getElementById("cancelBankName").value.trim();
-            accountNumber = document.getElementById("cancelAccountNumber").value.trim();
-            accountHolderName = document.getElementById("cancelAccountHolderName").value.trim();
+            if (!reason) {
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng nhập lý do yêu cầu hoàn tiền.</div>`;
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...`;
+
+            try {
+                const response = await fetch("/api/refunds", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        orderId: currentRefundOrderId,
+                        reason: reason,
+                        bankName: bankName || null,
+                        accountNumber: accountNumber || null,
+                        accountHolderName: accountHolderName || null
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Gửi yêu cầu hoàn tiền thất bại.");
+                }
+
+                msgDiv.innerHTML = `<div class="alert alert-success py-2 small">${result.message}</div>`;
+                setTimeout(() => {
+                    const modalEl = document.getElementById("refundModal");
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    loadOrderDetail();
+                }, 1500);
+
+            } catch (err) {
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">${err.message || "Có lỗi xảy ra, vui lòng thử lại."}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-check me-1"></i> Xác nhận gửi yêu cầu`;
+            }
+        }
+
+        // ==========================================
+        // UC-20: THEO DÕI & CẬP NHẬT YÊU CẦU HOÀN TIỀN
+        // ==========================================
+        let currentResubmitOrderId = 0;
+
+        async function loadCustomerRefundStatus(orderId) {
+            const container = document.getElementById("customerRefundSection");
+            if (!container) return;
+
+            try {
+                const res = await fetch(`/api/refunds/order/${orderId}`, { credentials: "include" });
+                if (!res.ok) {
+                    container.innerHTML = "";
+                    return;
+                }
+
+                const refund = await res.json();
+                if (!refund) {
+                    container.innerHTML = "";
+                    return;
+                }
+
+                if (refund.status === "Pending") {
+                    container.innerHTML = `
+                        <div class="alert alert-warning mt-3 mb-0 small shadow-sm border border-warning">
+                            <h6 class="alert-heading mb-1 fw-bold text-dark"><i class="fa-solid fa-clock me-1"></i> Yêu cầu hoàn tiền đang chờ xét duyệt</h6>
+                            <div class="mb-1">Số tiền yêu cầu: <strong class="text-danger">${formatCurrency(refund.amount)}</strong></div>
+                            <div class="mb-1">Tài khoản nhận: <strong>${escapeHtml(refund.bankName || "Chưa có")}</strong> - <code>${escapeHtml(refund.accountNumber || "")}</code> (${escapeHtml(refund.accountHolderName || "")})</div>
+                            <div class="text-muted mt-1 small">Yêu cầu hoàn tiền của bạn đang được Ban quản trị xét duyệt.</div>
+                        </div>
+                    `;
+                } else if (refund.status === "Approved") {
+                    container.innerHTML = `
+                        <div class="alert alert-success mt-3 mb-0 small shadow-sm border border-success">
+                            <h6 class="alert-heading mb-1 fw-bold text-success"><i class="fa-solid fa-circle-check me-1"></i> Đã hoàn tiền thành công</h6>
+                            <div class="mb-1">Số tiền đã hoàn: <strong class="text-success">${formatCurrency(refund.amount)}</strong></div>
+                            ${refund.adminNote ? `<div class="mb-1">Phản hồi Ban quản trị: <strong>${escapeHtml(refund.adminNote)}</strong></div>` : ''}
+                            <div class="text-muted mt-1 small">Đã xử lý lúc: ${formatDate(refund.processedAt)}</div>
+                        </div>
+                    `;
+                } else if (refund.status === "Rejected") {
+                    container.innerHTML = `
+                        <div class="alert alert-danger mt-3 mb-0 small shadow-sm border border-danger">
+                            <h6 class="alert-heading mb-1 fw-bold text-danger"><i class="fa-solid fa-circle-xmark me-1"></i> Yêu cầu hoàn tiền đã bị từ chối</h6>
+                            <div class="mb-2"><strong>Lý do từ Ban quản trị:</strong> <span class="text-dark">${escapeHtml(refund.adminNote || "Chưa cung cấp lý do cụ thể")}</span></div>
+                            <div class="p-2 rounded bg-white text-dark border mb-2 small">
+                                Tài khoản đã gửi: ${escapeHtml(refund.bankName || "")} - <code>${escapeHtml(refund.accountNumber || "")}</code> (${escapeHtml(refund.accountHolderName || "")})
+                            </div>
+                            <button type="button" class="btn-cancel-order py-2 mt-1" onclick="openResubmitRefundModal(${refund.orderId}, '${escapeHtml(refund.bankName || "")}', '${escapeHtml(refund.accountNumber || "")}', '${escapeHtml(refund.accountHolderName || "")}')">
+                                <i class="fa-solid fa-rotate-right me-1"></i> Cập nhật lại số tài khoản &amp; gửi lại
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error("Lỗi tải thông tin hoàn tiền:", e);
+            }
+        }
+
+        function openResubmitRefundModal(orderId, bankName, accountNumber, accountHolderName) {
+            currentResubmitOrderId = orderId;
+            document.getElementById("resubmitRefundModalMessage").innerHTML = "";
+            document.getElementById("resubmitBankName").value = bankName || "";
+            document.getElementById("resubmitAccountNumber").value = accountNumber || "";
+            document.getElementById("resubmitAccountHolderName").value = accountHolderName || "";
+            document.getElementById("resubmitReason").value = "";
+
+            const modal = new bootstrap.Modal(document.getElementById("resubmitRefundModal"));
+            modal.show();
+        }
+
+        async function submitResubmitRefund() {
+            const bankName = document.getElementById("resubmitBankName").value.trim();
+            const accountNumber = document.getElementById("resubmitAccountNumber").value.trim();
+            const accountHolderName = document.getElementById("resubmitAccountHolderName").value.trim();
+            const reason = document.getElementById("resubmitReason").value.trim();
+            const msgDiv = document.getElementById("resubmitRefundModalMessage");
+            const btn = document.getElementById("btnSubmitResubmitRefund");
 
             if (!bankName || !accountNumber || !accountHolderName) {
-                msgDiv.innerHTML = `<div class="alert alert-danger py-2">Vui lòng nhập đầy đủ thông tin tài khoản ngân hàng để nhận tiền hoàn.</div>`;
-                return;
-            }
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang xử lý...`;
-
-        try {
-            const res = await fetch(`/api/orders/cancel/${currentCancelOrderId}`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({
-                    reason: reason,
-                    bankName: bankName || null,
-                    accountNumber: accountNumber || null,
-                    accountHolderName: accountHolderName || null
-                })
-            });
-
-            const result = await res.json();
-            if (!res.ok || !result.success) {
-                throw new Error(result.message || "Hủy đơn hàng thất bại.");
-            }
-
-            msgDiv.innerHTML = `<div class="alert alert-success py-2">${result.message}</div>`;
-            setTimeout(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById("cancelOrderModal"));
-                if (modal) modal.hide();
-                loadOrderDetail();
-            }, 1200);
-        } catch (e) {
-            msgDiv.innerHTML = `<div class="alert alert-danger py-2">${e.message || "Có lỗi xảy ra"}</div>`;
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fa fa-times-circle me-1"></i> Xác nhận hủy đơn`;
-        }
-    }
-
-    function openRequestCancelModal(orderId) {
-        currentRequestCancelOrderId = orderId;
-        document.getElementById("requestCancelReason").value = "";
-        document.getElementById("requestCancelModalMessage").innerHTML = "";
-        const modal = new bootstrap.Modal(document.getElementById("requestCancelModal"));
-        modal.show();
-    }
-
-    async function submitRequestCancel() {
-        const reason = document.getElementById("requestCancelReason").value.trim();
-        const msgDiv = document.getElementById("requestCancelModalMessage");
-        const btn = document.getElementById("btnSubmitRequestCancel");
-
-        if (!reason) {
-            msgDiv.innerHTML = `<div class="alert alert-danger py-2">Vui lòng nhập lý do yêu cầu hủy đơn.</div>`;
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...`;
-
-        try {
-            const res = await fetch(`/api/orders/request-cancel/${currentRequestCancelOrderId}`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({ reason: reason })
-            });
-
-            const result = await res.json();
-            if (!res.ok || !result.success) {
-                throw new Error(result.message || "Gửi yêu cầu hủy thất bại.");
-            }
-
-            msgDiv.innerHTML = `<div class="alert alert-success py-2">${result.message}</div>`;
-            setTimeout(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById("requestCancelModal"));
-                if (modal) modal.hide();
-                loadOrderDetail();
-            }, 1200);
-        } catch (e) {
-            msgDiv.innerHTML = `<div class="alert alert-danger py-2">${e.message || "Có lỗi xảy ra"}</div>`;
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fa fa-paper-plane me-1"></i> Gửi yêu cầu`;
-        }
-    }
-
-    function openRefundModal(orderId, amount) {
-        currentRefundOrderId = orderId;
-        document.getElementById("refundAmountDisplay").value = formatCurrency(amount);
-        document.getElementById("refundReason").value = "";
-        document.getElementById("refundModalMessage").innerHTML = "";
-        
-        const modal = new bootstrap.Modal(document.getElementById("refundModal"));
-        modal.show();
-    }
-
-    async function submitRefundRequest() {
-        const reason = document.getElementById("refundReason").value.trim();
-        const bankName = document.getElementById("refundBankName").value.trim();
-        const accountNumber = document.getElementById("refundAccountNumber").value.trim();
-        const accountHolderName = document.getElementById("refundAccountHolderName").value.trim();
-        const msgDiv = document.getElementById("refundModalMessage");
-        const btn = document.getElementById("btnSubmitRefund");
-
-        if (!reason) {
-            msgDiv.innerHTML = `<div class="alert alert-danger py-2">Vui lòng nhập lý do yêu cầu hoàn tiền.</div>`;
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...`;
-
-        try {
-            const response = await fetch("/api/refunds", {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
-                body: JSON.stringify({
-                    orderId: currentRefundOrderId,
-                    reason: reason,
-                    bankName: bankName || null,
-                    accountNumber: accountNumber || null,
-                    accountHolderName: accountHolderName || null
-                })
-            });
-
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || "Gửi yêu cầu hoàn tiền thất bại.");
-            }
-
-            msgDiv.innerHTML = `<div class="alert alert-success py-2">${result.message}</div>`;
-            setTimeout(() => {
-                const modalEl = document.getElementById("refundModal");
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-                loadOrderDetail();
-            }, 1500);
-
-        } catch (err) {
-            msgDiv.innerHTML = `<div class="alert alert-danger py-2">${err.message || "Có lỗi xảy ra, vui lòng thử lại."}</div>`;
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = "Xác nhận gửi yêu cầu";
-        }
-    }
-
-    // ==========================================
-    // UC-20: THEO DÕI & CẬP NHẬT YÊU CẦU HOÀN TIỀN
-    // ==========================================
-    let currentResubmitOrderId = 0;
-
-    async function loadCustomerRefundStatus(orderId) {
-        const container = document.getElementById("customerRefundSection");
-        if (!container) return;
-
-        try {
-            const res = await fetch(`/api/refunds/order/${orderId}`, { credentials: "include" });
-            if (!res.ok) {
-                container.innerHTML = "";
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng điền đầy đủ tên ngân hàng, số tài khoản và tên chủ tài khoản.</div>`;
                 return;
             }
 
-            const refund = await res.json();
-            if (!refund) {
-                container.innerHTML = "";
-                return;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...`;
+
+            try {
+                const response = await fetch("/api/refunds/resubmit", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        orderId: currentResubmitOrderId,
+                        bankName: bankName,
+                        accountNumber: accountNumber,
+                        accountHolderName: accountHolderName,
+                        reason: reason || null
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || "Gửi lại yêu cầu hoàn tiền thất bại.");
+                }
+
+                msgDiv.innerHTML = `<div class="alert alert-success py-2 small">${result.message}</div>`;
+                setTimeout(() => {
+                    const modalEl = document.getElementById("resubmitRefundModal");
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    loadOrderDetail();
+                }, 1500);
+
+            } catch (err) {
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">${err.message || "Có lỗi xảy ra, vui lòng thử lại."}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane me-1"></i> Gửi lại yêu cầu`;
             }
-
-            if (refund.status === "Pending") {
-                container.innerHTML = `
-                    <div class="alert alert-warning mt-3 mb-0 small shadow-sm border border-warning">
-                        <h6 class="alert-heading mb-1 fw-bold text-dark"><i class="fa fa-clock me-1"></i> Yêu cầu hoàn tiền đang chờ xét duyệt</h6>
-                        <div class="mb-1">Số tiền yêu cầu: <strong class="text-danger">${formatCurrency(refund.amount)}</strong></div>
-                        <div class="mb-1">Tài khoản nhận: <strong>${escapeHtml(refund.bankName || "Chưa có")}</strong> - <code>${escapeHtml(refund.accountNumber || "")}</code> (${escapeHtml(refund.accountHolderName || "")})</div>
-                        <div class="text-muted mt-1 small">Yêu cầu hoàn tiền của bạn đang được Ban quản trị xét duyệt.</div>
-                    </div>
-                `;
-            } else if (refund.status === "Approved") {
-                container.innerHTML = `
-                    <div class="alert alert-success mt-3 mb-0 small shadow-sm border border-success">
-                        <h6 class="alert-heading mb-1 fw-bold text-success"><i class="fa fa-check-circle me-1"></i> Đã hoàn tiền thành công</h6>
-                        <div class="mb-1">Số tiền đã hoàn: <strong class="text-success">${formatCurrency(refund.amount)}</strong></div>
-                        ${refund.adminNote ? `<div class="mb-1">Phản hồi Ban quản trị: <strong>${escapeHtml(refund.adminNote)}</strong></div>` : ''}
-                        <div class="text-muted mt-1 small">Đã xử lý lúc: ${formatDate(refund.processedAt)}</div>
-                    </div>
-                `;
-            } else if (refund.status === "Rejected") {
-                container.innerHTML = `
-                    <div class="alert alert-danger mt-3 mb-0 small shadow-sm border border-danger">
-                        <h6 class="alert-heading mb-1 fw-bold text-danger"><i class="fa fa-times-circle me-1"></i> Yêu cầu hoàn tiền đã bị từ chối</h6>
-                        <div class="mb-2"><strong>Lý do từ Ban quản trị:</strong> <span class="text-dark">${escapeHtml(refund.adminNote || "Chưa cung cấp lý do cụ thể")}</span></div>
-                        <div class="p-2 rounded bg-white text-dark border mb-2 small">
-                            Tài khoản đã gửi: ${escapeHtml(refund.bankName || "")} - <code>${escapeHtml(refund.accountNumber || "")}</code> (${escapeHtml(refund.accountHolderName || "")})
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger fw-bold w-100 py-1" onclick="openResubmitRefundModal(${refund.orderId}, '${escapeHtml(refund.bankName || "")}', '${escapeHtml(refund.accountNumber || "")}', '${escapeHtml(refund.accountHolderName || "")}')">
-                            <i class="fa fa-redo me-1"></i> Cập nhật lại số tài khoản &amp; gửi lại
-                        </button>
-                    </div>
-                `;
-            }
-        } catch (e) {
-            console.error("Lỗi tải thông tin hoàn tiền:", e);
         }
-    }
-
-    function openResubmitRefundModal(orderId, bankName, accountNumber, accountHolderName) {
-        currentResubmitOrderId = orderId;
-        document.getElementById("resubmitRefundModalMessage").innerHTML = "";
-        document.getElementById("resubmitBankName").value = bankName || "";
-        document.getElementById("resubmitAccountNumber").value = accountNumber || "";
-        document.getElementById("resubmitAccountHolderName").value = accountHolderName || "";
-        document.getElementById("resubmitReason").value = "";
-
-        const modal = new bootstrap.Modal(document.getElementById("resubmitRefundModal"));
-        modal.show();
-    }
-
-    async function submitResubmitRefund() {
-        const bankName = document.getElementById("resubmitBankName").value.trim();
-        const accountNumber = document.getElementById("resubmitAccountNumber").value.trim();
-        const accountHolderName = document.getElementById("resubmitAccountHolderName").value.trim();
-        const reason = document.getElementById("resubmitReason").value.trim();
-        const msgDiv = document.getElementById("resubmitRefundModalMessage");
-        const btn = document.getElementById("btnSubmitResubmitRefund");
-
-        if (!bankName || !accountNumber || !accountHolderName) {
-            msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng điền đầy đủ tên ngân hàng, số tài khoản và tên chủ tài khoản.</div>`;
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...`;
-
-        try {
-            const response = await fetch("/api/refunds/resubmit", {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
-                body: JSON.stringify({
-                    orderId: currentResubmitOrderId,
-                    bankName: bankName,
-                    accountNumber: accountNumber,
-                    accountHolderName: accountHolderName,
-                    reason: reason || null
-                })
-            });
-
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || "Gửi lại yêu cầu hoàn tiền thất bại.");
-            }
-
-            msgDiv.innerHTML = `<div class="alert alert-success py-2 small">${result.message}</div>`;
-            setTimeout(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById("resubmitRefundModal"));
-                if (modal) modal.hide();
-                loadOrderDetail();
-            }, 1500);
-
-        } catch (err) {
-            msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">${err.message || "Có lỗi xảy ra, vui lòng thử lại."}</div>`;
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fa fa-paper-plane me-1"></i> Gửi lại yêu cầu`;
-        }
-    }
-
-    // BẢO MẬT: Hàm mã hóa HTML để phòng chống lỗ hổng Cross-Site Scripting (XSS)
-    function escapeHtml(str) {
-        if (!str) return "";
-        return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-</script>
-    function copyDetailText(text, msg) {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert(msg || "Đã sao chép");
-            });
-        } else {
-            const inp = document.createElement("input");
-            inp.value = text;
-            document.body.appendChild(inp);
-            inp.select();
-            document.execCommand("copy");
-            document.body.removeChild(inp);
-            alert(msg || "Đã sao chép");
-        }
-    }
+    </script>
+}

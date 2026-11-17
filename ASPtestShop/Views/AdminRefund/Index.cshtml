@@ -12,10 +12,10 @@
         </div>
 
         <div class="d-flex gap-2">
-            <a href="/admin/orders" class="btn btn-outline-dark">
+            <a href="/admin/orders" class="fuu-btn-action fuu-btn-view py-2 px-3" style="height: auto;">
                 <i class="fa fa-shopping-bag me-1"></i> Quản lý đơn hàng
             </a>
-            <a href="/admin" class="btn btn-outline-secondary">
+            <a href="/admin" class="fuu-btn-action fuu-btn-view py-2 px-3" style="height: auto;">
                 Dashboard
             </a>
         </div>
@@ -64,10 +64,32 @@
         </div>
 
         <div class="card-body p-4">
+            <!-- THANH TÁC VỤ HÀNG LOẠT -->
+            <div id="batchActionBar" class="d-none fuu-batch-bar">
+                <div class="d-flex align-items-center">
+                    <i class="fa fa-check-square me-2 text-warning"></i>
+                    <span>Đã chọn <strong id="selectedRefundCount" class="badge-count">0</strong> yêu cầu hoàn tiền</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="openBatchProcessModal('Approved')">
+                        <i class="fa fa-check-circle me-1"></i> Duyệt hoàn tiền đã chọn
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger fw-semibold" onclick="openBatchProcessModal('Rejected')">
+                        <i class="fa fa-times-circle me-1"></i> Từ chối đã chọn
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light" onclick="clearSelectedRefunds()">
+                        Bỏ chọn
+                    </button>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th style="width: 40px;" class="text-center">
+                                <input type="checkbox" id="selectAllRefunds" class="fuu-checkbox" onchange="toggleSelectAllRefunds(this)" title="Chọn tất cả">
+                            </th>
                             <th>Mã YC</th>
                             <th>Mã đơn</th>
                             <th>Khách hàng</th>
@@ -76,12 +98,12 @@
                             <th>Lý do hoàn tiền</th>
                             <th>Trạng thái</th>
                             <th>Ngày yêu cầu</th>
-                            <th class="text-end">Thao tác</th>
+                            <th class="text-end" style="min-width: 170px;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="refundTableBody">
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 Đang tải danh sách yêu cầu hoàn tiền...
                             </td>
                         </tr>
@@ -92,13 +114,55 @@
     </div>
 </div>
 
-<!-- MODAL XỬ LÝ HOÀN TIỀN -->
+<!-- MODAL XỬ LÝ HÀNG LOẠT HOÀN TIỀN -->
+<div class="modal fade" id="batchRefundModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 10px;">
+            <div class="modal-header border-bottom pb-3">
+                <h5 class="modal-title fw-bold" id="batchRefundModalTitle">Xử lý hàng loạt yêu cầu hoàn tiền</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="batchModalAlert"></div>
+                <div class="alert alert-info py-2 small mb-3">
+                    Đang xử lý cho <strong id="batchSelectedNumber">0</strong> yêu cầu hoàn tiền đã chọn.
+                </div>
+
+                <div id="batchApproveSection">
+                    <div class="mb-3">
+                        <label for="batchTransactionCode" class="form-label small fw-semibold">Mã giao dịch ngân hàng / Ủy nhiệm chi (tùy chọn)</label>
+                        <input type="text" class="form-control" id="batchTransactionCode" placeholder="VD: VCB-BATCH-2026..." />
+                    </div>
+                    <div class="mb-3">
+                        <label for="batchApproveNote" class="form-label small fw-semibold">Ghi chú đối soát</label>
+                        <textarea class="form-control" id="batchApproveNote" rows="2" placeholder="Ghi chú chuyển khoản đối soát hàng loạt..."></textarea>
+                    </div>
+                </div>
+
+                <div id="batchRejectSection" class="d-none">
+                    <div class="mb-3">
+                        <label for="batchRejectReason" class="form-label small fw-semibold text-danger">Lý do từ chối (bắt buộc) <span class="text-danger">*</span></label>
+                        <textarea class="form-control border-danger" id="batchRejectReason" rows="3" placeholder="Nhập lý do từ chối để thông báo cho khách hàng..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="fuu-btn-primary px-4" id="btnSubmitBatchRefund" onclick="submitBatchProcessRefund()">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL XỬ LÝ HOÀN TIỀN ĐƠN LẺ -->
 <div class="modal fade" id="processRefundModal" tabindex="-1" aria-labelledby="processRefundModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-light">
+        <div class="modal-content border-0 shadow" style="border-radius: 10px;">
+            <div class="modal-header border-bottom pb-3">
                 <h5 class="modal-title fw-bold" id="processRefundModalLabel">
-                    <i class="fa fa-file-invoice-dollar me-2 text-primary"></i>Xử lý yêu cầu hoàn tiền
+                    <i class="fa fa-file-invoice-dollar me-2 text-success"></i>Xử lý yêu cầu hoàn tiền
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -177,9 +241,9 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-                <button type="button" class="btn btn-dark btn-sm fw-bold px-4" id="btnSubmitProcessRefund" onclick="submitProcessRefund()">
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="fuu-btn-primary px-4" id="btnSubmitProcessRefund" onclick="submitProcessRefund()">
                     Xác nhận xử lý
                 </button>
             </div>
@@ -190,8 +254,8 @@
 <!-- MODAL XEM CHI TIẾT ĐÃ XỬ LÝ -->
 <div class="modal fade" id="viewRefundDetailModal" tabindex="-1" aria-labelledby="viewRefundDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-light">
+        <div class="modal-content border-0 shadow" style="border-radius: 10px;">
+            <div class="modal-header border-bottom pb-3">
                 <h5 class="modal-title fw-bold" id="viewRefundDetailModalLabel">
                     <i class="fa fa-info-circle me-2 text-secondary"></i>Chi tiết yêu cầu hoàn tiền
                 </h5>
@@ -200,8 +264,8 @@
             <div class="modal-body p-4" id="viewRefundDetailBody">
                 <!-- Nội dung render qua JS -->
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
@@ -212,8 +276,11 @@
         let allRefunds = [];
         let currentStatusFilter = "ALL";
         let activeProcessingRefundId = 0;
+        let batchRefundModal = null;
+        let currentBatchAction = "Approved";
 
         document.addEventListener("DOMContentLoaded", function() {
+            batchRefundModal = new bootstrap.Modal(document.getElementById("batchRefundModal"));
             loadRefundRequests();
         });
 
@@ -229,6 +296,7 @@
         }
 
         async function loadRefundRequests() {
+            clearSelectedRefunds();
             const tbody = document.getElementById("refundTableBody");
             try {
                 const response = await fetch("/api/refunds/admin/all", {
@@ -242,7 +310,7 @@
                 }
 
                 if (!response.ok) {
-                    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Không thể tải danh sách yêu cầu hoàn tiền.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Không thể tải danh sách yêu cầu hoàn tiền.</td></tr>`;
                     return;
                 }
 
@@ -252,7 +320,7 @@
 
             } catch (err) {
                 console.error("Lỗi tải yêu cầu hoàn tiền:", err);
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Lỗi kết nối máy chủ.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Lỗi kết nối máy chủ.</td></tr>`;
             }
         }
 
@@ -272,10 +340,12 @@
             currentStatusFilter = status;
             document.querySelectorAll("#refundStatusTabs .nav-link").forEach(el => el.classList.remove("active"));
             if (btn) btn.classList.add("active");
+            clearSelectedRefunds();
             applyRefundFilter();
         }
 
         function handleRefundSearch() {
+            clearSelectedRefunds();
             applyRefundFilter();
         }
 
@@ -309,7 +379,7 @@
             if (!Array.isArray(refunds) || refunds.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-5">
+                        <td colspan="10" class="text-center text-muted py-5">
                             Không có yêu cầu hoàn tiền nào phù hợp với bộ lọc.
                         </td>
                     </tr>
@@ -326,16 +396,11 @@
                 if (isApproved) statusBadge = '<span class="badge bg-success"><i class="fa fa-check me-1"></i>Đã hoàn tiền</span>';
                 if (r.status === "Rejected") statusBadge = '<span class="badge bg-danger"><i class="fa fa-times me-1"></i>Đã từ chối</span>';
 
-                const actionHtml = isPending
-                    ? `<button type="button" class="btn btn-sm btn-dark fw-bold" onclick="openProcessRefundModal(${r.refundRequestId})">
-                           <i class="fa fa-gavel me-1"></i>Xử lý
-                       </button>`
-                    : `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="openViewRefundDetailModal(${r.refundRequestId})">
-                           <i class="fa fa-info-circle me-1"></i>Chi tiết
-                       </button>`;
-
                 return `
                     <tr>
+                        <td class="text-center">
+                            <input type="checkbox" class="fuu-checkbox refund-select-checkbox" value="${r.refundRequestId}" onchange="handleRefundRowSelect()" />
+                        </td>
                         <td><strong>#RF-${r.refundRequestId}</strong></td>
                         <td>
                             <a href="/admin/orders/detail/${r.orderId}" class="text-decoration-none fw-semibold text-primary">
@@ -360,11 +425,19 @@
                         <td>${statusBadge}</td>
                         <td class="small text-muted">${formatDate(r.createdAt)}</td>
                         <td class="text-end">
-                            <div class="d-inline-flex gap-1">
-                                <a href="/admin/orders/detail/${r.orderId}" class="btn btn-sm btn-outline-dark" title="Xem đơn hàng">
-                                    <i class="fa fa-eye"></i>
+                            <div class="fuu-action-group justify-content-end">
+                                <a href="/admin/orders/detail/${r.orderId}" class="fuu-btn-action fuu-btn-view" title="Xem đơn hàng">
+                                    <i class="fa fa-eye"></i> <span>Đơn</span>
                                 </a>
-                                ${actionHtml}
+                                ${isPending ? `
+                                    <button type="button" class="fuu-btn-action fuu-btn-process" onclick="openProcessRefundModal(${r.refundRequestId})" title="Xử lý hoàn tiền">
+                                        <i class="fa fa-gavel"></i> <span>Xử lý</span>
+                                    </button>
+                                ` : `
+                                    <button type="button" class="fuu-btn-action fuu-btn-view" onclick="openViewRefundDetailModal(${r.refundRequestId})" title="Xem chi tiết">
+                                        <i class="fa fa-info-circle"></i> <span>Chi tiết</span>
+                                    </button>
+                                `}
                             </div>
                         </td>
                     </tr>
@@ -372,6 +445,137 @@
             }).join('');
         }
 
+        // ==========================================
+        // XỬ LÝ CHỌN HÀNG LOẠT (BATCH ACTIONS)
+        // ==========================================
+        function toggleSelectAllRefunds(master) {
+            const checkboxes = document.querySelectorAll(".refund-select-checkbox");
+            checkboxes.forEach(cb => cb.checked = master.checked);
+            handleRefundRowSelect();
+        }
+
+        function handleRefundRowSelect() {
+            const checkedBoxes = document.querySelectorAll(".refund-select-checkbox:checked");
+            const allBoxes = document.querySelectorAll(".refund-select-checkbox");
+            const count = checkedBoxes.length;
+
+            const countEl = document.getElementById("selectedRefundCount");
+            if (countEl) countEl.textContent = count;
+
+            const bar = document.getElementById("batchActionBar");
+            if (bar) {
+                if (count > 0) bar.classList.remove("d-none");
+                else bar.classList.add("d-none");
+            }
+
+            const master = document.getElementById("selectAllRefunds");
+            if (master) {
+                master.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+            }
+        }
+
+        function clearSelectedRefunds() {
+            const master = document.getElementById("selectAllRefunds");
+            if (master) master.checked = false;
+            document.querySelectorAll(".refund-select-checkbox").forEach(cb => cb.checked = false);
+            handleRefundRowSelect();
+        }
+
+        function getSelectedRefundIds() {
+            const checkedBoxes = document.querySelectorAll(".refund-select-checkbox:checked");
+            return Array.from(checkedBoxes).map(cb => parseInt(cb.value)).filter(id => !isNaN(id) && id > 0);
+        }
+
+        function openBatchProcessModal(action) {
+            const ids = getSelectedRefundIds();
+            if (ids.length === 0) {
+                showRefundAlert("Vui lòng chọn ít nhất một yêu cầu hoàn tiền.", "warning");
+                return;
+            }
+
+            currentBatchAction = action;
+            document.getElementById("batchSelectedNumber").textContent = ids.length;
+            document.getElementById("batchModalAlert").innerHTML = "";
+
+            const isApprove = action === "Approved";
+            document.getElementById("batchRefundModalTitle").textContent = isApprove
+                ? "Duyệt hoàn tiền hàng loạt"
+                : "Từ chối hoàn tiền hàng loạt";
+
+            const btnSubmit = document.getElementById("btnSubmitBatchRefund");
+            btnSubmit.className = isApprove ? "btn btn-success px-4" : "btn btn-danger px-4";
+            btnSubmit.textContent = isApprove ? "Xác nhận duyệt" : "Xác nhận từ chối";
+
+            if (isApprove) {
+                document.getElementById("batchApproveSection").classList.remove("d-none");
+                document.getElementById("batchRejectSection").classList.add("d-none");
+            } else {
+                document.getElementById("batchApproveSection").classList.add("d-none");
+                document.getElementById("batchRejectSection").classList.remove("d-none");
+            }
+
+            batchRefundModal.show();
+        }
+
+        async function submitBatchProcessRefund() {
+            const ids = getSelectedRefundIds();
+            if (ids.length === 0) return;
+
+            const isApprove = currentBatchAction === "Approved";
+            let transactionCode = "";
+            let adminNote = "";
+
+            if (isApprove) {
+                transactionCode = document.getElementById("batchTransactionCode").value.trim();
+                adminNote = document.getElementById("batchApproveNote").value.trim();
+            } else {
+                adminNote = document.getElementById("batchRejectReason").value.trim();
+                if (!adminNote) {
+                    document.getElementById("batchModalAlert").innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng nhập lý do từ chối để thông báo cho khách hàng!</div>`;
+                    document.getElementById("batchRejectReason").focus();
+                    return;
+                }
+            }
+
+            const btn = document.getElementById("btnSubmitBatchRefund");
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa fa-spinner fa-spin me-1"></i> Đang xử lý...`;
+
+            try {
+                const response = await fetch("/api/refunds/admin/batch-process", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        refundRequestIds: ids,
+                        status: currentBatchAction,
+                        transactionCode: transactionCode,
+                        adminNote: adminNote
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    document.getElementById("batchModalAlert").innerHTML = `<div class="alert alert-danger py-2 small">${data.message || "Lỗi xử lý hàng loạt"}</div>`;
+                    return;
+                }
+
+                batchRefundModal.hide();
+                showRefundAlert(data.message, "success");
+                loadRefundRequests();
+
+            } catch (err) {
+                console.error("Lỗi:", err);
+                document.getElementById("batchModalAlert").innerHTML = `<div class="alert alert-danger py-2 small">Có lỗi kết nối máy chủ.</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = isApprove ? "Xác nhận duyệt" : "Xác nhận từ chối";
+            }
+        }
+
+        // ==========================================
+        // CÁC HÀM XỬ LÝ ĐƠN LẺ
+        // ==========================================
         function toggleRefundActionFields() {
             const isApprove = document.getElementById("actionApprove").checked;
             const approveSection = document.getElementById("fieldApproveSection");

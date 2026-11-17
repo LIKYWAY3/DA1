@@ -253,8 +253,8 @@
                     ? '<span class="badge bg-danger">Đã bị khóa</span>'
                     : '<span class="badge bg-success">Đang hoạt động</span>';
 
-                const lockBtnText = isLocked ? 'Mở khóa' : 'Khóa';
-                const lockBtnClass = isLocked ? 'btn-outline-success' : 'btn-outline-danger';
+                const lockBtnText = isLocked ? '<i class="fa fa-unlock me-1"></i> Mở khóa' : '<i class="fa fa-lock me-1"></i> Khóa';
+                const lockBtnClass = isLocked ? 'fuu-btn-approve' : 'fuu-btn-delete';
 
                 return `
                     <tr>
@@ -284,11 +284,11 @@
                         </td>
                         <td>${statusBadge}</td>
                         <td class="text-end">
-                            <div class="d-inline-flex gap-1">
-                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="viewUserDetail('${u.id}')">
-                                    <i class="fa fa-eye me-1"></i> Chi tiết
+                            <div class="fuu-action-group justify-content-end">
+                                <button type="button" class="fuu-btn-action fuu-btn-view" onclick="viewUserDetail('${u.id}')" title="Xem chi tiết">
+                                    <i class="fa fa-eye"></i> <span>Chi tiết</span>
                                 </button>
-                                <button type="button" class="btn btn-sm ${lockBtnClass} rounded-pill px-3" onclick="toggleLock('${u.id}', '${u.userName}', ${isLocked})">
+                                <button type="button" class="fuu-btn-action ${lockBtnClass}" onclick="toggleLock('${u.id}', '${u.userName}', ${isLocked})" title="${isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}">
                                     ${lockBtnText}
                                 </button>
                             </div>
