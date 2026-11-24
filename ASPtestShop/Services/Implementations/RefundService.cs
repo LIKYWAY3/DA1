@@ -26,15 +26,31 @@ namespace ASPtestShop.Services.Implementations
         {
             var order = await _context.Orders
                 .Include(o => o.OrderItems)
-                .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId && o.UserId == userId);
+                .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId);
 
             if (order == null)
             {
                 return new RefundResultDto
                 {
                     Success = false,
-                    Message = "Không tìm thấy đơn hàng hoặc đơn hàng không thuộc về bạn."
+                    Message = "Không tìm thấy đơn hàng."
                 };
+            }
+
+            // Kiểm tra quyền sở hữu đơn hàng (cho phép chủ đơn hoặc Admin)
+            if (!string.IsNullOrEmpty(order.UserId) && !string.Equals(order.UserId, userId, StringComparison.OrdinalIgnoreCase))
+            {
+                var isCallerAdmin = await _context.UserRoles
+                    .AnyAsync(ur => ur.UserId == userId && _context.Roles.Any(r => r.Id == ur.RoleId && r.Name == "Admin"));
+
+                if (!isCallerAdmin)
+                {
+                    return new RefundResultDto
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy đơn hàng hoặc đơn hàng không thuộc về bạn."
+                    };
+                }
             }
 
             // Chỉ cho phép yêu cầu hoàn tiền nếu đơn hàng ĐÃ THANH TOÁN
@@ -65,23 +81,28 @@ namespace ASPtestShop.Services.Implementations
             var accountNumber = dto.AccountNumber;
             var accountHolderName = dto.AccountHolderName;
 
+            var targetUserId = order.UserId ?? userId;
+
             if (string.IsNullOrWhiteSpace(accountNumber))
             {
                 var defaultBank = await _context.BankAccounts
-                    .FirstOrDefaultAsync(b => b.UserId == userId);
+                    .Where(b => b.UserId == targetUserId)
+                    .OrderByDescending(b => b.IsDefault)
+                    .ThenByDescending(b => b.CreatedAt)
+                    .FirstOrDefaultAsync();
 
                 if (defaultBank != null)
                 {
-                    bankName = bankName ?? defaultBank.BankName;
+                    bankName = string.IsNullOrWhiteSpace(bankName) ? defaultBank.BankName : bankName;
                     accountNumber = defaultBank.AccountNumber;
-                    accountHolderName = accountHolderName ?? defaultBank.AccountName;
+                    accountHolderName = string.IsNullOrWhiteSpace(accountHolderName) ? defaultBank.AccountName : accountHolderName;
                 }
             }
 
             var refundRequest = new RefundRequest
             {
                 OrderId           = order.OrderId,
-                UserId            = userId,
+                UserId            = targetUserId,
                 Amount            = order.FinalAmount,
                 Reason            = dto.Reason,
                 Status            = "Pending",
@@ -95,6 +116,7 @@ namespace ASPtestShop.Services.Implementations
 
             // Cập nhật trạng thái thanh toán của Order sang RefundPending
             order.PaymentStatus = "RefundPending";
+            order.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -146,7 +168,7 @@ namespace ASPtestShop.Services.Implementations
             var r = await _context.RefundRequests
                 .Include(x => x.Order)
                 .Include(x => x.User)
-                .Where(x => x.OrderId == orderId && (string.IsNullOrEmpty(userId) || x.UserId == userId))
+                .Where(x => x.OrderId == orderId && (string.IsNullOrEmpty(userId) || x.UserId == userId || (x.Order != null && x.Order.UserId == userId)))
                 .OrderByDescending(x => x.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -337,7 +359,7 @@ namespace ASPtestShop.Services.Implementations
         {
             var request = await _context.RefundRequests
                 .Include(r => r.Order)
-                .FirstOrDefaultAsync(r => r.OrderId == dto.OrderId && r.UserId == userId);
+                .FirstOrDefaultAsync(r => r.OrderId == dto.OrderId);
 
             if (request == null)
             {
@@ -346,6 +368,24 @@ namespace ASPtestShop.Services.Implementations
                     Success = false,
                     Message = "Không tìm thấy yêu cầu hoàn tiền nào cho đơn hàng này."
                 };
+            }
+
+            // Kiểm tra quyền sở hữu đơn hàng (cho phép chủ đơn hoặc Admin)
+            if (!string.IsNullOrEmpty(request.UserId) && 
+                !string.Equals(request.UserId, userId, StringComparison.OrdinalIgnoreCase) && 
+                (request.Order == null || (!string.IsNullOrEmpty(request.Order.UserId) && !string.Equals(request.Order.UserId, userId, StringComparison.OrdinalIgnoreCase))))
+            {
+                var isCallerAdmin = await _context.UserRoles
+                    .AnyAsync(ur => ur.UserId == userId && _context.Roles.Any(r => r.Id == ur.RoleId && r.Name == "Admin"));
+
+                if (!isCallerAdmin)
+                {
+                    return new RefundResultDto
+                    {
+                        Success = false,
+                        Message = "Yêu cầu hoàn tiền không thuộc về bạn."
+                    };
+                }
             }
 
             if (request.Status != "Rejected")

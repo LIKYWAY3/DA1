@@ -22,6 +22,22 @@ namespace ASPtestShop.Controllers.Api
             _refundService = refundService;
         }
 
+        private string? GetCurrentCustomerId()
+        {
+            // 1. Ưu tiên trích xuất từ Identity của UserCookieAuth
+            var userCookieIdentity = User.Identities.FirstOrDefault(i => i.AuthenticationType == ASPtestShop.Auth.UserCookieAuth.Scheme);
+            var id = userCookieIdentity?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(id)) return id;
+
+            // 2. Trích xuất từ Identity có Role "Customer"
+            var customerIdentity = User.Identities.FirstOrDefault(i => i.HasClaim(ClaimTypes.Role, "Customer"));
+            id = customerIdentity?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(id)) return id;
+
+            // 3. Fallback ClaimTypes.NameIdentifier
+            return User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
         // =======================================================================
         // POST: api/refunds
         // Khách hàng gửi yêu cầu hoàn tiền
@@ -34,7 +50,7 @@ namespace ASPtestShop.Controllers.Api
                 return BadRequest(ModelState);
             }
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = GetCurrentCustomerId();
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized(new { Message = "Bạn chưa đăng nhập" });
@@ -56,7 +72,7 @@ namespace ASPtestShop.Controllers.Api
         [HttpGet("my")]
         public async Task<IActionResult> GetMyRefunds()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = GetCurrentCustomerId();
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized(new { Message = "Bạn chưa đăng nhập" });
@@ -73,7 +89,7 @@ namespace ASPtestShop.Controllers.Api
         [HttpGet("order/{orderId:int}")]
         public async Task<IActionResult> GetRefundByOrder(int orderId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = GetCurrentCustomerId();
             var isAdmin = User.IsInRole("Admin");
 
             var request = await _refundService.GetRefundRequestByOrderIdAsync(orderId, isAdmin ? "" : (userId ?? ""));
@@ -174,7 +190,7 @@ namespace ASPtestShop.Controllers.Api
                 return BadRequest(ModelState);
             }
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = GetCurrentCustomerId();
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized(new { Message = "Bạn chưa đăng nhập" });

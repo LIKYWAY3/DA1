@@ -962,7 +962,7 @@
                 }
             }
 
-            if (order.paymentStatus === "Paid" && order.orderStatus === "Completed") {
+            if (order.paymentStatus === "Paid" && (order.orderStatus === "Completed" || order.orderStatus === "Cancelled")) {
                 html += `
                     <div class="mt-3 pt-3 border-top">
                         <button type="button" class="btn-request-refund" onclick="openRefundModal(${order.orderId}, ${order.finalAmount})">
@@ -1122,23 +1122,54 @@
             }
         }
 
-        function openRefundModal(orderId, amount) {
-            currentRefundOrderId = orderId;
+        async function openRefundModal(orderId, amount) {
+            currentRefundOrderId = orderId || parseInt('@orderId') || 0;
             document.getElementById("refundAmountDisplay").value = formatCurrency(amount);
             document.getElementById("refundReason").value = "";
             document.getElementById("refundModalMessage").innerHTML = "";
+
+            // Tự động nạp thông tin tài khoản ngân hàng mặc định của khách hàng từ UC-05
+            try {
+                const res = await fetch("/api/user/bank-accounts", { credentials: "include" });
+                if (res.ok) {
+                    const bankResult = await res.json();
+                    const banks = bankResult.data || bankResult || [];
+                    if (Array.isArray(banks) && banks.length > 0) {
+                        const defaultBank = banks.find(b => b.isDefault) || banks[0];
+                        if (defaultBank) {
+                            if (!document.getElementById("refundBankName").value) {
+                                document.getElementById("refundBankName").value = defaultBank.bankName || "";
+                            }
+                            if (!document.getElementById("refundAccountNumber").value) {
+                                document.getElementById("refundAccountNumber").value = defaultBank.accountNumber || "";
+                            }
+                            if (!document.getElementById("refundAccountHolderName").value) {
+                                document.getElementById("refundAccountHolderName").value = defaultBank.accountName || "";
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn("Không thể nạp tự động tài khoản ngân hàng:", err);
+            }
             
             const modal = new bootstrap.Modal(document.getElementById("refundModal"));
             modal.show();
         }
 
         async function submitRefundRequest() {
+            const targetOrderId = currentRefundOrderId || parseInt('@orderId') || 0;
             const reason = document.getElementById("refundReason").value.trim();
             const bankName = document.getElementById("refundBankName").value.trim();
             const accountNumber = document.getElementById("refundAccountNumber").value.trim();
             const accountHolderName = document.getElementById("refundAccountHolderName").value.trim();
             const msgDiv = document.getElementById("refundModalMessage");
             const btn = document.getElementById("btnSubmitRefund");
+
+            if (!targetOrderId || targetOrderId <= 0) {
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Không xác định được mã đơn hàng. Vui lòng tải lại trang.</div>`;
+                return;
+            }
 
             if (!reason) {
                 msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng nhập lý do yêu cầu hoàn tiền.</div>`;
@@ -1157,7 +1188,7 @@
                         "Accept": "application/json"
                     },
                     body: JSON.stringify({
-                        orderId: currentRefundOrderId,
+                        orderId: targetOrderId,
                         reason: reason,
                         bankName: bankName || null,
                         accountNumber: accountNumber || null,
@@ -1247,7 +1278,7 @@
         }
 
         function openResubmitRefundModal(orderId, bankName, accountNumber, accountHolderName) {
-            currentResubmitOrderId = orderId;
+            currentResubmitOrderId = orderId || parseInt('@orderId') || 0;
             document.getElementById("resubmitRefundModalMessage").innerHTML = "";
             document.getElementById("resubmitBankName").value = bankName || "";
             document.getElementById("resubmitAccountNumber").value = accountNumber || "";
@@ -1259,12 +1290,18 @@
         }
 
         async function submitResubmitRefund() {
+            const targetOrderId = currentResubmitOrderId || parseInt('@orderId') || 0;
             const bankName = document.getElementById("resubmitBankName").value.trim();
             const accountNumber = document.getElementById("resubmitAccountNumber").value.trim();
             const accountHolderName = document.getElementById("resubmitAccountHolderName").value.trim();
             const reason = document.getElementById("resubmitReason").value.trim();
             const msgDiv = document.getElementById("resubmitRefundModalMessage");
             const btn = document.getElementById("btnSubmitResubmitRefund");
+
+            if (!targetOrderId || targetOrderId <= 0) {
+                msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Không xác định được mã đơn hàng. Vui lòng tải lại trang.</div>`;
+                return;
+            }
 
             if (!bankName || !accountNumber || !accountHolderName) {
                 msgDiv.innerHTML = `<div class="alert alert-danger py-2 small">Vui lòng điền đầy đủ tên ngân hàng, số tài khoản và tên chủ tài khoản.</div>`;
@@ -1283,7 +1320,7 @@
                         "Accept": "application/json"
                     },
                     body: JSON.stringify({
-                        orderId: currentResubmitOrderId,
+                        orderId: targetOrderId,
                         bankName: bankName,
                         accountNumber: accountNumber,
                         accountHolderName: accountHolderName,
