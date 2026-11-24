@@ -315,7 +315,86 @@
                     }
                 </div>
 
-                <!-- CARD 3: BẢO MẬT MẬT KHẨU & TÀI KHOẢN LIÊN KẾT (2 CỘT) -->
+                <!-- CARD 3: TÀI KHOẢN NGÂN HÀNG THỤ HƯỞNG (UC-05) -->
+                <div class="profile-content-card bg-white border rounded-3 p-4 mb-4 shadow-sm" id="section-bank-account">
+                    <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <h6 class="fw-bold text-dark mb-0 fs-6">
+                                <i class="fa-solid fa-building-columns me-2 text-secondary"></i>Tài khoản ngân hàng thụ hưởng
+                            </h6>
+                            <span class="badge bg-light text-secondary border" id="badgeBankCount">@(Model.BankAccounts?.Count ?? 0) tài khoản</span>
+                        </div>
+                        <button type="button" 
+                                class="btn-add-address-btn text-danger fw-semibold border-0 bg-transparent small"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalAddBankAccount">
+                            <i class="fa-solid fa-plus me-1"></i>Thêm tài khoản
+                        </button>
+                    </div>
+
+                    @if (Model.BankAccounts != null && Model.BankAccounts.Count > 0)
+                    {
+                        <div class="bank-list-container d-flex flex-column gap-3" id="bankListContainer">
+                            @foreach (var bank in Model.BankAccounts)
+                            {
+                                <div class="bank-item-box p-3 rounded-3 border @(bank.IsDefault ? "border-danger-subtle bg-danger-subtle-50" : "bg-white") position-relative" id="bank-item-@bank.Id">
+                                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2">
+                                        <div class="bank-details">
+                                            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                                <span class="fw-bold text-dark">@bank.BankName</span>
+                                                <span class="text-secondary small">|</span>
+                                                <span class="fw-bold text-danger font-monospace fs-6">@bank.AccountNumber</span>
+                                                @if (bank.IsDefault)
+                                                {
+                                                    <span class="badge-address-default">Mặc định</span>
+                                                }
+                                            </div>
+                                            <div class="text-secondary small mb-1">
+                                                <i class="fa-regular fa-user me-1 text-muted"></i>Chủ tài khoản: <span class="text-dark fw-semibold text-uppercase">@bank.AccountName</span>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(bank.Branch))
+                                            {
+                                                <div class="text-muted small">
+                                                    <i class="fa-solid fa-location-dot me-1 text-muted"></i>Chi nhánh: @bank.Branch
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <div class="bank-actions d-flex align-items-center gap-2 mt-2 mt-md-0">
+                                            @if (!bank.IsDefault)
+                                            {
+                                                <button type="button" class="btn-action-text text-secondary small border-0 bg-transparent" onclick="setDefaultBankAccount(@bank.Id)">
+                                                    Đặt làm mặc định
+                                                </button>
+                                            }
+                                            <button type="button" 
+                                                    class="btn-action-text text-primary small border-0 bg-transparent"
+                                                    onclick="openEditBankModal(@bank.Id, '@Html.Raw(bank.BankName.Replace("'", "\\'"))', '@Html.Raw(bank.AccountName.Replace("'", "\\'"))', '@bank.AccountNumber', '@Html.Raw((bank.Branch ?? "").Replace("'", "\\'"))', @(bank.IsDefault ? "true" : "false"))">
+                                                Cập nhật
+                                            </button>
+                                            <button type="button" class="btn-action-text text-danger small border-0 bg-transparent" onclick="deleteBankAccount(@bank.Id)">
+                                                Xóa
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 border rounded-3 bg-light" id="bankEmptyState">
+                            <i class="fa-solid fa-building-columns fa-2x text-muted mb-2 opacity-50"></i>
+                            <div class="text-dark fw-semibold small">Bạn chưa liên kết tài khoản ngân hàng nào</div>
+                            <p class="text-muted small mb-2">Thêm tài khoản ngân hàng thụ hưởng để hệ thống tự động điền sẵn khi bạn gửi yêu cầu hoàn tiền.</p>
+                            <button type="button" class="btn btn-sm btn-outline-danger px-3 rounded-pill" data-bs-toggle="modal" data-bs-target="#modalAddBankAccount">
+                                <i class="fa-solid fa-plus me-1"></i>Thêm tài khoản đầu tiên
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                <!-- CARD 4: BẢO MẬT MẬT KHẨU & TÀI KHOẢN LIÊN KẾT (2 CỘT) -->
                 <div class="row g-3">
                     
                     <!-- Cột 1: Mật khẩu -->
@@ -668,6 +747,164 @@
 
                 <div class="modal-footer border-top p-3 bg-white">
                     <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold rounded-3 fs-6">
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- =================================================================== -->
+<!-- 5b. MODAL: THÊM TÀI KHOẢN NGÂN HÀNG (ADD BANK ACCOUNT)              -->
+<!-- =================================================================== -->
+<div class="modal fade" id="modalAddBankAccount" tabindex="-1" aria-labelledby="modalAddBankLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="modalAddBankLabel">
+                    <i class="fa-solid fa-building-columns me-2 text-danger"></i>Thêm tài khoản ngân hàng thụ hưởng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form id="formAddBankAccount" onsubmit="return handleAddBankAccountSubmit(event);">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Ngân hàng thụ hưởng <span class="text-danger">*</span></label>
+                        <select name="BankName" id="addBankName" class="form-select fuu-control" required>
+                            <option value="">-- Chọn ngân hàng --</option>
+                            <option value="Vietcombank (VCB)">Vietcombank (VCB) - TMCP Ngoại thương Việt Nam</option>
+                            <option value="MBBank (MB)">MBBank (MB) - TMCP Quân Đội</option>
+                            <option value="Techcombank (TCB)">Techcombank (TCB) - TMCP Kỹ Thương Việt Nam</option>
+                            <option value="BIDV">BIDV - TMCP Đầu tư và Phát triển Việt Nam</option>
+                            <option value="VietinBank (CTG)">VietinBank (CTG) - TMCP Công Thương Việt Nam</option>
+                            <option value="Agribank">Agribank - Nông nghiệp và Phát triển Nông thôn</option>
+                            <option value="ACB">ACB - TMCP Á Châu</option>
+                            <option value="TPBank">TPBank - TMCP Tiên Phong</option>
+                            <option value="VPBank">VPBank - TMCP Việt Nam Thịnh Vượng</option>
+                            <option value="Sacombank">Sacombank - TMCP Sài Gòn Thương Tín</option>
+                            <option value="HDBank">HDBank - TMCP Phát triển TP.HCM</option>
+                            <option value="VIB">VIB - TMCP Quốc tế Việt Nam</option>
+                            <option value="SHB">SHB - TMCP Sài Gòn - Hà Nội</option>
+                            <option value="MSB">MSB - TMCP Hàng Hải Việt Nam</option>
+                            <option value="SeABank">SeABank - TMCP Đông Nam Á</option>
+                            <option value="Khác">Ngân hàng khác</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 d-none" id="customBankGroup">
+                        <label class="form-label fuu-label">Tên ngân hàng khác <span class="text-danger">*</span></label>
+                        <input type="text" id="addCustomBankName" class="form-control fuu-control" placeholder="Nhập tên ngân hàng của bạn..." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Số tài khoản ngân hàng <span class="text-danger">*</span></label>
+                        <input type="text" name="AccountNumber" id="addBankAccountNumber" class="form-control fuu-control font-monospace fw-bold" placeholder="Nhập số tài khoản (chỉ chữ số)..." pattern="^[0-9]{6,20}$" title="Số tài khoản chỉ chứa từ 6 đến 20 chữ số" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Tên chủ tài khoản (Viết hoa không dấu) <span class="text-danger">*</span></label>
+                        <input type="text" name="AccountName" id="addBankAccountName" class="form-control fuu-control text-uppercase" placeholder="Ví dụ: NGUYEN VAN A" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Chi nhánh ngân hàng (Tùy chọn)</label>
+                        <input type="text" name="Branch" id="addBankBranch" class="form-control fuu-control" placeholder="Ví dụ: Chi nhánh Cần Thơ..." />
+                    </div>
+
+                    <hr class="my-3 border-secondary-subtle">
+
+                    <div class="form-check form-switch d-flex justify-content-between align-items-center p-0 pt-1">
+                        <label class="form-check-label fw-semibold text-dark small" for="addBankIsDefaultSwitch">
+                            Đặt làm tài khoản mặc định khi hoàn tiền
+                        </label>
+                        <input class="form-check-input fuu-switch ms-0" type="checkbox" role="switch" name="IsDefault" id="addBankIsDefaultSwitch" />
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top p-3 bg-white">
+                    <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold rounded-3 fs-6" id="btnSubmitAddBank">
+                        Lưu tài khoản
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- 5c. MODAL: CẬP NHẬT TÀI KHOẢN NGÂN HÀNG (EDIT BANK ACCOUNT)         -->
+<!-- =================================================================== -->
+<div class="modal fade" id="modalEditBankAccount" tabindex="-1" aria-labelledby="modalEditBankLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="modalEditBankLabel">
+                    <i class="fa-solid fa-pen-to-square me-2 text-danger"></i>Cập nhật tài khoản ngân hàng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form id="formEditBankAccount" onsubmit="return handleEditBankAccountSubmit(event);">
+                <input type="hidden" id="editBankId" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Ngân hàng thụ hưởng <span class="text-danger">*</span></label>
+                        <select id="editBankName" class="form-select fuu-control" required>
+                            <option value="">-- Chọn ngân hàng --</option>
+                            <option value="Vietcombank (VCB)">Vietcombank (VCB) - TMCP Ngoại thương Việt Nam</option>
+                            <option value="MBBank (MB)">MBBank (MB) - TMCP Quân Đội</option>
+                            <option value="Techcombank (TCB)">Techcombank (TCB) - TMCP Kỹ Thương Việt Nam</option>
+                            <option value="BIDV">BIDV - TMCP Đầu tư và Phát triển Việt Nam</option>
+                            <option value="VietinBank (CTG)">VietinBank (CTG) - TMCP Công Thương Việt Nam</option>
+                            <option value="Agribank">Agribank - Nông nghiệp và Phát triển Nông thôn</option>
+                            <option value="ACB">ACB - TMCP Á Châu</option>
+                            <option value="TPBank">TPBank - TMCP Tiên Phong</option>
+                            <option value="VPBank">VPBank - TMCP Việt Nam Thịnh Vượng</option>
+                            <option value="Sacombank">Sacombank - TMCP Sài Gòn Thương Tín</option>
+                            <option value="HDBank">HDBank - TMCP Phát triển TP.HCM</option>
+                            <option value="VIB">VIB - TMCP Quốc tế Việt Nam</option>
+                            <option value="SHB">SHB - TMCP Sài Gòn - Hà Nội</option>
+                            <option value="MSB">MSB - TMCP Hàng Hải Việt Nam</option>
+                            <option value="SeABank">SeABank - TMCP Đông Nam Á</option>
+                            <option value="Khác">Ngân hàng khác</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 d-none" id="editCustomBankGroup">
+                        <label class="form-label fuu-label">Tên ngân hàng khác <span class="text-danger">*</span></label>
+                        <input type="text" id="editCustomBankName" class="form-control fuu-control" placeholder="Nhập tên ngân hàng của bạn..." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Số tài khoản ngân hàng <span class="text-danger">*</span></label>
+                        <input type="text" id="editBankAccountNumber" class="form-control fuu-control font-monospace fw-bold" pattern="^[0-9]{6,20}$" title="Số tài khoản chỉ chứa từ 6 đến 20 chữ số" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Tên chủ tài khoản (Viết hoa không dấu) <span class="text-danger">*</span></label>
+                        <input type="text" id="editBankAccountName" class="form-control fuu-control text-uppercase" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fuu-label">Chi nhánh ngân hàng (Tùy chọn)</label>
+                        <input type="text" id="editBankBranch" class="form-control fuu-control" />
+                    </div>
+
+                    <hr class="my-3 border-secondary-subtle">
+
+                    <div class="form-check form-switch d-flex justify-content-between align-items-center p-0 pt-1">
+                        <label class="form-check-label fw-semibold text-dark small" for="editBankIsDefaultSwitch">
+                            Đặt làm tài khoản mặc định khi hoàn tiền
+                        </label>
+                        <input class="form-check-input fuu-switch ms-0" type="checkbox" role="switch" id="editBankIsDefaultSwitch" />
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top p-3 bg-white">
+                    <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold rounded-3 fs-6" id="btnSubmitEditBank">
                         Lưu thay đổi
                     </button>
                 </div>
@@ -1344,6 +1581,200 @@
             if (modalEl && typeof bootstrap !== "undefined") {
                 const modal = new bootstrap.Modal(modalEl);
                 modal.show();
+            }
+        }
+
+        // =============================================================
+        // QUẢN LÝ TÀI KHOẢN NGÂN HÀNG THỤ HƯỞNG (UC-05)
+        // =============================================================
+        document.addEventListener("DOMContentLoaded", function() {
+            const addBankSelect = document.getElementById("addBankName");
+            const customBankGroup = document.getElementById("customBankGroup");
+            if (addBankSelect && customBankGroup) {
+                addBankSelect.addEventListener("change", function() {
+                    if (this.value === "Khác") {
+                        customBankGroup.classList.remove("d-none");
+                        document.getElementById("addCustomBankName").required = true;
+                    } else {
+                        customBankGroup.classList.add("d-none");
+                        document.getElementById("addCustomBankName").required = false;
+                    }
+                });
+            }
+
+            const editBankSelect = document.getElementById("editBankName");
+            const editCustomBankGroup = document.getElementById("editCustomBankGroup");
+            if (editBankSelect && editCustomBankGroup) {
+                editBankSelect.addEventListener("change", function() {
+                    if (this.value === "Khác") {
+                        editCustomBankGroup.classList.remove("d-none");
+                        document.getElementById("editCustomBankName").required = true;
+                    } else {
+                        editCustomBankGroup.classList.add("d-none");
+                        document.getElementById("editCustomBankName").required = false;
+                    }
+                });
+            }
+        });
+
+        function openEditBankModal(id, bankName, accountName, accountNumber, branch, isDefault) {
+            document.getElementById("editBankId").value = id;
+            const select = document.getElementById("editBankName");
+            const customGroup = document.getElementById("editCustomBankGroup");
+            const customInput = document.getElementById("editCustomBankName");
+            
+            let found = false;
+            for (let opt of select.options) {
+                if (opt.value === bankName) {
+                    select.value = bankName;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                select.value = "Khác";
+                customGroup.classList.remove("d-none");
+                customInput.value = bankName;
+                customInput.required = true;
+            } else {
+                customGroup.classList.add("d-none");
+                customInput.required = false;
+            }
+
+            document.getElementById("editBankAccountName").value = accountName;
+            document.getElementById("editBankAccountNumber").value = accountNumber;
+            document.getElementById("editBankBranch").value = branch || "";
+            document.getElementById("editBankIsDefaultSwitch").checked = isDefault;
+
+            const modalEl = document.getElementById("modalEditBankAccount");
+            if (modalEl && typeof bootstrap !== "undefined") {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+
+        async function handleAddBankAccountSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById("btnSubmitAddBank");
+            btn.disabled = true;
+
+            try {
+                const selectBank = document.getElementById("addBankName").value;
+                const bankName = selectBank === "Khác" ? document.getElementById("addCustomBankName").value.trim() : selectBank;
+                const accountName = document.getElementById("addBankAccountName").value.trim();
+                const accountNumber = document.getElementById("addBankAccountNumber").value.trim();
+                const branch = document.getElementById("addBankBranch").value.trim();
+                const isDefault = document.getElementById("addBankIsDefaultSwitch").checked;
+
+                const payload = {
+                    bankName: bankName,
+                    accountName: accountName,
+                    accountNumber: accountNumber,
+                    branch: branch,
+                    isDefault: isDefault
+                };
+
+                const res = await fetch("/api/user/bank-accounts", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    window.location.href = "/Account/Profile#section-bank-account";
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Có lỗi xảy ra khi thêm tài khoản ngân hàng.");
+                }
+            } catch (err) {
+                alert("Lỗi kết nối máy chủ: " + err.message);
+            } finally {
+                btn.disabled = false;
+            }
+            return false;
+        }
+
+        async function handleEditBankAccountSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById("editBankId").value;
+            const btn = document.getElementById("btnSubmitEditBank");
+            btn.disabled = true;
+
+            try {
+                const selectBank = document.getElementById("editBankName").value;
+                const bankName = selectBank === "Khác" ? document.getElementById("editCustomBankName").value.trim() : selectBank;
+                const accountName = document.getElementById("editBankAccountName").value.trim();
+                const accountNumber = document.getElementById("editBankAccountNumber").value.trim();
+                const branch = document.getElementById("editBankBranch").value.trim();
+                const isDefault = document.getElementById("editBankIsDefaultSwitch").checked;
+
+                const payload = {
+                    bankName: bankName,
+                    accountName: accountName,
+                    accountNumber: accountNumber,
+                    branch: branch,
+                    isDefault: isDefault
+                };
+
+                const res = await fetch(`/api/user/bank-accounts/${id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    window.location.href = "/Account/Profile#section-bank-account";
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Có lỗi xảy ra khi cập nhật tài khoản ngân hàng.");
+                }
+            } catch (err) {
+                alert("Lỗi kết nối máy chủ: " + err.message);
+            } finally {
+                btn.disabled = false;
+            }
+            return false;
+        }
+
+        async function deleteBankAccount(id) {
+            if (!confirm("Bạn có chắc chắn muốn xóa tài khoản ngân hàng này?")) return;
+
+            try {
+                const res = await fetch(`/api/user/bank-accounts/${id}`, {
+                    method: "DELETE"
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    window.location.href = "/Account/Profile#section-bank-account";
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Xóa tài khoản thất bại.");
+                }
+            } catch (err) {
+                alert("Lỗi kết nối: " + err.message);
+            }
+        }
+
+        async function setDefaultBankAccount(id) {
+            try {
+                const res = await fetch(`/api/user/bank-accounts/${id}/default`, {
+                    method: "PATCH"
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    window.location.href = "/Account/Profile#section-bank-account";
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Không thể đặt làm mặc định.");
+                }
+            } catch (err) {
+                alert("Lỗi kết nối: " + err.message);
             }
         }
     </script>

@@ -718,6 +718,7 @@ using System.Text.Json;
             var appUser = await _userManager.FindByIdAsync(userId);
             var logins = appUser != null ? await _userManager.GetLoginsAsync(appUser) : new List<UserLoginInfo>();
             var isGoogleLinked = logins.Any(l => l.LoginProvider.Equals("Google", StringComparison.OrdinalIgnoreCase));
+            var bankAccounts = await _userAuthService.GetBankAccountsAsync(userId);
 
             var model = new UserProfileViewModel
             {
@@ -733,6 +734,7 @@ using System.Text.Json;
                 TotalSpent = totalSpent,
                 Addresses = addresses,
                 DefaultAddress = defaultAddress,
+                BankAccounts = bankAccounts,
                 IsGoogleLinked = isGoogleLinked
             };
 

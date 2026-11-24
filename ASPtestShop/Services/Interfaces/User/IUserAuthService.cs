@@ -27,6 +27,12 @@ namespace ASPtestShop.Services.Interfaces.User
 
         Task<AuthResultDto> AddBankAccountAsync(string userId, AddBankAccountViewModel model);
 
+        Task<AuthResultDto> UpdateBankAccountAsync(string userId, int bankId, AddBankAccountViewModel model);
+
+        Task<AuthResultDto> DeleteBankAccountAsync(string userId, int bankId);
+
+        Task<AuthResultDto> SetDefaultBankAccountAsync(string userId, int bankId);
+
         Task<List<UserAddress>> GetUserAddressesAsync(string userId);
 
         Task<AuthResultDto> AddAddressAsync(string userId, AddAddressViewModel model);

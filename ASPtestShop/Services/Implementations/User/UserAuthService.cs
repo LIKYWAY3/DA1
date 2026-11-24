@@ -523,47 +523,205 @@ namespace ASPtestShop.Services.Implementations.User
         }
         public async Task<List<BankAccountDto>> GetBankAccountsAsync(string userId)
         {
-            try
-            {
-                string apiUrl = $"https://api.yourdomain.com/v1/banks/{userId}";
+            if (string.IsNullOrEmpty(userId)) return new List<BankAccountDto>();
 
-                var banks = await _httpClient.GetFromJsonAsync<List<BankAccountDto>>(apiUrl);
-
-                return banks ?? new List<BankAccountDto>();
-            }
-            catch (Exception)
-            {
-                return new List<BankAccountDto>();
-            }
+            return await _context.BankAccounts
+                .Where(b => b.UserId == userId)
+                .OrderByDescending(b => b.IsDefault)
+                .ThenByDescending(b => b.CreatedAt)
+                .Select(b => new BankAccountDto
+                {
+                    Id = b.Id,
+                    BankName = b.BankName,
+                    AccountName = b.AccountName,
+                    AccountNumber = b.AccountNumber,
+                    Branch = b.Branch,
+                    IsDefault = b.IsDefault
+                })
+                .ToListAsync();
         }
 
         public async Task<AuthResultDto> AddBankAccountAsync(string userId, AddBankAccountViewModel model)
         {
-            try
+            if (string.IsNullOrEmpty(userId))
             {
-                string apiUrl = $"https://api.yourdomain.com/v1/banks/add";
+                return new AuthResultDto { Success = false, Message = "Người dùng không hợp lệ." };
+            }
 
-                var payload = new
+            if (model == null)
+            {
+                return new AuthResultDto { Success = false, Message = "Dữ liệu không được để trống." };
+            }
+
+            // Validation: Số tài khoản chỉ chứa số
+            var cleanAccountNumber = model.AccountNumber?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(cleanAccountNumber) || !System.Text.RegularExpressions.Regex.IsMatch(cleanAccountNumber, @"^[0-9]{6,20}$"))
+            {
+                return new AuthResultDto { Success = false, Message = "Số tài khoản ngân hàng chỉ được chứa các chữ số (từ 6 đến 20 số)." };
+            }
+
+            // Kiểm tra trùng tài khoản của user
+            var cleanBankName = model.BankName?.Trim() ?? string.Empty;
+            var duplicate = await _context.BankAccounts.AnyAsync(b => b.UserId == userId && b.AccountNumber == cleanAccountNumber && b.BankName == cleanBankName);
+            if (duplicate)
+            {
+                return new AuthResultDto { Success = false, Message = "Tài khoản ngân hàng này đã tồn tại trong danh sách của bạn." };
+            }
+
+            var existingCount = await _context.BankAccounts.CountAsync(b => b.UserId == userId);
+            var shouldBeDefault = model.IsDefault || existingCount == 0;
+
+            if (shouldBeDefault)
+            {
+                var currentDefaults = await _context.BankAccounts
+                    .Where(b => b.UserId == userId && b.IsDefault)
+                    .ToListAsync();
+                foreach (var item in currentDefaults)
                 {
-                    UserId = userId,
-                    BankName = model.BankName,
-                    AccountName = model.AccountName.ToUpper(),
-                    AccountNumber = model.AccountNumber
-                };
-
-                var response = await _httpClient.PostAsJsonAsync(apiUrl, payload);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return new AuthResultDto { Success = true, Message = "Thêm tài khoản ngân hàng thành công!" };
+                    item.IsDefault = false;
                 }
+            }
 
-                return new AuthResultDto { Success = false, Message = "API từ chối yêu cầu." };
-            }
-            catch (Exception ex)
+            var bankAccount = new BankAccount
             {
-                return new AuthResultDto { Success = false, Message = "Lỗi kết nối đến Server API." };
+                UserId = userId,
+                BankName = cleanBankName,
+                AccountName = (model.AccountName ?? string.Empty).Trim().ToUpper(),
+                AccountNumber = cleanAccountNumber,
+                Branch = model.Branch?.Trim(),
+                IsDefault = shouldBeDefault,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.BankAccounts.Add(bankAccount);
+            await _context.SaveChangesAsync();
+
+            return new AuthResultDto { Success = true, Message = "Thêm tài khoản ngân hàng thành công." };
+        }
+
+        public async Task<AuthResultDto> UpdateBankAccountAsync(string userId, int bankId, AddBankAccountViewModel model)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return new AuthResultDto { Success = false, Message = "Người dùng không hợp lệ." };
             }
+
+            var account = await _context.BankAccounts.FirstOrDefaultAsync(b => b.Id == bankId);
+            if (account == null)
+            {
+                return new AuthResultDto { Success = false, Message = "Tài khoản ngân hàng không tồn tại." };
+            }
+
+            // Chống IDOR: Ngăn chặn user khác sửa tài khoản
+            if (account.UserId != userId)
+            {
+                return new AuthResultDto { Success = false, Message = "Bạn không có quyền chỉnh sửa tài khoản ngân hàng này." };
+            }
+
+            var cleanAccountNumber = model.AccountNumber?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(cleanAccountNumber) || !System.Text.RegularExpressions.Regex.IsMatch(cleanAccountNumber, @"^[0-9]{6,20}$"))
+            {
+                return new AuthResultDto { Success = false, Message = "Số tài khoản ngân hàng chỉ được chứa các chữ số (từ 6 đến 20 số)." };
+            }
+
+            var cleanBankName = model.BankName?.Trim() ?? string.Empty;
+            var duplicate = await _context.BankAccounts.AnyAsync(b => b.UserId == userId && b.Id != bankId && b.AccountNumber == cleanAccountNumber && b.BankName == cleanBankName);
+            if (duplicate)
+            {
+                return new AuthResultDto { Success = false, Message = "Tài khoản ngân hàng này đã tồn tại trong danh sách của bạn." };
+            }
+
+            account.BankName = cleanBankName;
+            account.AccountName = (model.AccountName ?? string.Empty).Trim().ToUpper();
+            account.AccountNumber = cleanAccountNumber;
+            account.Branch = model.Branch?.Trim();
+
+            if (model.IsDefault && !account.IsDefault)
+            {
+                var currentDefaults = await _context.BankAccounts
+                    .Where(b => b.UserId == userId && b.Id != bankId && b.IsDefault)
+                    .ToListAsync();
+                foreach (var item in currentDefaults)
+                {
+                    item.IsDefault = false;
+                }
+                account.IsDefault = true;
+            }
+
+            await _context.SaveChangesAsync();
+            return new AuthResultDto { Success = true, Message = "Cập nhật tài khoản ngân hàng thành công." };
+        }
+
+        public async Task<AuthResultDto> DeleteBankAccountAsync(string userId, int bankId)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return new AuthResultDto { Success = false, Message = "Người dùng không hợp lệ." };
+            }
+
+            var account = await _context.BankAccounts.FirstOrDefaultAsync(b => b.Id == bankId);
+            if (account == null)
+            {
+                return new AuthResultDto { Success = false, Message = "Tài khoản ngân hàng không tồn tại." };
+            }
+
+            // Chống IDOR
+            if (account.UserId != userId)
+            {
+                return new AuthResultDto { Success = false, Message = "Bạn không có quyền xóa tài khoản ngân hàng này." };
+            }
+
+            var wasDefault = account.IsDefault;
+            _context.BankAccounts.Remove(account);
+
+            // Nếu xóa tài khoản mặc định, tự động chuyển quyền mặc định sang tài khoản kế tiếp
+            if (wasDefault)
+            {
+                var nextAccount = await _context.BankAccounts
+                    .Where(b => b.UserId == userId && b.Id != bankId)
+                    .OrderByDescending(b => b.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (nextAccount != null)
+                {
+                    nextAccount.IsDefault = true;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return new AuthResultDto { Success = true, Message = "Xóa tài khoản ngân hàng thành công." };
+        }
+
+        public async Task<AuthResultDto> SetDefaultBankAccountAsync(string userId, int bankId)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return new AuthResultDto { Success = false, Message = "Người dùng không hợp lệ." };
+            }
+
+            var targetAccount = await _context.BankAccounts.FirstOrDefaultAsync(b => b.Id == bankId);
+            if (targetAccount == null)
+            {
+                return new AuthResultDto { Success = false, Message = "Tài khoản ngân hàng không tồn tại." };
+            }
+
+            // Chống IDOR
+            if (targetAccount.UserId != userId)
+            {
+                return new AuthResultDto { Success = false, Message = "Bạn không có quyền thao tác trên tài khoản ngân hàng này." };
+            }
+
+            var currentDefaults = await _context.BankAccounts
+                .Where(b => b.UserId == userId && b.IsDefault)
+                .ToListAsync();
+
+            foreach (var item in currentDefaults)
+                item.IsDefault = false;
+
+            targetAccount.IsDefault = true;
+            await _context.SaveChangesAsync();
+
+            return new AuthResultDto { Success = true, Message = "Đặt làm tài khoản ngân hàng mặc định thành công." };
         }
         public async Task<List<UserAddress>> GetUserAddressesAsync(string userId)
         {
