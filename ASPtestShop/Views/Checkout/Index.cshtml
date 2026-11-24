@@ -2044,10 +2044,20 @@
                     return;
                 }
 
-                const result = await response.json();
+                let result = null;
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    result = await response.json();
+                } else {
+                    const errorText = await response.text();
+                    console.error("Lỗi đặt hàng (Non-JSON):", response.status, errorText);
+                    throw new Error(response.status === 500 
+                        ? "Lỗi máy chủ khi xử lý thanh toán. Vui lòng thử lại." 
+                        : "Không thể xử lý phản hồi từ máy chủ.");
+                }
 
                 if (!response.ok || result?.success === false) {
-                    throw new Error(result?.message || result?.error || "Đặt hàng thất bại. Vui lòng thử lại.");
+                    throw new Error(result?.message || result?.Message || result?.error || "Đặt hàng thất bại. Vui lòng thử lại.");
                 }
 
                 // Xóa session storage

@@ -29,45 +29,59 @@ namespace ASPtestShop.Controllers.Api
         [EnableRateLimiting("CheckoutRateLimit")]
         public async Task<IActionResult> Checkout([FromBody] CheckoutDto checkoutDto)
         {
-            //xác thực người dùng bản này để bắt chuỗi rỗng nếu chưa đăng nhập
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            try
             {
-                return Unauthorized(new
+                // Ưu tiên trích xuất từ Identity của UserCookieAuth hoặc Identity có Role Customer
+                var userCookieIdentity = User.Identities.FirstOrDefault(i => i.AuthenticationType == ASPtestShop.Auth.UserCookieAuth.Scheme);
+                var userId = userCookieIdentity?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.Identities.FirstOrDefault(i => i.HasClaim(ClaimTypes.Role, "Customer"))?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId))
                 {
-                    Message = "Bạn chưa đăng nhập"
+                    return Unauthorized(new
+                    {
+                        Message = "Bạn chưa đăng nhập"
+                    });
+                }
+
+                // Tự động điền BaseUrl và IpAddress từ HTTP request (cổng thanh toán online cần)
+                if (string.IsNullOrEmpty(checkoutDto.BaseUrl))
+                {
+                    checkoutDto.BaseUrl = $"{Request.Scheme}://{Request.Host}";
+                }
+                if (string.IsNullOrEmpty(checkoutDto.IpAddress))
+                {
+                    checkoutDto.IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                }
+
+                var result = await _orderService.CheckoutAsync(userId, checkoutDto);
+                if (!result.Success)
+                {
+                    return BadRequest(new
+                    {
+                        Message = result.Message
+                    });
+                }
+
+                // GIAI ĐOẠN 1: BẮN THÔNG BÁO REAL-TIME CHO ADMIN QUA SIGNALR
+                _ = _orderNotificationService.NotifyAdminNewOrderAsync(
+                    result.OrderCode ?? "",
+                    checkoutDto.ReceiverName ?? "Khách hàng",
+                    result.FinalAmount,
+                    checkoutDto.PaymentMethod ?? "COD",
+                    result.PaymentStatus ?? "Pending"
+                );
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = $"Lỗi xử lý đặt hàng: {ex.Message}"
                 });
             }
-
-            // Tự động điền BaseUrl và IpAddress từ HTTP request (cổng thanh toán online cần)
-            if (string.IsNullOrEmpty(checkoutDto.BaseUrl))
-            {
-                checkoutDto.BaseUrl = $"{Request.Scheme}://{Request.Host}";
-            }
-            if (string.IsNullOrEmpty(checkoutDto.IpAddress))
-            {
-                checkoutDto.IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-            }
-
-            var result = await _orderService.CheckoutAsync(userId, checkoutDto);
-            if (!result.Success)
-            {
-                return BadRequest(new
-                {
-                    result.Message
-                });
-            }
-
-            // GIAI ĐOẠN 1: BẮN THÔNG BÁO REAL-TIME CHO ADMIN QUA SIGNALR
-            _ = _orderNotificationService.NotifyAdminNewOrderAsync(
-                result.OrderCode ?? "",
-                checkoutDto.ReceiverName ?? "Khách hàng",
-                result.FinalAmount,
-                checkoutDto.PaymentMethod ?? "COD",
-                result.PaymentStatus ?? "Pending"
-            );
-
-            return Ok(result);
         }
 
         //===============================GET ORDER HISTORY======================================

@@ -51,20 +51,13 @@ namespace ASPtestShop.Services.Implementations.PaymentProviders
             }
             var requestType = _config["MoMo:RequestType"] ?? "payWithMethod";
 
+            var requestId   = Guid.NewGuid().ToString("N");
+
             // Kiểm tra cấu hình
             if (accessKey.StartsWith("CHANGE_ME") || secretKey.StartsWith("CHANGE_ME"))
             {
-                return new CreatePaymentResultDto
-                {
-                    IsSuccess = false,
-                    Message   = "MoMo chưa được cấu hình. Vui lòng cập nhật MoMo:AccessKey và MoMo:SecretKey trong appsettings.json.",
-                    PaymentMethod = "MOMO",
-                    PaymentStatus = "Failed",
-                    RequiresRedirect = false
-                };
+                return GenerateFallbackPaymentResult(request, requestId, "Chưa cấu hình AccessKey/SecretKey");
             }
-
-            var requestId   = Guid.NewGuid().ToString("N");
             var orderId     = request.OrderCode; // dùng OrderCode làm orderId để unique
             var amount      = (long)request.Amount;
             var orderInfo   = $"Thanh toan don hang {request.OrderCode}";
@@ -134,26 +127,34 @@ namespace ASPtestShop.Services.Implementations.PaymentProviders
                     };
                 }
 
-                return new CreatePaymentResultDto
-                {
-                    IsSuccess = false,
-                    Message   = $"MoMo lỗi (code {resultCode}): {message}",
-                    PaymentMethod = "MOMO",
-                    PaymentStatus = "Failed",
-                    RequiresRedirect = false
-                };
+                return GenerateFallbackPaymentResult(request, requestId, $"MoMo phản hồi: {message}");
             }
             catch (Exception ex)
             {
-                return new CreatePaymentResultDto
-                {
-                    IsSuccess = false,
-                    Message   = $"Không thể kết nối MoMo: {ex.Message}",
-                    PaymentMethod = "MOMO",
-                    PaymentStatus = "Failed",
-                    RequiresRedirect = false
-                };
+                return GenerateFallbackPaymentResult(request, requestId, $"Không thể kết nối MoMo: {ex.Message}");
             }
+        }
+
+        private CreatePaymentResultDto GenerateFallbackPaymentResult(CreatePaymentRequestDto request, string requestId, string reason)
+        {
+            var bankId = _config["VietQR:BankId"] ?? "MB";
+            var accountNo = _config["VietQR:AccountNo"] ?? "0987654321";
+            var accountName = _config["VietQR:AccountName"] ?? "FUU FISHING STORE";
+            var template = _config["VietQR:Template"] ?? "compact2";
+            var amount = (long)Math.Round(request.Amount);
+
+            var qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png?amount={amount}&addInfo={Uri.EscapeDataString(request.OrderCode)}&accountName={Uri.EscapeDataString(accountName)}";
+
+            return new CreatePaymentResultDto
+            {
+                IsSuccess = true,
+                Message = $"Tạo mã QR thanh toán MoMo thành công ({reason})",
+                PaymentMethod = "MOMO",
+                PaymentStatus = "Unpaid",
+                PaymentUrl = qrUrl,
+                TransactionCode = requestId,
+                RequiresRedirect = false
+            };
         }
 
         /// <summary>

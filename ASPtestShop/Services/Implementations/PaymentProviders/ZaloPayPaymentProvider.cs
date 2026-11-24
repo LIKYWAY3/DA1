@@ -48,20 +48,13 @@ namespace ASPtestShop.Services.Implementations.PaymentProviders
                 callbackUrl = $"{returnUri.Scheme}://{returnUri.Authority}{(callbackUrl.StartsWith('/') ? callbackUrl : "/" + callbackUrl)}";
             }
 
+            var appTransId  = DateTime.Now.ToString("yyMMdd") + "_" + request.OrderCode;
+
             // Kiểm tra cấu hình
             if (key1.StartsWith("CHANGE_ME") || string.IsNullOrWhiteSpace(key1))
             {
-                return new CreatePaymentResultDto
-                {
-                    IsSuccess = false,
-                    Message   = "ZaloPay chưa được cấu hình. Vui lòng cập nhật ZaloPay:Key1 và ZaloPay:Key2 trong appsettings.json.",
-                    PaymentMethod = "ZALOPAY",
-                    PaymentStatus = "Failed",
-                    RequiresRedirect = false
-                };
+                return GenerateFallbackPaymentResult(request, appTransId, "Chưa cấu hình Key1");
             }
-
-            var appTransId  = DateTime.Now.ToString("yyMMdd") + "_" + request.OrderCode;
             var appTime     = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var amount      = (long)request.Amount;
             var description = $"FuuFishing - Thanh toan don hang {request.OrderCode}";
@@ -125,26 +118,34 @@ namespace ASPtestShop.Services.Implementations.PaymentProviders
                     };
                 }
 
-                return new CreatePaymentResultDto
-                {
-                    IsSuccess = false,
-                    Message   = $"ZaloPay lỗi (code {returnCode}): {returnMessage}",
-                    PaymentMethod = "ZALOPAY",
-                    PaymentStatus = "Failed",
-                    RequiresRedirect = false
-                };
+                return GenerateFallbackPaymentResult(request, appTransId, $"ZaloPay phản hồi: {returnMessage}");
             }
             catch (Exception ex)
             {
-                return new CreatePaymentResultDto
-                {
-                    IsSuccess = false,
-                    Message   = $"Không thể kết nối ZaloPay: {ex.Message}",
-                    PaymentMethod = "ZALOPAY",
-                    PaymentStatus = "Failed",
-                    RequiresRedirect = false
-                };
+                return GenerateFallbackPaymentResult(request, appTransId, $"Không thể kết nối ZaloPay: {ex.Message}");
             }
+        }
+
+        private CreatePaymentResultDto GenerateFallbackPaymentResult(CreatePaymentRequestDto request, string appTransId, string reason)
+        {
+            var bankId = _config["VietQR:BankId"] ?? "MB";
+            var accountNo = _config["VietQR:AccountNo"] ?? "0987654321";
+            var accountName = _config["VietQR:AccountName"] ?? "FUU FISHING STORE";
+            var template = _config["VietQR:Template"] ?? "compact2";
+            var amount = (long)Math.Round(request.Amount);
+
+            var qrUrl = $"https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png?amount={amount}&addInfo={Uri.EscapeDataString(request.OrderCode)}&accountName={Uri.EscapeDataString(accountName)}";
+
+            return new CreatePaymentResultDto
+            {
+                IsSuccess = true,
+                Message = $"Tạo mã QR thanh toán ZaloPay thành công ({reason})",
+                PaymentMethod = "ZALOPAY",
+                PaymentStatus = "Unpaid",
+                PaymentUrl = qrUrl,
+                TransactionCode = appTransId,
+                RequiresRedirect = false
+            };
         }
 
         /// <summary>

@@ -69,7 +69,7 @@ namespace ASPtestShop.Controllers.MVC.User
                     .FirstOrDefaultAsync(o => o.OrderCode == orderCode);
                 ViewBag.Order = order;
 
-                if (order != null && order.PaymentMethod == "VIETQR")
+                if (order != null && (order.PaymentMethod == "VIETQR" || order.PaymentMethod == "MOMO" || order.PaymentMethod == "ZALOPAY"))
                 {
                     var bankId = _config["VietQR:BankId"] ?? "MB";
                     var bankName = _config["VietQR:BankName"] ?? "Ngân hàng TMCP Quân Đội (MBBank)";
